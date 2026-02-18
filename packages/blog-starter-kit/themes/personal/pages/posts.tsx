@@ -34,8 +34,8 @@ type Props = {
 export default function AllPostsPage({ publication, initialPosts, initialPageInfo }: Props) {
 	const [posts, setPosts] = useState<PostFragment[]>(
 		initialPosts.sort((a, b) => {
-			const dateA = new Date(a.updatedAt || a.publishedAt || 0).getTime();
-			const dateB = new Date(b.updatedAt || b.publishedAt || 0).getTime();
+			const dateA = new Date(a.publishedAt || 0).getTime();
+			const dateB = new Date(b.publishedAt || 0).getTime();
 			return dateB - dateA;
 		})
 	);
@@ -105,8 +105,8 @@ export default function AllPostsPage({ publication, initialPosts, initialPageInf
 		}
 		const newPosts = data.publication.posts.edges.map((edge) => edge.node);
 		const combined = [...posts, ...newPosts].sort((a, b) => {
-			const dateA = new Date(a.updatedAt || a.publishedAt || 0).getTime();
-			const dateB = new Date(b.updatedAt || b.publishedAt || 0).getTime();
+			const dateA = new Date(a.publishedAt || 0).getTime();
+			const dateB = new Date(b.publishedAt || 0).getTime();
 			return dateB - dateA;
 		});
 		setPosts(combined);
