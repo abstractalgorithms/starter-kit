@@ -12,6 +12,16 @@ fragment Post on Post {
 	publishedAt
 	slug
 	brief
+	tags {
+		id
+		name
+		slug
+	}
+	series {
+		id
+		name
+		slug
+	}
 	comments(first: 0) {
 		totalDocuments
 	}

@@ -1,7 +1,14 @@
 import { ThemeProvider } from 'next-themes';
 import { AppProps } from 'next/app';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import { useEffect } from 'react';
 import '../styles/index.css';
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+	subsets: ['latin'],
+	weight: ['400', '500', '600', '700', '800'],
+	variable: '--font-plus-jakarta-sans',
+});
 
 export default function MyApp({ Component, pageProps }: AppProps) {
 	useEffect(() => {
@@ -14,7 +21,9 @@ export default function MyApp({ Component, pageProps }: AppProps) {
 	}, []);
 	return (
 		<ThemeProvider attribute="class">
-			<Component {...pageProps} />
+			<main className={`${plusJakartaSans.variable} font-sans`}>
+				<Component {...pageProps} />
+			</main>
 		</ThemeProvider>
 	);
 }

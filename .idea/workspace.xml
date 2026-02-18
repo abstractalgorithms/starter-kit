@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="a59748e7-f36d-4de1-a19a-4be95f019d3d" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/analytics.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/analytics.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/avatar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/avatar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/button.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/button.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/container.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/container.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/cover-image.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/cover-image.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/date-formatter.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/date-formatter.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/footer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/footer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/markdown-styles.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/markdown-styles.module.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/markdown-to-html.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/markdown-to-html.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/minimal-post-preview.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/minimal-post-preview.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/minimal-posts.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/minimal-posts.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/personal-theme-header.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/personal-theme-header.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/section-separator.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/section-separator.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/toggle-theme.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/components/toggle-theme.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/generated/graphql.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/generated/graphql.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/generated/schema.graphql" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/generated/schema.graphql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/pages/[slug].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/pages/[slug].tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/pages/_document.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/pages/_document.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/pages/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/pages/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/pages/preview/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/pages/preview/[id].tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/pages/tag/[slug].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/pages/tag/[slug].tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/styles/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/styles/index.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/tailwind.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/packages/blog-starter-kit/themes/personal/tailwind.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pnpm-lock.yaml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;abstractalgorithms&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Hashnode/starter-kit.git&quot;,
+    &quot;accountId&quot;: &quot;edae9795-74c8-47d7-85ec-a1f4db9b774e&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7
+}</component>
+  <component name="ProjectId" id="39lNxj3MFROcnYVdLb7qvnqaBuc" />
+  <component name="ProjectViewState">
+    <option name="autoscrollFromSource" value="true" />
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/Hands-On/hashnode.dev/starter-kit",
+    "settings.editor.selected.configurable": "com.android.studio.ml.bot.mainConfigurable"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="a59748e7-f36d-4de1-a19a-4be95f019d3d" name="Changes" comment="" />
+      <created>1771266946040</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1771266946040</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>

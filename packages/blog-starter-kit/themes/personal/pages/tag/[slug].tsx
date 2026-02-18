@@ -44,13 +44,28 @@ export default function Tag({ publication, posts, tag }: Props) {
 						dangerouslySetInnerHTML={{ __html: JSON.stringify(addPublicationJsonLd(publication)) }}
 					/>
 				</Head>
-				<Container className="mx-auto flex max-w-3xl flex-col items-stretch gap-10 px-5 py-10">
-					<PersonalHeader />
-					<div className="flex flex-col gap-1 pt-5">
-						<p className="font-bold uppercase text-slate-500 dark:text-neutral-400">Tag</p>
-						<h1 className="text-4xl font-bold text-slate-900 dark:text-neutral-50">#{tag}</h1>
+				<Container className="mx-auto w-full px-5 py-10">
+					<div className="max-w-6xl mx-auto w-full flex flex-col gap-0">
+						<PersonalHeader />
+						<section className="w-full py-12">
+							<div className="mb-12">
+								<p className="font-semibold uppercase text-sm text-neutral-600 dark:text-neutral-400 mb-3">
+									Category
+								</p>
+								<h1 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-neutral-50 capitalize mb-4">
+									{tag}
+								</h1>
+								<p className="text-lg text-neutral-600 dark:text-neutral-300">
+									{posts.length} article{posts.length !== 1 ? 's' : ''} in this category
+								</p>
+							</div>
+							{posts.length > 0 && (
+								<div>
+									<MinimalPosts context="tag" posts={posts} />
+								</div>
+							)}
+						</section>
 					</div>
-					{posts.length > 0 && <MinimalPosts context="home" posts={posts} />}
 					<Footer />
 				</Container>
 			</Layout>

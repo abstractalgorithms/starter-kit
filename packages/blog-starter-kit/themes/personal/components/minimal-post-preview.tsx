@@ -6,33 +6,51 @@ type Author = Pick<User, 'name'>;
 
 type Props = {
 	title: string;
+	brief: string;
 	date: string;
 	author: Author;
 	slug: string;
 	commentCount: number;
+	coverImage?: string;
 };
 
-export const MinimalPostPreview = ({ title, date, slug, commentCount }: Props) => {
+export const MinimalPostPreview = ({ title, brief, date, slug, commentCount, coverImage }: Props) => {
 	const postURL = `/${slug}`;
 
 	return (
-		<section className="flex flex-col items-start gap-1">
-			<h2 className="text-lg leading-tight tracking-tight text-black dark:text-white">
-				<Link href={postURL}>{title}</Link>
-			</h2>
-			<p className="flex flex-row items-center gap-2">
-				<Link href={postURL} className="text-sm text-neutral-600 dark:text-neutral-400">
-					<DateFormatter dateString={date} />
-				</Link>
-				{commentCount > 2 && (
-					<>
-						<span>&middot;</span>
-						<Link href={postURL} className="text-sm text-neutral-600 dark:text-neutral-400">
-							{commentCount} comments
-						</Link>
-					</>
+		<Link href={postURL} className="group block h-full">
+			<div className="flex flex-col h-full p-5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300">
+				{coverImage && (
+					<div className="relative w-full h-48 overflow-hidden rounded-md mb-4 -m-5 mb-4 md:rounded-t-lg">
+						<img
+							src={coverImage}
+							alt={title}
+							className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+						/>
+					</div>
 				)}
-			</p>
-		</section>
+				<section className="flex flex-col items-start gap-3 flex-grow">
+					<h2 className="text-lg font-bold leading-tight tracking-tight text-black dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+						{title}
+					</h2>
+					<p className="text-neutral-600 dark:text-neutral-400 line-clamp-2 text-sm flex-grow">
+						{brief}
+					</p>
+					<div className="flex flex-row items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400 mt-auto pt-3 border-t border-neutral-200 dark:border-neutral-800 w-full">
+						<DateFormatter dateString={date} />
+						<span>•</span>
+						<span>5 min read</span>
+						{commentCount > 2 && (
+							<>
+								<span>•</span>
+								<span>
+									{commentCount} comments
+								</span>
+							</>
+						)}
+					</div>
+				</section>
+			</div>
+		</Link>
 	);
 };

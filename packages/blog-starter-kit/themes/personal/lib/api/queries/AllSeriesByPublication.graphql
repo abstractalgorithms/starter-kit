@@ -1,0 +1,11 @@
+# This query is a placeholder
+# Series are accessed via SeriesPostsByPublication query with specific slugs
+# Or extracted from posts that include series data
+query PublicationSeriesInfo($host: String!) {
+	publication(host: $host) {
+		...Publication
+		posts(first: 0) {
+			totalDocuments
+		}
+	}
+}

@@ -7,10 +7,14 @@ import { useState } from 'react';
 import { Waypoint } from 'react-waypoint';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
+import { CategoriesSection } from '../components/categories-section';
+import { FeaturedArticle } from '../components/featured-article';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { MinimalPosts } from '../components/minimal-posts';
+import { NewsletterSection } from '../components/newsletter-section';
 import { PersonalHeader } from '../components/personal-theme-header';
+import { Hero } from '../components/hero';
 import {
 	MorePostsByPublicationDocument,
 	MorePostsByPublicationQuery,
@@ -55,7 +59,7 @@ export default function Index({ publication, initialPosts, initialPageInfo }: Pr
 		setLoadedMore(true);
 	};
 	return (
-		<AppProvider publication={publication}>
+		<AppProvider publication={publication} posts={posts}>
 			<Layout>
 				<Head>
 					<title>{publication.title}</title>
@@ -83,18 +87,41 @@ export default function Index({ publication, initialPosts, initialPageInfo }: Pr
 						}}
 					/>
 				</Head>
-				<Container className="mx-auto flex max-w-3xl flex-col items-stretch gap-10 px-5 py-10">
-					<PersonalHeader />
-					{posts.length > 0 && <MinimalPosts context="home" posts={posts} />}
-					{!loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
-						<button onClick={loadMore}>
-							Load more
-						</button>
-					)}
-					{loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
-						<Waypoint onEnter={loadMore} bottomOffset={'10%'} />
-					)}
-
+				<Container className="mx-auto w-full px-5 py-10">
+					<div className="max-w-6xl mx-auto w-full flex flex-col gap-0">
+						<PersonalHeader />
+						<Hero />
+						{posts.length > 0 && (
+							<>
+								<FeaturedArticle post={posts[0]} />
+								
+								<section className="w-full py-12">
+									<h2 className="text-2xl md:text-3xl font-bold mb-8 text-neutral-900 dark:text-neutral-50">
+										Latest Articles
+									</h2>
+									<div className="w-full">
+										<MinimalPosts context="home" posts={posts.slice(1, 4)} />
+									</div>
+									{!loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
+										<div className="flex justify-center mt-10">
+											<button 
+												onClick={loadMore}
+												className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+											>
+												Load more articles
+											</button>
+										</div>
+									)}
+									{loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
+										<Waypoint onEnter={loadMore} bottomOffset={'10%'} />
+									)}
+								</section>
+							</>
+						)}
+						
+						<CategoriesSection posts={posts} />
+						<NewsletterSection />
+					</div>
 					<Footer />
 				</Container>
 			</Layout>

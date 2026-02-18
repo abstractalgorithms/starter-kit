@@ -53,7 +53,7 @@ const Post = ({ publication, post }: PostProps) => {
 		<li key={tag.id}>
 			<Link
 				href={`/tag/${tag.slug}`}
-				className="block rounded-full border px-2 py-1 font-medium hover:bg-slate-50 dark:border-neutral-800 dark:hover:bg-neutral-800 md:px-4"
+				className="inline-flex items-center px-3 py-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
 			>
 				#{tag.slug}
 			</Link>
@@ -128,23 +128,28 @@ const Post = ({ publication, post }: PostProps) => {
 				/>
 				<style dangerouslySetInnerHTML={{ __html: highlightJsMonokaiTheme }}></style>
 			</Head>
-			<h1 className="text-4xl font-bold leading-tight tracking-tight text-black dark:text-white">
+			<h1 className="text-5xl font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50 mt-0">
 				{post.title}
 			</h1>
-			<div className="flex tracking-tight gap-2 text-neutral-600 dark:text-neutral-400">
-				<DateFormatter dateString={post.publishedAt} />
-				{'•'}
-				<span>{post.readTimeInMinutes} min read</span>
+			<div className="flex flex-wrap gap-4 text-sm text-neutral-600 dark:text-neutral-400 mb-6">
+				<span className="flex items-center gap-1">
+					<DateFormatter dateString={post.publishedAt} />
+				</span>
+				<span>•</span>
+				<span className="flex items-center gap-1">{post.readTimeInMinutes} min read</span>
 			</div>
 			{!!coverImageSrc && (
-				<div className="w-full">
+				<div className="w-full my-8 rounded-lg overflow-hidden">
 					<CoverImage title={post.title} priority={true} src={coverImageSrc} />
 				</div>
 			)}
 			<MarkdownToHtml contentMarkdown={post.content.markdown} />
 			{(post.tags ?? []).length > 0 && (
-				<div className="mx-auto w-full text-slate-600 dark:text-neutral-300 md:max-w-screen-md">
-					<ul className="flex flex-row flex-wrap items-center gap-2">{tagsList}</ul>
+				<div className="w-full text-neutral-600 dark:text-neutral-300 mt-8 pt-8 border-t border-neutral-200 dark:border-neutral-800">
+					<div className="flex flex-wrap gap-2 items-center">
+						<span className="text-sm font-medium">Tags:</span>
+						<ul className="flex flex-row flex-wrap items-center gap-2">{tagsList}</ul>
+					</div>
 				</div>
 			)}
 		</>
@@ -171,13 +176,15 @@ export default function PostOrPage(props: Props) {
 	return (
 		<AppProvider publication={publication} post={maybePost} page={maybePage}>
 			<Layout>
-				<Container className="mx-auto flex max-w-3xl flex-col items-stretch gap-10 px-5 py-10">
-					<PersonalHeader />
-					<article className="flex flex-col items-start gap-10 pb-10">
-						{props.type === 'post' && <Post {...props} />}
-						{props.type === 'page' && <Page {...props} />}
-					</article>
-					<Footer />
+				<Container className="mx-auto w-full px-5 py-10">
+					<div className="max-w-6xl mx-auto w-full flex flex-col gap-0">
+						<PersonalHeader />
+						<article className="flex flex-col items-start gap-8 pb-10 w-full max-w-3xl mx-auto">
+							{props.type === 'post' && <Post {...props} />}
+							{props.type === 'page' && <Page {...props} />}
+						</article>
+						<Footer />
+					</div>
 				</Container>
 			</Layout>
 		</AppProvider>
