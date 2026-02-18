@@ -64,10 +64,10 @@ export const Hero = () => {
 	return (
 		<section className="w-full py-12 md:py-20">
 			<div className="text-center">
-			<h1 className="text-4xl md:text-6xl font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50 mb-2">
+			<h1 className="text-4xl md:text-7xl font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50 mb-2">
 				Discover the Art of
 			</h1>
-			<div className="h-16 md:h-20 flex items-center justify-center mb-4">
+			<div className="min-h-24 md:min-h-32 flex items-center justify-center mb-4">
 				<h2 
 					className={`text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-500 transition-opacity duration-300 ${
 						isVisible ? 'opacity-100' : 'opacity-0'

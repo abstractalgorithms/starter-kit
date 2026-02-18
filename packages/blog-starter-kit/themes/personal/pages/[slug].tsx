@@ -179,7 +179,7 @@ export default function PostOrPage(props: Props) {
 				<Container className="mx-auto w-full px-5 py-10">
 					<div className="max-w-6xl mx-auto w-full flex flex-col gap-0">
 						<PersonalHeader />
-						<article className="flex flex-col items-start gap-8 pb-10 w-full max-w-3xl mx-auto">
+						<article className="flex flex-col items-start gap-8 pb-10 w-full">
 							{props.type === 'post' && <Post {...props} />}
 							{props.type === 'page' && <Page {...props} />}
 						</article>

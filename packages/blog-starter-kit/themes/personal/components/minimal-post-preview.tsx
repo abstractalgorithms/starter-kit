@@ -19,9 +19,9 @@ export const MinimalPostPreview = ({ title, brief, date, slug, commentCount, cov
 
 	return (
 		<Link href={postURL} className="group block h-full">
-			<div className="flex flex-col h-full p-5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300">
+			<div className="flex flex-col h-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 overflow-hidden">
 				{coverImage && (
-					<div className="relative w-full h-48 overflow-hidden rounded-md mb-4 -m-5 mb-4 md:rounded-t-lg">
+					<div className="relative w-full h-48 overflow-hidden">
 						<img
 							src={coverImage}
 							alt={title}
@@ -29,7 +29,7 @@ export const MinimalPostPreview = ({ title, brief, date, slug, commentCount, cov
 						/>
 					</div>
 				)}
-				<section className="flex flex-col items-start gap-3 flex-grow">
+				<section className="flex flex-col items-start gap-3 flex-grow p-5">
 					<h2 className="text-lg font-bold leading-tight tracking-tight text-black dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
 						{title}
 					</h2>

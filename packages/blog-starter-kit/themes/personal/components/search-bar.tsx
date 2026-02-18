@@ -1,7 +1,8 @@
 import { resizeImage } from '@starter-kit/utils/image';
 import request from 'graphql-request';
+import Image from 'next/image';
 import Link from 'next/link';
-import { KeyboardEventHandler, useEffect, useRef, useState } from 'react';
+import { KeyboardEventHandler, useCallback, useEffect, useRef, useState } from 'react';
 import {
 	SearchPostsOfPublicationDocument,
 	SearchPostsOfPublicationQuery,
@@ -43,39 +44,42 @@ export const SearchBar = () => {
 		setShowResults(true);
 	};
 
-	const search = async (query: string) => {
-		if (timerRef.current) clearTimeout(timerRef.current);
+	const search = useCallback(
+		async (searchQuery: string) => {
+			if (timerRef.current) clearTimeout(timerRef.current);
 
-		if (!query) {
-			setSearchResults([]);
-			setShowResults(false);
-			return;
-		}
-
-		timerRef.current = setTimeout(async () => {
-			setIsSearching(true);
-
-			try {
-				const data = await request<
-					SearchPostsOfPublicationQuery,
-					SearchPostsOfPublicationQueryVariables
-				>(GQL_ENDPOINT, SearchPostsOfPublicationDocument, {
-					first: NO_OF_SEARCH_RESULTS,
-					filter: { query, publicationId: publication.id },
-				});
-				const posts = data.searchPostsOfPublication.edges.map((edge) => edge.node);
-				setSearchResults(posts);
-			} catch (error) {
-				console.error('Search error:', error);
+			if (!searchQuery) {
 				setSearchResults([]);
+				setShowResults(false);
+				return;
 			}
-			setIsSearching(false);
-		}, 500);
-	};
+
+			timerRef.current = setTimeout(async () => {
+				setIsSearching(true);
+
+				try {
+					const data = await request<
+						SearchPostsOfPublicationQuery,
+						SearchPostsOfPublicationQueryVariables
+					>(GQL_ENDPOINT, SearchPostsOfPublicationDocument, {
+						first: NO_OF_SEARCH_RESULTS,
+						filter: { query: searchQuery, publicationId: publication.id },
+					});
+					const posts = data.searchPostsOfPublication.edges.map((edge) => edge.node);
+					setSearchResults(posts);
+				} catch (error) {
+					console.error('Search error:', error);
+					setSearchResults([]);
+				}
+				setIsSearching(false);
+			}, 500);
+		},
+		[publication.id],
+	);
 
 	useEffect(() => {
 		search(query);
-	}, [query]);
+	}, [query, search]);
 
 	const searchResultsList = searchResults.map((post, index) => {
 		const postURL = `/${post.slug}`;
@@ -89,13 +93,15 @@ export const SearchBar = () => {
 				onClick={() => resetInput()}
 			>
 				{post.coverImage && (
-					<img
+					<Image
 						src={resizeImage(post.coverImage.url, {
 							w: 80,
 							h: 80,
 							c: 'thumb',
 						})}
 						alt={post.title}
+						width={80}
+						height={80}
 						className="w-20 h-20 rounded-md object-cover flex-shrink-0"
 					/>
 				)}
@@ -155,7 +161,7 @@ export const SearchBar = () => {
 						<div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl p-6 z-50">
 							<div className="text-center">
 								<p className="text-sm text-neutral-600 dark:text-neutral-400">
-									No articles found for <span className="font-semibold text-neutral-900 dark:text-neutral-200">"{query}"</span>
+								No articles found for <span className="font-semibold text-neutral-900 dark:text-neutral-200">&quot;{query}&quot;</span>
 								</p>
 								<p className="text-xs text-neutral-500 dark:text-neutral-500 mt-2">
 									Try different keywords

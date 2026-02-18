@@ -6,16 +6,17 @@ type Props = {
 	contentMarkdown: string;
 };
 
-const _MarkdownToHtml = ({ contentMarkdown }: Props) => {
+const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 	const content = markdownToHtml(contentMarkdown);
 	useEmbeds({ enabled: true });
 
 	return (
 		<div
-			className="hashnode-content-style w-full"
+			className="hashnode-content-style w-full max-w-none"
+			style={{ maxWidth: 'none' }}
 			dangerouslySetInnerHTML={{ __html: content }}
 		/>
 	);
 };
 
-export const MarkdownToHtml = memo(_MarkdownToHtml);
+export const MarkdownToHtml = memo(MarkdownToHtmlComponent);
