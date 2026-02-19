@@ -1,16 +1,6 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppContext } from './contexts/appContext';
 import { SearchBar } from './search-bar';
-
-type HeroStats = {
-	articlesCount: number;
-	categoriesCount: number;
-	seriesCount: number;
-};
-
-type Props = {
-	stats?: HeroStats;
-};
 
 const ROTATING_TOPICS = [
 	'System Designs',
@@ -21,8 +11,8 @@ const ROTATING_TOPICS = [
 	'Software Architecture',
 ];
 
-export const Hero = ({ stats: globalStats }: Props) => {
-	const { publication, posts } = useAppContext();
+export const Hero = () => {
+	const { publication } = useAppContext();
 	const [topicIndex, setTopicIndex] = useState(0);
 	const [isVisible, setIsVisible] = useState(true);
 
@@ -37,45 +27,6 @@ export const Hero = ({ stats: globalStats }: Props) => {
 
 		return () => clearInterval(interval);
 	}, []);
-
-	const localStats = useMemo(() => {
-		// Count total articles from posts available in current context
-		const articlesCount = posts.length;
-
-		// Count unique categories (tags)
-		const tagsSet = new Set<string>();
-		posts.forEach((post) => {
-			if (post.tags && Array.isArray(post.tags)) {
-				post.tags.forEach((tag) => {
-					tagsSet.add(tag.slug);
-				});
-			}
-		});
-		const categoriesCount = tagsSet.size;
-
-		// Count unique series from posts
-		const seriesSet = new Set<string>();
-		posts.forEach((post) => {
-			if (post.series?.id) {
-				seriesSet.add(post.series.id);
-			}
-		});
-		const seriesCount = seriesSet.size;
-
-		return {
-			articlesCount,
-			categoriesCount,
-			seriesCount,
-		};
-	}, [posts]);
-
-	const stats = globalStats ?? localStats;
-
-	const statItems = [
-		{ label: 'Published Articles', value: stats.articlesCount },
-		{ label: 'Categories', value: stats.categoriesCount },
-		{ label: 'Series', value: stats.seriesCount },
-	];
 
 	return (
 		<section className="w-full py-8 md:py-12">
@@ -98,21 +49,6 @@ export const Hero = ({ stats: globalStats }: Props) => {
 			<div className="mb-8">
 				<SearchBar />
 			</div>
-			<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-4 max-w-4xl mx-auto">
-				{statItems.map((item) => (
-					<div
-						key={item.label}
-						className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-5 py-4 text-center"
-					>
-						<div className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-neutral-50">
-							{item.value}
-						</div>
-						<div className="text-sm md:text-base text-neutral-600 dark:text-neutral-300 mt-1">
-							{item.label}
-						</div>
-					</div>
-				))}
-				</div>
 			</div>
 		</section>
 	);

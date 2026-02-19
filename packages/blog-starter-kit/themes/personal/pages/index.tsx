@@ -32,14 +32,9 @@ type Props = {
 	publication: PublicationFragment;
 	initialPosts: PostFragment[];
 	initialPageInfo: PageInfoFragment;
-	heroStats: {
-		articlesCount: number;
-		categoriesCount: number;
-		seriesCount: number;
-	};
 };
 
-export default function Index({ publication, initialPosts, initialPageInfo, heroStats }: Props) {
+export default function Index({ publication, initialPosts, initialPageInfo }: Props) {
 	const [posts, setPosts] = useState<PostFragment[]>(initialPosts);
 	const [pageInfo, setPageInfo] = useState<Props['initialPageInfo']>(initialPageInfo);
 	const [visibleLatestCount, setVisibleLatestCount] = useState(3);
@@ -115,7 +110,7 @@ export default function Index({ publication, initialPosts, initialPageInfo, hero
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0 divide-y divide-neutral-200 dark:divide-neutral-800">
-						<Hero stats={heroStats} />
+						<Hero />
 						{featuredPost && (
 							<>
 								<FeaturedArticle post={featuredPost} />
@@ -170,55 +165,11 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 	}
 	const initialPosts = (publication.posts.edges ?? []).map((edge) => edge.node);
 
-	const allPosts = [...initialPosts];
-	let cursor = publication.posts.pageInfo.endCursor;
-	let hasNextPage = !!publication.posts.pageInfo.hasNextPage;
-
-	while (hasNextPage && cursor) {
-		const nextPage = await request<MorePostsByPublicationQuery, MorePostsByPublicationQueryVariables>(
-			GQL_ENDPOINT,
-			MorePostsByPublicationDocument,
-			{
-				first: 20,
-				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
-				after: cursor,
-			},
-		);
-
-		if (!nextPage.publication) {
-			break;
-		}
-
-		const nextPosts = nextPage.publication.posts.edges.map((edge) => edge.node);
-		allPosts.push(...nextPosts);
-		cursor = nextPage.publication.posts.pageInfo.endCursor;
-		hasNextPage = !!nextPage.publication.posts.pageInfo.hasNextPage;
-	}
-
-	const categorySlugs = new Set<string>();
-	const seriesIds = new Set<string>();
-
-	for (const post of allPosts) {
-		for (const tag of post.tags ?? []) {
-			categorySlugs.add(tag.slug);
-		}
-		if (post.series?.id) {
-			seriesIds.add(post.series.id);
-		}
-	}
-
-	const heroStats = {
-		articlesCount: allPosts.length,
-		categoriesCount: categorySlugs.size,
-		seriesCount: seriesIds.size,
-	};
-
 	return {
 		props: {
 			publication,
 			initialPosts,
 			initialPageInfo: publication.posts.pageInfo,
-			heroStats,
 		},
 		revalidate: 1,
 	};

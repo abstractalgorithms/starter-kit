@@ -10,7 +10,13 @@ import { Layout } from '../components/layout';
 import { PersonalHeader } from '../components/personal-theme-header';
 import { getFooterPosts } from '../lib/api/footerData';
 import {
+	MorePostsByPublicationDocument,
+	MorePostsByPublicationQuery,
+	MorePostsByPublicationQueryVariables,
 	PostFragment,
+	PostsByPublicationDocument,
+	PostsByPublicationQuery,
+	PostsByPublicationQueryVariables,
 	PublicationByHostDocument,
 	PublicationByHostQuery,
 	PublicationByHostQueryVariables,
@@ -22,9 +28,14 @@ const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 type Props = {
 	publication: PublicationFragment;
 	footerPosts: PostFragment[];
+	heroStats: {
+		articlesCount: number;
+		categoriesCount: number;
+		seriesCount: number;
+	};
 };
 
-export default function AboutPage({ publication, footerPosts }: Props) {
+export default function AboutPage({ publication, footerPosts, heroStats }: Props) {
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
@@ -64,7 +75,7 @@ export default function AboutPage({ publication, footerPosts }: Props) {
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-5">
 						<section className="w-full py-12">
-							<div className="max-w-4xl">
+							<div className="w-full">
 								<p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-4">
 									About Us
 								</p>
@@ -79,7 +90,32 @@ export default function AboutPage({ publication, footerPosts }: Props) {
 						</section>
 
 						<section className="w-full py-12 border-t border-neutral-200 dark:border-neutral-800">
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-4">
+							By the Numbers
+						</p>
+						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+							{[
+								{ label: 'Published Articles', value: heroStats.articlesCount },
+								{ label: 'Categories', value: heroStats.categoriesCount },
+								{ label: 'Series', value: heroStats.seriesCount },
+							].map((item) => (
+								<div
+									key={item.label}
+									className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-5 py-6 text-center"
+								>
+									<div className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-neutral-50">
+										{item.value}
+									</div>
+									<div className="text-sm md:text-base text-neutral-600 dark:text-neutral-300 mt-1">
+										{item.label}
+									</div>
+								</div>
+							))}
+						</div>
+					</section>
+
+					<section className="w-full py-12 border-t border-neutral-200 dark:border-neutral-800">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6">
 									<h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50 mb-3">Our Mission</h2>
 									<p className="text-neutral-600 dark:text-neutral-300 leading-relaxed">
@@ -136,10 +172,63 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 
 	const footerPosts = await getFooterPosts();
 
+	// Fetch all posts to compute stats
+	const postsData = await request<PostsByPublicationQuery, PostsByPublicationQueryVariables>(
+		GQL_ENDPOINT,
+		PostsByPublicationDocument,
+		{
+			first: 20,
+			host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
+		},
+	);
+
+	const allPosts: PostFragment[] = [];
+	if (postsData.publication) {
+		const initialPosts = (postsData.publication.posts.edges ?? []).map((edge) => edge.node);
+		allPosts.push(...initialPosts);
+
+		let cursor = postsData.publication.posts.pageInfo.endCursor;
+		let hasNextPage = !!postsData.publication.posts.pageInfo.hasNextPage;
+
+		while (hasNextPage && cursor) {
+			const nextPage = await request<
+				MorePostsByPublicationQuery,
+				MorePostsByPublicationQueryVariables
+			>(GQL_ENDPOINT, MorePostsByPublicationDocument, {
+				first: 20,
+				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
+				after: cursor,
+			});
+			if (!nextPage.publication) break;
+			const nextPosts = nextPage.publication.posts.edges.map((edge) => edge.node);
+			allPosts.push(...nextPosts);
+			cursor = nextPage.publication.posts.pageInfo.endCursor;
+			hasNextPage = !!nextPage.publication.posts.pageInfo.hasNextPage;
+		}
+	}
+
+	const categorySlugs = new Set<string>();
+	const seriesIds = new Set<string>();
+	for (const post of allPosts) {
+		for (const tag of post.tags ?? []) {
+			categorySlugs.add(tag.slug);
+		}
+		if (post.series?.id) {
+			seriesIds.add(post.series.id);
+		}
+	}
+
+	const heroStats = {
+		articlesCount: allPosts.length,
+		categoriesCount: categorySlugs.size,
+		seriesCount: seriesIds.size,
+	};
+
 	return {
 		props: {
 			publication,
 			footerPosts,
+			heroStats,
 		},
 		revalidate: 1,
 	};
