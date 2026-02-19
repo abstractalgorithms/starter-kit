@@ -44,9 +44,9 @@ export default function Tag({ publication, posts, tag }: Props) {
 						dangerouslySetInnerHTML={{ __html: JSON.stringify(addPublicationJsonLd(publication)) }}
 					/>
 				</Head>
-				<Container className="mx-auto w-full px-5 py-10">
-					<div className="max-w-6xl mx-auto w-full flex flex-col gap-0">
-						<PersonalHeader />
+				<Container className="mx-auto w-full py-4">
+					<PersonalHeader />
+					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0">
 						<section className="w-full py-12">
 							<div className="mb-12">
 								<p className="font-semibold uppercase text-sm text-neutral-600 dark:text-neutral-400 mb-3">

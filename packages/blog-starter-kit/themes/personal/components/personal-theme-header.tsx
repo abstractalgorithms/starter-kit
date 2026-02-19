@@ -22,18 +22,21 @@ export const PersonalHeader = () => {
 				</Link>
 			</li>
 			<li>
-					<Link href="/posts" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-						All Posts
-					</Link>
-				</li>
-				<li>
+				<Link href="/posts" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+					All Posts
+				</Link>
+			</li>
+			<li>
+				<Link href="/about" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+					About
+				</Link>
 			</li>
 		</ul>
 	);
 
 	return (
-		<header className="w-full border-b border-neutral-200 dark:border-neutral-800 py-4 mb-8">
-			<div className="flex items-center justify-between">
+		<header className="w-full bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800">
+			<div className="max-w-6xl mx-auto px-5 py-2.5 flex items-center justify-between">
 				<h1>
 					<Link
 						className="flex flex-row items-center gap-3 text-lg font-bold leading-tight tracking-tight text-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"

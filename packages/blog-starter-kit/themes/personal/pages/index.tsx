@@ -4,7 +4,6 @@ import request from 'graphql-request';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import { useState } from 'react';
-import { Waypoint } from 'react-waypoint';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { CategoriesSection } from '../components/categories-section';
@@ -38,9 +37,29 @@ type Props = {
 export default function Index({ publication, initialPosts, initialPageInfo }: Props) {
 	const [posts, setPosts] = useState<PostFragment[]>(initialPosts);
 	const [pageInfo, setPageInfo] = useState<Props['initialPageInfo']>(initialPageInfo);
-	const [loadedMore, setLoadedMore] = useState(false);
+	const [visibleLatestCount, setVisibleLatestCount] = useState(3);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const featuredPost = publication.pinnedPost ?? posts[0];
+	const latestPostsAll = featuredPost
+		? posts.filter((post) => post.id !== featuredPost.id)
+		: posts;
+	const latestPosts = latestPostsAll.slice(0, visibleLatestCount);
+	const canLoadMoreLatest =
+		visibleLatestCount < latestPostsAll.length || !!pageInfo.hasNextPage;
 
 	const loadMore = async () => {
+		if (isLoadingMore) {
+			return;
+		}
+
+		const nextVisibleCount = visibleLatestCount + 3;
+		setVisibleLatestCount(nextVisibleCount);
+
+		if (nextVisibleCount <= latestPostsAll.length || !pageInfo.hasNextPage || !pageInfo.endCursor) {
+			return;
+		}
+
+		setIsLoadingMore(true);
 		const data = await request<MorePostsByPublicationQuery, MorePostsByPublicationQueryVariables>(
 			GQL_ENDPOINT,
 			MorePostsByPublicationDocument,
@@ -51,12 +70,13 @@ export default function Index({ publication, initialPosts, initialPageInfo }: Pr
 			},
 		);
 		if (!data.publication) {
+			setIsLoadingMore(false);
 			return;
 		}
 		const newPosts = data.publication.posts.edges.map((edge) => edge.node);
-		setPosts([...posts, ...newPosts]);
+		setPosts((prevPosts) => [...prevPosts, ...newPosts]);
 		setPageInfo(data.publication.posts.pageInfo);
-		setLoadedMore(true);
+		setIsLoadingMore(false);
 	};
 	return (
 		<AppProvider publication={publication} posts={posts}>
@@ -87,33 +107,31 @@ export default function Index({ publication, initialPosts, initialPageInfo }: Pr
 						}}
 					/>
 				</Head>
-				<Container className="mx-auto w-full px-5 py-10">
-					<div className="max-w-6xl mx-auto w-full flex flex-col gap-0">
-						<PersonalHeader />
+				<Container className="mx-auto w-full py-4">
+					<PersonalHeader />
+					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0 divide-y divide-neutral-200 dark:divide-neutral-800">
 						<Hero />
-						{posts.length > 0 && (
+						{featuredPost && (
 							<>
-								<FeaturedArticle post={posts[0]} />
+								<FeaturedArticle post={featuredPost} />
 								
 								<section className="w-full py-12">
 									<h2 className="text-2xl md:text-3xl font-bold mb-8 text-neutral-900 dark:text-neutral-50">
 										Latest Articles
 									</h2>
 									<div className="w-full">
-										<MinimalPosts context="home" posts={posts.slice(1, 4)} />
+										<MinimalPosts context="home" posts={latestPosts} />
 									</div>
-									{!loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
+									{canLoadMoreLatest && (
 										<div className="flex justify-center mt-10">
 											<button 
 												onClick={loadMore}
+												disabled={isLoadingMore}
 												className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
 											>
-												Load more articles
+												{isLoadingMore ? 'Loading...' : 'Load more articles'}
 											</button>
 										</div>
-									)}
-									{loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
-										<Waypoint onEnter={loadMore} bottomOffset={'10%'} />
 									)}
 								</section>
 							</>

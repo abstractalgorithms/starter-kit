@@ -10,6 +10,34 @@ import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+
+// ─── Reading Progress Bar ─────────────────────────────────────────────────────
+const ReadingProgressBar = () => {
+	const [progress, setProgress] = useState(0);
+
+	useEffect(() => {
+		const onScroll = () => {
+			const el = document.documentElement;
+			const scrolled = el.scrollTop;
+			const total = el.scrollHeight - el.clientHeight;
+			setProgress(total > 0 ? Math.min(100, (scrolled / total) * 100) : 0);
+		};
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
+	}, []);
+
+	return (
+		<div
+			aria-hidden="true"
+			className="fixed top-0 left-0 z-50 w-full h-0.5 bg-transparent pointer-events-none"
+		>
+			<div
+				className="h-full bg-blue-500 dark:bg-blue-400"
+				style={{ width: `${progress}%`, transition: 'width 80ms linear' }}
+			/>
+		</div>
+	);
+};
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { CoverImage } from '../components/cover-image';
@@ -49,34 +77,14 @@ const Post = ({ publication, post }: PostProps) => {
 	const [, setMobMount] = useState(false);
 	const [canLoadEmbeds, setCanLoadEmbeds] = useState(false);
 	useEmbeds({ enabled: canLoadEmbeds });
-	const tagsList = (post.tags ?? []).map((tag) => (
-		<li key={tag.id}>
-			<Link
-				href={`/tag/${tag.slug}`}
-				className="inline-flex items-center px-3 py-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
-			>
-				#{tag.slug}
-			</Link>
-		</li>
-	));
 
 	if (post.hasLatexInPost) {
-		setTimeout(() => {
-			handleMathJax(true);
-		}, 500);
+		setTimeout(() => handleMathJax(true), 500);
 	}
 
 	useEffect(() => {
-		if (screen.width <= 425) {
-			setMobMount(true);
-		}
-
-		if (!post) {
-			return;
-		}
-
-		// TODO:
-		// More of an alert, did this below to wrap async funcs inside useEffect
+		if (screen.width <= 425) setMobMount(true);
+		if (!post) return;
 		(async () => {
 			await loadIframeResizer();
 			triggerCustomWidgetEmbed(post.publication?.id.toString());
@@ -85,19 +93,26 @@ const Post = ({ publication, post }: PostProps) => {
 	}, []);
 
 	const coverImageSrc = !!post.coverImage?.url
-		? resizeImage(post.coverImage.url, {
-				w: 1600,
-				h: 840,
-				c: 'thumb',
-		  })
+		? resizeImage(post.coverImage.url, { w: 1600, h: 840, c: 'thumb' })
 		: undefined;
+
+	const tocItems =
+		post.features?.tableOfContents?.isEnabled &&
+		(post.features.tableOfContents.items ?? []).length > 0
+			? post.features.tableOfContents.items ?? []
+			: [];
+
+	const tags = post.tags ?? [];
 
 	return (
 		<>
 			<Head>
 				<title>{post.seo?.title || post.title}</title>
 				<link rel="canonical" href={post.url} />
-				<meta name="description" content={post.seo?.description || post.subtitle || post.brief} />
+				<meta
+					name="description"
+					content={post.seo?.description || post.subtitle || post.brief}
+				/>
 				<meta property="twitter:card" content="summary_large_image" />
 				<meta property="twitter:title" content={post.seo?.title || post.title} />
 				<meta
@@ -126,32 +141,168 @@ const Post = ({ publication, post }: PostProps) => {
 						__html: JSON.stringify(addArticleJsonLd(publication, post)),
 					}}
 				/>
-				<style dangerouslySetInnerHTML={{ __html: highlightJsMonokaiTheme }}></style>
+				<style dangerouslySetInnerHTML={{ __html: highlightJsMonokaiTheme }} />
 			</Head>
-			<h1 className="text-5xl font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50 mt-0">
-				{post.title}
-			</h1>
-			<div className="flex flex-wrap gap-4 text-sm text-neutral-600 dark:text-neutral-400 mb-6">
-				<span className="flex items-center gap-1">
-					<DateFormatter dateString={post.publishedAt} />
-				</span>
-				<span>•</span>
-				<span className="flex items-center gap-1">{post.readTimeInMinutes} min read</span>
-			</div>
+
+			{/* ── Back Navigation ── */}
+			<Link
+				href="/"
+				className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-10 group"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform"
+				>
+					<path
+						fillRule="evenodd"
+						d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+						clipRule="evenodd"
+					/>
+				</svg>
+				All Posts
+			</Link>
+
+			{/* ── Post Header ── */}
+			<header className="mb-10">
+				<h1 className="text-4xl md:text-5xl font-extrabold leading-[1.15] tracking-tight text-neutral-900 dark:text-neutral-50 mb-4">
+					{post.title}
+				</h1>
+
+				{post.subtitle && (
+					<p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed font-normal mb-6">
+						{post.subtitle}
+					</p>
+				)}
+
+				{/* Meta row */}
+				<div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-5 border-t border-neutral-100 dark:border-neutral-800">
+					<div className="flex items-center gap-2">
+						{post.author.profilePicture && (
+							<img
+								src={resizeImage(post.author.profilePicture, { w: 80, h: 80, c: 'face' })}
+								alt={post.author.name}
+								className="w-7 h-7 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-800"
+							/>
+						)}
+						<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+							{post.author.name}
+						</span>
+					</div>
+					<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
+					<time className="text-sm text-neutral-400 dark:text-neutral-500">
+						<DateFormatter dateString={post.publishedAt} />
+					</time>
+					<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
+					<span className="inline-flex items-center gap-1 text-sm text-neutral-400 dark:text-neutral-500">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							className="w-3.5 h-3.5"
+						>
+							<path
+								fillRule="evenodd"
+								d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z"
+								clipRule="evenodd"
+							/>
+						</svg>
+						{post.readTimeInMinutes} min read
+					</span>
+					{post.reactionCount > 0 && (
+						<>
+							<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
+							<span className="text-sm text-neutral-400 dark:text-neutral-500">
+								♥ {post.reactionCount}
+							</span>
+						</>
+					)}
+				</div>
+			</header>
+
+			{/* ── Cover Image ── */}
 			{!!coverImageSrc && (
-				<div className="w-full my-8 rounded-lg overflow-hidden">
+				<div className="w-full mb-10 rounded-xl overflow-hidden ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-sm">
 					<CoverImage title={post.title} priority={true} src={coverImageSrc} />
 				</div>
 			)}
-			<MarkdownToHtml contentMarkdown={post.content.markdown} />
-			{(post.tags ?? []).length > 0 && (
-				<div className="w-full text-neutral-600 dark:text-neutral-300 mt-8 pt-8 border-t border-neutral-200 dark:border-neutral-800">
-					<div className="flex flex-wrap gap-2 items-center">
-						<span className="text-sm font-medium">Tags:</span>
-						<ul className="flex flex-row flex-wrap items-center gap-2">{tagsList}</ul>
-					</div>
+
+			{/* ── Table of Contents ── */}
+			{tocItems.length > 0 && (
+				<nav
+					aria-label="Table of contents"
+					className="mb-10 p-5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
+				>
+					<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
+						In this article
+					</p>
+					<ol className="flex flex-col gap-1.5 m-0 p-0 list-none">
+						{tocItems.map((item) => (
+							<li
+								key={item.id}
+								style={{ paddingLeft: `${(item.level - 1) * 0.875}rem` }}
+								className="m-0 p-0"
+							>
+								<a
+									href={`#${item.slug}`}
+									className="text-sm text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors leading-snug no-underline"
+								>
+									{item.title}
+								</a>
+							</li>
+						))}
+					</ol>
+				</nav>
+			)}
+
+			{/* ── Article Body ── */}
+			<div className="w-full">
+				<MarkdownToHtml contentMarkdown={post.content.markdown} />
+			</div>
+
+			{/* ── Tags ── */}
+			{tags.length > 0 && (
+				<div className="mt-12 pt-8 border-t border-neutral-100 dark:border-neutral-800">
+					<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
+						Tags
+					</p>
+					<ul className="flex flex-wrap gap-2 list-none m-0 p-0">
+						{tags.map((tag) => (
+							<li key={tag.id} className="m-0 p-0">
+								<Link
+									href={`/tag/${tag.slug}`}
+									className="inline-flex items-center px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full text-xs font-mono border border-neutral-200 dark:border-neutral-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 dark:hover:bg-blue-950 dark:hover:text-blue-300 dark:hover:border-blue-800 transition-colors"
+								>
+									#{tag.slug}
+								</Link>
+							</li>
+						))}
+					</ul>
 				</div>
 			)}
+
+			{/* ── Author Card ── */}
+			<div className="mt-10 p-5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-4">
+				{post.author.profilePicture && (
+					<img
+						src={resizeImage(post.author.profilePicture, { w: 120, h: 120, c: 'face' })}
+						alt={post.author.name}
+						className="w-14 h-14 rounded-full ring-2 ring-neutral-200 dark:ring-neutral-700 flex-shrink-0"
+					/>
+				)}
+				<div>
+					<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-0.5">
+						Written by
+					</p>
+					<p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">
+						{post.author.name}
+					</p>
+					<p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5 font-mono">
+						@{post.author.username}
+					</p>
+				</div>
+			</div>
 		</>
 	);
 };
@@ -176,15 +327,16 @@ export default function PostOrPage(props: Props) {
 	return (
 		<AppProvider publication={publication} post={maybePost} page={maybePage}>
 			<Layout>
-				<Container className="mx-auto w-full px-5 py-10">
-					<div className="max-w-6xl mx-auto w-full flex flex-col gap-0">
-						<PersonalHeader />
-						<article className="flex flex-col items-start gap-8 pb-10 w-full">
+				{props.type === 'post' && <ReadingProgressBar />}
+				<Container className="mx-auto w-full py-4">
+					<PersonalHeader />
+					<div className="max-w-6xl mx-auto w-full px-5 pt-10 pb-20">
+						<article>
 							{props.type === 'post' && <Post {...props} />}
 							{props.type === 'page' && <Page {...props} />}
 						</article>
-						<Footer />
 					</div>
+					<Footer />
 				</Container>
 			</Layout>
 		</AppProvider>
@@ -249,13 +401,7 @@ export async function getStaticPaths() {
 	const postSlugs = (data.publication?.posts.edges ?? []).map((edge) => edge.node.slug);
 
 	return {
-		paths: postSlugs.map((slug) => {
-			return {
-				params: {
-					slug: slug,
-				},
-			};
-		}),
+		paths: postSlugs.map((slug) => ({ params: { slug } })),
 		fallback: 'blocking',
 	};
 }

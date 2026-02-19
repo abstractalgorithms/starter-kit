@@ -58,7 +58,7 @@ export default function Post({ publication, post }: Props) {
 		<AppProvider publication={publication} post={post}>
 			<Layout>
 				<Container className="mx-auto flex max-w-3xl flex-col items-stretch gap-10 px-5 py-10">
-					<PersonalHeader />
+				<PersonalHeader />
 					<article className="flex flex-col items-start gap-10 pb-10">
 						<Head>
 							<title>{post.seo?.title || post.title}</title>

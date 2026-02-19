@@ -62,24 +62,24 @@ export const Hero = () => {
 	}, [posts]);
 
 	return (
-		<section className="w-full py-12 md:py-20">
+		<section className="w-full py-8 md:py-12">
 			<div className="text-center">
-			<h1 className="text-4xl md:text-7xl font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50 mb-2">
+			<h1 className="text-4xl md:text-7xl font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50 mb-0">
 				Discover the Art of
 			</h1>
-			<div className="min-h-24 md:min-h-32 flex items-center justify-center mb-4">
+			<div className="min-h-16 md:min-h-20 flex items-center justify-center mb-2 overflow-visible">
 				<h2 
-					className={`text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-500 transition-opacity duration-300 ${
+					className={`text-3xl md:text-5xl font-bold leading-snug text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-500 transition-opacity duration-300 ${
 						isVisible ? 'opacity-100' : 'opacity-0'
 					}`}
 				>
 					{ROTATING_TOPICS[topicIndex]}
 				</h2>
 			</div>
-				<p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-300 max-w-2xl mx-auto mb-8">
+				<p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-300 max-w-2xl mx-auto mb-6">
 					{publication.descriptionSEO || publication.title}
 			</p>
-			<div className="mb-12">
+			<div className="mb-8">
 				<SearchBar />
 			</div>
 			<div className="flex flex-col sm:flex-row items-center justify-center gap-6 md:gap-8 text-neutral-600 dark:text-neutral-300 px-4">

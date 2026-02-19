@@ -4,5 +4,11 @@ type Props = {
 };
 
 export const Container = ({ children, className }: Props) => {
-	return <div className={'w-full bg-blue-50 dark:bg-slate-950 ' + (className || '')}>{children}</div>;
+	return (
+		<div className="w-full bg-white dark:bg-neutral-950 py-4">
+			<div className={className || ''}>
+				{children}
+			</div>
+		</div>
+	);
 };

@@ -68,9 +68,9 @@ export default function SeriesPage({ publication, series }: Props) {
 						}}
 					/>
 				</Head>
-				<Container className="mx-auto w-full px-5 py-10">
-					<div className="max-w-6xl mx-auto w-full flex flex-col gap-0">
-						<PersonalHeader />
+				<Container className="mx-auto w-full py-4">
+					<PersonalHeader />
+					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0">
 						<section className="w-full py-12">
 							<div className="mb-12">
 								<h1 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-neutral-50 mb-4">
@@ -131,7 +131,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 			GQL_ENDPOINT,
 			PostsByPublicationDocument,
 			{
-				first: 100,
+				first: 50,
 				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
 			},
 		);

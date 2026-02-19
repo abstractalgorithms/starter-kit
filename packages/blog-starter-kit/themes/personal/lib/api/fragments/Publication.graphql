@@ -8,6 +8,9 @@ fragment Publication on Publication {
 	isTeam
 	followersCount
 	descriptionSEO
+	pinnedPost {
+		...Post
+	}
 	author {
 		name
 		username
