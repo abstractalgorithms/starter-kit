@@ -68,7 +68,7 @@ export default function SeriesPage({ publication, series }: Props) {
 						}}
 					/>
 				</Head>
-				<Container className="mx-auto w-full py-4">
+				<Container className="mx-auto w-full">
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0">
 						<section className="w-full py-12">

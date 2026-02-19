@@ -46,28 +46,33 @@ export default function AllPostsPage({ publication, initialPosts, initialPageInf
 	const [selectedSeries, setSelectedSeries] = useState<string | null>(null);
 
 	const categories = useMemo(() => {
-		const set = new Set<string>();
+		const map = new Map<string, string>();
 		posts.forEach((p) => {
 			(p.tags ?? []).forEach((t) => {
-				if (t && t.slug) set.add(t.slug);
+				if (t && t.slug && !map.has(t.slug)) map.set(t.slug, t.name ?? t.slug);
 			});
 		});
-		return Array.from(set).sort();
+		return Array.from(map.entries())
+			.map(([slug, name]) => ({ slug, name }))
+			.sort((a, b) => a.name.localeCompare(b.name));
 	}, [posts]);
 
 	const seriesList = useMemo(() => {
-		const set = new Set<string>();
+		const map = new Map<string, string>();
 		posts.forEach((p) => {
 			const s = p.series;
 			if (Array.isArray(s)) {
 				s.forEach((item) => {
-					if (item && item.slug) set.add(item.slug);
+					if (item && item.slug && !map.has(item.slug)) map.set(item.slug, item.name ?? item.slug);
 				});
 			} else if (s && (s as any).slug) {
-				set.add((s as any).slug);
+				const slug = (s as any).slug;
+				if (!map.has(slug)) map.set(slug, (s as any).name ?? slug);
 			}
 		});
-		return Array.from(set).sort();
+		return Array.from(map.entries())
+			.map(([slug, name]) => ({ slug, name }))
+			.sort((a, b) => a.name.localeCompare(b.name));
 	}, [posts]);
 
 	const filteredPosts = useMemo(() => {
@@ -148,64 +153,85 @@ export default function AllPostsPage({ publication, initialPosts, initialPageInf
 						}}
 					/>
 				</Head>
-				<Container className="mx-auto w-full py-4">
+				<Container className="mx-auto w-full">
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0">
-						<h1 className="text-4xl font-bold text-neutral-900 dark:text-neutral-50">All Posts</h1>
-						<div className="flex flex-col md:flex-row items-start md:items-center gap-4 mt-4 mb-6">
-							<div className="flex items-center gap-2">
-								<label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mr-2">Category</label>
-								<select
-									value={selectedCategory ?? ''}
-									onChange={(e) => setSelectedCategory(e.target.value || null)}
-									className="rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-								>
-									<option value="">All</option>
-									{categories.map((c) => (
-										<option key={c} value={c}>
-											{c}
-										</option>
-									))}
-								</select>
+						<section className="w-full py-12">
+							<div className="mb-8">
+								<h1 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-neutral-50 mb-4">
+									All Posts
+								</h1>
+								<p className="text-lg text-neutral-600 dark:text-neutral-300">
+									Browse every article, filter by category or series.
+								</p>
 							</div>
-							<div className="flex items-center gap-2">
-								<label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mr-2">Series</label>
-								<select
-									value={selectedSeries ?? ''}
-									onChange={(e) => setSelectedSeries(e.target.value || null)}
-									className="rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+							<div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-8 p-4 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900">
+								<div className="flex items-center gap-2">
+									<label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Category</label>
+									<select
+										value={selectedCategory ?? ''}
+										onChange={(e) => setSelectedCategory(e.target.value || null)}
+										className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-2 text-sm bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+									>
+										<option value="">All</option>
+										{categories.map((c) => (
+											<option key={c.slug} value={c.slug}>
+												{c.name}
+											</option>
+										))}
+									</select>
+								</div>
+								<div className="flex items-center gap-2">
+									<label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Series</label>
+									<select
+										value={selectedSeries ?? ''}
+										onChange={(e) => setSelectedSeries(e.target.value || null)}
+										className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-2 text-sm bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+									>
+										<option value="">All</option>
+										{seriesList.map((s) => (
+											<option key={s.slug} value={s.slug}>
+												{s.name}
+											</option>
+										))}
+									</select>
+								</div>
+								<button
+									onClick={() => {
+										setSelectedCategory(null);
+										setSelectedSeries(null);
+									}}
+									className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
 								>
-									<option value="">All</option>
-									{seriesList.map((s) => (
-										<option key={s} value={s}>
-											{s}
-										</option>
-									))}
-								</select>
+									Clear filters
+								</button>
+								{(selectedCategory || selectedSeries) && (
+									<span className="text-sm text-neutral-500 dark:text-neutral-400 md:ml-auto">
+										{filteredPosts.length} post{filteredPosts.length !== 1 ? 's' : ''} found
+									</span>
+								)}
 							</div>
-							<button
-								onClick={() => {
-									setSelectedCategory(null);
-									setSelectedSeries(null);
-								}}
-								className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
-							>
-								Clear
-							</button>
-						</div>
-						{filteredPosts.length > 0 ? (
-							<MinimalPosts context="home" posts={filteredPosts} />
-						) : (
-							<p className="text-neutral-600 dark:text-neutral-400">No posts match the selected filters.</p>
-						)}
-						{!loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
-							<button onClick={loadMore}>
-								Load more
-							</button>
-						)}
-						{loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
-							<Waypoint onEnter={loadMore} bottomOffset={'10%'} />
-						)}
+							{filteredPosts.length > 0 ? (
+								<MinimalPosts context="home" posts={filteredPosts} />
+							) : (
+								<p className="text-neutral-600 dark:text-neutral-400 py-8 text-center">
+									No posts match the selected filters.
+								</p>
+							)}
+							{!loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
+								<div className="mt-10 flex justify-center">
+									<button
+										onClick={loadMore}
+										className="px-6 py-2.5 text-sm font-medium rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+									>
+										Load more posts
+									</button>
+								</div>
+							)}
+							{loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
+								<Waypoint onEnter={loadMore} bottomOffset={'10%'} />
+							)}
+						</section>
 					</div>
 					<Footer />
 				</Container>

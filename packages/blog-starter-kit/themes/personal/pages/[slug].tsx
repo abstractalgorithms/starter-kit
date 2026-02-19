@@ -328,7 +328,7 @@ export default function PostOrPage(props: Props) {
 		<AppProvider publication={publication} post={maybePost} page={maybePage}>
 			<Layout>
 				{props.type === 'post' && <ReadingProgressBar />}
-				<Container className="mx-auto w-full py-4">
+				<Container className="mx-auto w-full">
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-5 pt-10 pb-20">
 						<article>

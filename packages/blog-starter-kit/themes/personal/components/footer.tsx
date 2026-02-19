@@ -28,8 +28,8 @@ export const Footer = () => {
 	const navItems = publication.preferences?.navbarItems ?? [];
 
 	return (
-		<footer className="w-full bg-white dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800">
-			<div className="max-w-6xl mx-auto px-5 py-16">
+		<footer className="w-full bg-white dark:bg-neutral-950">
+			<div className="max-w-6xl mx-auto px-5 pt-16 pb-6 border-t border-neutral-200 dark:border-neutral-800">
 				<div className={`grid grid-cols-1 gap-12 mb-12 ${topTags.length > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
 
 					{/* ── Brand ─────────────────────────────────────────────── */}

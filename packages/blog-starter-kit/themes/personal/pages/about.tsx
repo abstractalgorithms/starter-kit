@@ -57,7 +57,7 @@ export default function AboutPage({ publication }: Props) {
 						}}
 					/>
 				</Head>
-				<Container className="mx-auto w-full py-4">
+				<Container className="mx-auto w-full">
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-5">
 						<section className="w-full py-12">

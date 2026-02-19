@@ -2,6 +2,16 @@ import { useMemo, useState, useEffect } from 'react';
 import { useAppContext } from './contexts/appContext';
 import { SearchBar } from './search-bar';
 
+type HeroStats = {
+	articlesCount: number;
+	categoriesCount: number;
+	seriesCount: number;
+};
+
+type Props = {
+	stats?: HeroStats;
+};
+
 const ROTATING_TOPICS = [
 	'System Designs',
 	'Machine Learning',
@@ -11,7 +21,7 @@ const ROTATING_TOPICS = [
 	'Software Architecture',
 ];
 
-export const Hero = () => {
+export const Hero = ({ stats: globalStats }: Props) => {
 	const { publication, posts } = useAppContext();
 	const [topicIndex, setTopicIndex] = useState(0);
 	const [isVisible, setIsVisible] = useState(true);
@@ -28,8 +38,8 @@ export const Hero = () => {
 		return () => clearInterval(interval);
 	}, []);
 
-	const stats = useMemo(() => {
-		// Count total articles from posts
+	const localStats = useMemo(() => {
+		// Count total articles from posts available in current context
 		const articlesCount = posts.length;
 
 		// Count unique categories (tags)
@@ -46,10 +56,8 @@ export const Hero = () => {
 		// Count unique series from posts
 		const seriesSet = new Set<string>();
 		posts.forEach((post) => {
-			if (post.series && Array.isArray(post.series) && post.series.length > 0) {
-				post.series.forEach((s) => {
-					if (s && s.id) seriesSet.add(s.id);
-				});
+			if (post.series?.id) {
+				seriesSet.add(post.series.id);
 			}
 		});
 		const seriesCount = seriesSet.size;
@@ -60,6 +68,14 @@ export const Hero = () => {
 			seriesCount,
 		};
 	}, [posts]);
+
+	const stats = globalStats ?? localStats;
+
+	const statItems = [
+		{ label: 'Published Articles', value: stats.articlesCount },
+		{ label: 'Categories', value: stats.categoriesCount },
+		{ label: 'Series', value: stats.seriesCount },
+	];
 
 	return (
 		<section className="w-full py-8 md:py-12">
@@ -82,27 +98,20 @@ export const Hero = () => {
 			<div className="mb-8">
 				<SearchBar />
 			</div>
-			<div className="flex flex-col sm:flex-row items-center justify-center gap-6 md:gap-8 text-neutral-600 dark:text-neutral-300 px-4">
-					<div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
-						<span className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-neutral-50">
-							{stats.articlesCount}
-						</span>
-						<span className="text-sm md:text-base">Published Articles</span>
+			<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-4 max-w-4xl mx-auto">
+				{statItems.map((item) => (
+					<div
+						key={item.label}
+						className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-5 py-4 text-center"
+					>
+						<div className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-neutral-50">
+							{item.value}
+						</div>
+						<div className="text-sm md:text-base text-neutral-600 dark:text-neutral-300 mt-1">
+							{item.label}
+						</div>
 					</div>
-					<span className="hidden sm:block text-neutral-400">•</span>
-					<div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
-						<span className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-neutral-50">
-							{stats.categoriesCount}
-						</span>
-						<span className="text-sm md:text-base">Categories</span>
-					</div>
-					<span className="hidden sm:block text-neutral-400">•</span>
-					<div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
-						<span className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-neutral-50">
-							{stats.seriesCount}
-						</span>
-						<span className="text-sm md:text-base">Series</span>
-					</div>
+				))}
 				</div>
 			</div>
 		</section>

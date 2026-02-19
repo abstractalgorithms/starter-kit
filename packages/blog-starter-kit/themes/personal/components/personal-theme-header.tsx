@@ -35,8 +35,8 @@ export const PersonalHeader = () => {
 	);
 
 	return (
-		<header className="w-full bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800">
-			<div className="max-w-6xl mx-auto px-5 py-2.5 flex items-center justify-between">
+		<header className="w-full bg-white dark:bg-neutral-950">
+			<div className="max-w-6xl mx-auto px-5 py-2.5 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
 				<h1>
 					<Link
 						className="flex flex-row items-center gap-3 text-lg font-bold leading-tight tracking-tight text-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -47,7 +47,7 @@ export const PersonalHeader = () => {
 							<img
 								className="block h-10 w-10 rounded-full fill-current"
 								alt={publication.author.name}
-								src={resizeImage(publication.author.profilePicture, {
+								src={resizeImage(publication.favicon, {
 									w: 400,
 									h: 400,
 									c: 'face',

@@ -59,7 +59,7 @@ export const CategoriesSection = ({ posts = [] }: Props) => {
 			</div>
 			<div className="grid grid-cols-2 md:grid-cols-3 gap-4">
 				{displayCategories.map((category) => (
-					<Link key={category.slug} href={`/search?tag=${category.slug}`}>
+					<Link key={category.slug} href={`/tag/${category.slug}`}>
 						<div className="group p-4 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950 transition-all cursor-pointer">
 							<div className="font-semibold text-neutral-900 dark:text-neutral-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors capitalize">
 								{category.name}
