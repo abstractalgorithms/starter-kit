@@ -43,13 +43,13 @@ export const PersonalHeader = () => {
 						href="/"
 						aria-label={`${publication.author.name}'s blog home page`}
 					>
-						{publication.author.profilePicture && (
+						{publication.favicon && (
 							<img
 								className="block h-10 w-10 rounded-full fill-current"
-								alt={publication.author.name}
+								alt={publication.title}
 								src={resizeImage(publication.favicon, {
-									w: 400,
-									h: 400,
+									w: 40,
+									h: 40,
 									c: 'face',
 								})}
 							/>
