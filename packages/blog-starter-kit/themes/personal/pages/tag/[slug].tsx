@@ -9,6 +9,7 @@ import { Footer } from '../../components/footer';
 import { Layout } from '../../components/layout';
 import { MinimalPosts } from '../../components/minimal-posts';
 import { PersonalHeader } from '../../components/personal-theme-header';
+import { getFooterPosts } from '../../lib/api/footerData';
 import {
 	PostFragment,
 	PublicationFragment,
@@ -19,15 +20,16 @@ import {
 
 type Props = {
 	posts: PostFragment[];
+	footerPosts: PostFragment[];
 	publication: PublicationFragment;
 	tag: string;
 };
 
-export default function Tag({ publication, posts, tag }: Props) {
+export default function Tag({ publication, posts, tag, footerPosts }: Props) {
 	const title = `#${tag} - ${publication.title}`;
 
 	return (
-		<AppProvider publication={publication}>
+		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
 				<Head>
 					<title>{title}</title>
@@ -98,12 +100,14 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 		};
 	}
 	const posts = publication.posts.edges.map((edge) => edge.node);
+	const footerPosts = await getFooterPosts();
 
 	return {
 		props: {
 			posts,
 			publication,
 			tag: params.slug,
+			footerPosts,
 		},
 		revalidate: 1,
 	};

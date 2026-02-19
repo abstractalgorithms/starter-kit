@@ -12,9 +12,10 @@ type Props = {
 	slug: string;
 	commentCount: number;
 	coverImage?: string;
+	readTimeInMinutes?: number;
 };
 
-export const MinimalPostPreview = ({ title, brief, date, slug, commentCount, coverImage }: Props) => {
+export const MinimalPostPreview = ({ title, brief, date, slug, commentCount, coverImage, readTimeInMinutes }: Props) => {
 	const postURL = `/${slug}`;
 
 	return (
@@ -25,7 +26,7 @@ export const MinimalPostPreview = ({ title, brief, date, slug, commentCount, cov
 						<img
 							src={coverImage}
 							alt={title}
-							className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+							className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
 						/>
 					</div>
 				)}
@@ -39,7 +40,7 @@ export const MinimalPostPreview = ({ title, brief, date, slug, commentCount, cov
 					<div className="flex flex-row items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400 mt-auto pt-3 border-t border-neutral-200 dark:border-neutral-800 w-full">
 						<DateFormatter dateString={date} />
 						<span>•</span>
-						<span>5 min read</span>
+						<span>{readTimeInMinutes ?? 5} min read</span>
 						{commentCount > 2 && (
 							<>
 								<span>•</span>

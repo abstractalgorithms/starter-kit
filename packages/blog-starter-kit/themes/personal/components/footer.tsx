@@ -5,11 +5,11 @@ const linkClass =
 	'text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm';
 
 export const Footer = () => {
-	const { publication, posts } = useAppContext();
+	const { publication, footerPosts } = useAppContext();
 
-	// ── Derive unique tags from whatever posts are in context ──────────────────
+	// ── Derive unique tags from footer posts ───────────────────────────────────
 	const tagMap = new Map<string, { name: string; slug: string; count: number }>();
-	for (const post of posts ?? []) {
+	for (const post of footerPosts) {
 		for (const tag of post.tags ?? []) {
 			const entry = tagMap.get(tag.slug);
 			tagMap.set(tag.slug, { name: tag.name, slug: tag.slug, count: (entry?.count ?? 0) + 1 });
@@ -19,21 +19,34 @@ export const Footer = () => {
 		.sort((a, b) => b.count - a.count)
 		.slice(0, 6);
 
+	// ── Derive unique series from footer posts ─────────────────────────────
+	const seriesMap = new Map<string, { name: string; slug: string }>();
+	for (const post of footerPosts) {
+		if (post.series?.id) {
+			seriesMap.set(post.series.id, { name: post.series.name, slug: post.series.slug });
+		}
+	}
+	const seriesList = [...seriesMap.values()];
+
 	// ── Social links — only render when the URL is actually set ───────────────
 	const { twitter, github, linkedin, hashnode: hashnodeLink } = publication.links ?? {};
 
 	const hasAnySocial = twitter || github || linkedin || hashnodeLink;
 
-	// ── Nav items from publication settings ───────────────────────────────────
-	const navItems = publication.preferences?.navbarItems ?? [];
+	// ── Grid column count (brand always takes 2 cols, each section takes 1) ───
+	const sectionCols = 2 + (seriesList.length > 0 ? 1 : 0) + (topTags.length > 0 ? 1 : 0); // nav + author + conditionals
+	const totalCols = 2 + sectionCols; // 2 for brand
+	const gridColsClass =
+		totalCols === 6 ? 'md:grid-cols-6' :
+		totalCols === 5 ? 'md:grid-cols-5' : 'md:grid-cols-4';
 
 	return (
 		<footer className="w-full bg-white dark:bg-neutral-950">
 			<div className="max-w-6xl mx-auto px-5 pt-16 pb-6 border-t border-neutral-200 dark:border-neutral-800">
-				<div className={`grid grid-cols-1 gap-12 mb-12 ${topTags.length > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+				<div className={`grid grid-cols-1 gap-x-8 gap-y-12 mb-12 ${gridColsClass}`}>
 
-					{/* ── Brand ─────────────────────────────────────────────── */}
-					<div className="md:col-span-1">
+					{/* ── Brand ───────────────────────────────────────────── */}
+					<div className="md:col-span-2">
 						<h3 className="text-base font-bold text-neutral-900 dark:text-neutral-50 mb-2">
 							{publication.title}
 						</h3>
@@ -94,22 +107,28 @@ export const Footer = () => {
 						<ul className="space-y-2.5">
 							<li><Link href="/" className={linkClass}>Home</Link></li>
 							<li><Link href="/posts" className={linkClass}>All Posts</Link></li>
-							{navItems
-								.filter((item): item is typeof item & { url: string } =>
-									!!item.url && item.url.length > 0
-								)
-								.map((item) => (
-									<li key={item.id}>
-										<a href={item.url} className={linkClass}
-											target={item.url.startsWith('http') ? '_blank' : undefined}
-											rel={item.url.startsWith('http') ? 'noopener noreferrer' : undefined}>
-											{item.label}
-										</a>
-									</li>
-								))}
+							<li><Link href="/series" className={linkClass}>All Series</Link></li>
 							<li><Link href="/about" className={linkClass}>About</Link></li>
 						</ul>
 					</div>
+
+					{/* ── Series ───────────────────────────────────────────── */}
+					{seriesList.length > 0 && (
+						<div>
+							<h4 className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-4">
+								Series
+							</h4>
+							<ul className="space-y-2.5">
+								{seriesList.map((s) => (
+									<li key={s.slug}>
+										<Link href={`/series/${s.slug}`} className={linkClass}>
+											{s.name}
+										</Link>
+									</li>
+								))}
+							</ul>
+						</div>
+					)}
 
 					{/* ── Popular Topics (only when posts in context) ───────── */}
 					{topTags.length > 0 && (

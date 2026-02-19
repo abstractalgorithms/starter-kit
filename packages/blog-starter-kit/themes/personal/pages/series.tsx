@@ -12,6 +12,9 @@ import { PersonalHeader } from '../components/personal-theme-header';
 import {
 	PublicationFragment,
 	PostFragment,
+	MorePostsByPublicationDocument,
+	MorePostsByPublicationQuery,
+	MorePostsByPublicationQueryVariables,
 	PostsByPublicationDocument,
 	PostsByPublicationQuery,
 	PostsByPublicationQueryVariables,
@@ -30,11 +33,12 @@ type Series = {
 type Props = {
 	publication: PublicationFragment;
 	series: Series[];
+	footerPosts: PostFragment[];
 };
 
-export default function SeriesPage({ publication, series }: Props) {
+export default function SeriesPage({ publication, series, footerPosts }: Props) {
 	return (
-		<AppProvider publication={publication}>
+		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
 				<Head>
 					<title>All Series - {publication.title}</title>
@@ -84,7 +88,7 @@ export default function SeriesPage({ publication, series }: Props) {
 							{series.length > 0 ? (
 								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 									{series.map((s) => (
-										<Link key={s.id} href={`/tag/${s.slug}`}>
+										<Link key={s.id} href={`/series/${s.slug}`}>
 											<div className="group h-full">
 												<div className="flex flex-col h-full p-6 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-300">
 													{s.coverImage && (
@@ -146,19 +150,41 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		// Extract unique series from posts
 		const seriesMap = new Map<string, Series>();
 		
-		const posts = (publication.posts.edges ?? []).map((edge) => edge.node);
-		
-		posts.forEach((post) => {
-			// Series might be available if Hashnode includes it in the Post fragment
-			// If not, we can extract from post metadata or skip for now
+		const allPosts = [...(publication.posts.edges ?? []).map((e) => e.node)];
+		let cursor = publication.posts.pageInfo?.endCursor;
+		let hasNextPage = !!publication.posts.pageInfo?.hasNextPage;
+
+		while (hasNextPage && cursor) {
+			const nextPage = await request<MorePostsByPublicationQuery, MorePostsByPublicationQueryVariables>(
+				GQL_ENDPOINT,
+				MorePostsByPublicationDocument,
+				{ first: 20, host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST, after: cursor },
+			);
+			if (!nextPage.publication) break;
+			allPosts.push(...nextPage.publication.posts.edges.map((e) => e.node));
+			cursor = nextPage.publication.posts.pageInfo.endCursor;
+			hasNextPage = !!nextPage.publication.posts.pageInfo.hasNextPage;
+		}
+
+		allPosts.forEach((post) => {
+			const s = post.series;
+			if (s && s.id && !seriesMap.has(s.id)) {
+				seriesMap.set(s.id, {
+					id: s.id,
+					name: s.name,
+					slug: s.slug,
+					postCount: allPosts.filter((p) => p.series?.id === s.id).length,
+				});
+			}
 		});
 
-		const series = Array.from(seriesMap.values());
+		const series = Array.from(seriesMap.values()).sort((a, b) => b.postCount - a.postCount);
 
 		return {
 			props: {
 				publication,
 				series,
+				footerPosts: allPosts,
 			},
 			revalidate: 1,
 		};

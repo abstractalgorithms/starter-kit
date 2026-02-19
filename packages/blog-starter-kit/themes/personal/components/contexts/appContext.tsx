@@ -9,6 +9,7 @@ import {
 type AppContext = {
 	publication: PublicationFragment;
 	posts: PostFragment[];
+	footerPosts: PostFragment[];
 	post: PostFullFragment | null;
 	page: NonNullable<PageByPublicationQuery['publication']>['staticPage'];
 };
@@ -19,12 +20,14 @@ const AppProvider = ({
 	children,
 	publication,
 	posts = [],
+	footerPosts,
 	post,
 	page,
 }: {
 	children: React.ReactNode;
 	publication: PublicationFragment;
 	posts?: PostFragment[];
+	footerPosts?: PostFragment[];
 	post?: PostFullFragment | null;
 	page?: NonNullable<PageByPublicationQuery['publication']>['staticPage'];
 }) => {
@@ -33,6 +36,7 @@ const AppProvider = ({
 			value={{
 				publication,
 				posts,
+				footerPosts: footerPosts ?? posts,
 				post: post ?? null,
 				page: page ?? null,
 			}}

@@ -8,7 +8,9 @@ import { AppProvider } from '../components/contexts/appContext';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { PersonalHeader } from '../components/personal-theme-header';
+import { getFooterPosts } from '../lib/api/footerData';
 import {
+	PostFragment,
 	PublicationByHostDocument,
 	PublicationByHostQuery,
 	PublicationByHostQueryVariables,
@@ -19,11 +21,12 @@ const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 
 type Props = {
 	publication: PublicationFragment;
+	footerPosts: PostFragment[];
 };
 
-export default function AboutPage({ publication }: Props) {
+export default function AboutPage({ publication, footerPosts }: Props) {
 	return (
-		<AppProvider publication={publication}>
+		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
 				<Head>
 					<title>About Us - {publication.title}</title>
@@ -131,9 +134,12 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		};
 	}
 
+	const footerPosts = await getFooterPosts();
+
 	return {
 		props: {
 			publication,
+			footerPosts,
 		},
 		revalidate: 1,
 	};

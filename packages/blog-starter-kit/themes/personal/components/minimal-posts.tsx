@@ -21,6 +21,7 @@ export const MinimalPosts = ({ posts }: Props) => {
 					slug={post.slug}
 					commentCount={post.comments?.totalDocuments}
 					coverImage={post.coverImage?.url}
+					readTimeInMinutes={post.readTimeInMinutes}
 				/>
 			))}
 		</section>

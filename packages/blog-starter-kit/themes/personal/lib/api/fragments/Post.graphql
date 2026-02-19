@@ -12,6 +12,7 @@ fragment Post on Post {
 	publishedAt
 	slug
 	brief
+	readTimeInMinutes
 	tags {
 		id
 		name

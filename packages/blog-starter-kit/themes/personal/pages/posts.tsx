@@ -119,7 +119,7 @@ export default function AllPostsPage({ publication, initialPosts, initialPageInf
 		setLoadedMore(true);
 	};
 	return (
-		<AppProvider publication={publication}>
+		<AppProvider publication={publication} footerPosts={initialPosts}>
 			<Layout>
 				<Head>
 					<title>All Posts - {publication.title}</title>

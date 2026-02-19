@@ -48,6 +48,7 @@ import { MarkdownToHtml } from '../components/markdown-to-html';
 import { PersonalHeader } from '../components/personal-theme-header';
 import {
 	PageByPublicationDocument,
+	PostFragment,
 	PostFullFragment,
 	PublicationFragment,
 	SinglePostByPublicationDocument,
@@ -56,17 +57,20 @@ import {
 } from '../generated/graphql';
 // @ts-ignore
 import { triggerCustomWidgetEmbed } from '@starter-kit/utils/trigger-custom-widget-embed';
+import { getFooterPosts } from '../lib/api/footerData';
 
 type PostProps = {
 	type: 'post';
 	post: PostFullFragment;
 	publication: PublicationFragment;
+	footerPosts: PostFragment[];
 };
 
 type PageProps = {
 	type: 'page';
 	page: StaticPageFragment;
 	publication: PublicationFragment;
+	footerPosts: PostFragment[];
 };
 
 type Props = PostProps | PageProps;
@@ -147,7 +151,7 @@ const Post = ({ publication, post }: PostProps) => {
 			{/* ── Back Navigation ── */}
 			<Link
 				href="/"
-				className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-10 group"
+				className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-8 group"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -164,69 +168,76 @@ const Post = ({ publication, post }: PostProps) => {
 				All Posts
 			</Link>
 
-			{/* ── Post Header ── */}
-			<header className="mb-10">
-				<h1 className="text-4xl md:text-5xl font-extrabold leading-[1.15] tracking-tight text-neutral-900 dark:text-neutral-50 mb-4">
-					{post.title}
-				</h1>
+			{/* ── Post Hero: header + cover image side-by-side ── */}
+			<div className={`flex flex-col ${coverImageSrc ? 'md:flex-row md:items-center md:gap-10' : ''} mb-12`}>
+				{/* Left: title, subtitle, meta */}
+				<div className={coverImageSrc ? 'flex-1 min-w-0' : 'w-full'}>
+					<h1 className="text-4xl md:text-5xl font-extrabold leading-[1.15] tracking-tight text-neutral-900 dark:text-neutral-50 mb-4">
+						{post.title}
+					</h1>
 
-				{post.subtitle && (
-					<p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed font-normal mb-6">
-						{post.subtitle}
-					</p>
-				)}
-
-				{/* Meta row */}
-				<div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-5 border-t border-neutral-100 dark:border-neutral-800">
-					<div className="flex items-center gap-2">
-						{post.author.profilePicture && (
-							<img
-								src={resizeImage(post.author.profilePicture, { w: 80, h: 80, c: 'face' })}
-								alt={post.author.name}
-								className="w-7 h-7 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-800"
-							/>
-						)}
-						<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
-							{post.author.name}
-						</span>
-					</div>
-					<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
-					<time className="text-sm text-neutral-400 dark:text-neutral-500">
-						<DateFormatter dateString={post.publishedAt} />
-					</time>
-					<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
-					<span className="inline-flex items-center gap-1 text-sm text-neutral-400 dark:text-neutral-500">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							className="w-3.5 h-3.5"
-						>
-							<path
-								fillRule="evenodd"
-								d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z"
-								clipRule="evenodd"
-							/>
-						</svg>
-						{post.readTimeInMinutes} min read
-					</span>
-					{post.reactionCount > 0 && (
-						<>
-							<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
-							<span className="text-sm text-neutral-400 dark:text-neutral-500">
-								♥ {post.reactionCount}
-							</span>
-						</>
+					{post.subtitle && (
+						<p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed font-normal mb-6">
+							{post.subtitle}
+						</p>
 					)}
-				</div>
-			</header>
 
-			{/* ── Cover Image ── */}
-			{!!coverImageSrc && (
-				<div className="w-full mb-10 rounded-xl overflow-hidden ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-sm">
-					<CoverImage title={post.title} priority={true} src={coverImageSrc} />
+					{/* Meta row */}
+					<div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-5 border-t border-neutral-100 dark:border-neutral-800">
+						<div className="flex items-center gap-2">
+							{post.author.profilePicture && (
+								<img
+									src={resizeImage(post.author.profilePicture, { w: 80, h: 80, c: 'face' })}
+									alt={post.author.name}
+									className="w-7 h-7 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-800"
+								/>
+							)}
+							<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+								{post.author.name}
+							</span>
+						</div>
+						<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
+						<time className="text-sm text-neutral-400 dark:text-neutral-500">
+							<DateFormatter dateString={post.publishedAt} />
+						</time>
+						<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
+						<span className="inline-flex items-center gap-1 text-sm text-neutral-400 dark:text-neutral-500">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								className="w-3.5 h-3.5"
+							>
+								<path
+									fillRule="evenodd"
+									d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z"
+									clipRule="evenodd"
+								/>
+							</svg>
+							{post.readTimeInMinutes} min read
+						</span>
+						{post.reactionCount > 0 && (
+							<>
+								<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
+								<span className="text-sm text-neutral-400 dark:text-neutral-500">
+									♥ {post.reactionCount}
+								</span>
+							</>
+						)}
+					</div>
 				</div>
-			)}
+
+				{/* Right: cover image */}
+				{!!coverImageSrc && (
+					<div className="w-full md:w-2/5 shrink-0 mt-8 md:mt-0 h-52 md:h-64 rounded-xl overflow-hidden ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-sm">
+						<img
+							src={coverImageSrc}
+							alt={`Cover Image for ${post.title}`}
+							className="w-full h-full object-cover"
+						/>
+					</div>
+				)}
+			</div>
 
 			{/* ── Table of Contents ── */}
 			{tocItems.length > 0 && (
@@ -325,7 +336,7 @@ export default function PostOrPage(props: Props) {
 	const publication = props.publication;
 
 	return (
-		<AppProvider publication={publication} post={maybePost} page={maybePage}>
+		<AppProvider publication={publication} post={maybePost} page={maybePage} footerPosts={props.footerPosts}>
 			<Layout>
 				{props.type === 'post' && <ReadingProgressBar />}
 				<Container className="mx-auto w-full">
@@ -359,11 +370,13 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 	const postData = await request(endpoint, SinglePostByPublicationDocument, { host, slug });
 
 	if (postData.publication?.post) {
+		const footerPosts = await getFooterPosts();
 		return {
 			props: {
 				type: 'post',
 				post: postData.publication.post,
 				publication: postData.publication,
+				footerPosts,
 			},
 			revalidate: 1,
 		};
@@ -372,11 +385,13 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 	const pageData = await request(endpoint, PageByPublicationDocument, { host, slug });
 
 	if (pageData.publication?.staticPage) {
+		const footerPosts = await getFooterPosts();
 		return {
 			props: {
 				type: 'page',
 				page: pageData.publication.staticPage,
 				publication: pageData.publication,
+				footerPosts,
 			},
 			revalidate: 1,
 		};

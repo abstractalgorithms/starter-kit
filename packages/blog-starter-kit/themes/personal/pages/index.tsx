@@ -179,7 +179,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 			GQL_ENDPOINT,
 			MorePostsByPublicationDocument,
 			{
-				first: 50,
+				first: 20,
 				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
 				after: cursor,
 			},
