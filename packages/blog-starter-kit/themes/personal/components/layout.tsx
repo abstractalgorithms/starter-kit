@@ -1,3 +1,4 @@
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from './analytics';
 import { Integrations } from './integrations';
 import { Meta } from './meta';
@@ -19,6 +20,7 @@ export const Layout = ({ children }: Props) => {
 			</div>
 			<Analytics />
 			<Integrations />
+			<SpeedInsights />
 		</>
 	);
 };
