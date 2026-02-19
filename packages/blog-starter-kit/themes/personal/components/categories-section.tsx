@@ -1,6 +1,15 @@
 import Link from 'next/link';
 import { PostFragment } from '../generated/graphql';
 
+const ACCENT_COLORS = [
+	'border-l-blue-500',
+	'border-l-emerald-500',
+	'border-l-purple-500',
+	'border-l-orange-500',
+	'border-l-teal-500',
+	'border-l-rose-500',
+];
+
 type Props = {
 	posts?: PostFragment[];
 };

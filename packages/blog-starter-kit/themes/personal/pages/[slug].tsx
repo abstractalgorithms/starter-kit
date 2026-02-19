@@ -10,6 +10,31 @@ import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { Container } from '../components/container';
+import { AppProvider } from '../components/contexts/appContext';
+import { CoverImage } from '../components/cover-image';
+import { DateFormatter } from '../components/date-formatter';
+import { Footer } from '../components/footer';
+import { Layout } from '../components/layout';
+import { MarkdownToHtml } from '../components/markdown-to-html';
+import { PersonalHeader } from '../components/personal-theme-header';
+import {
+	PageByPublicationDocument,
+	PostFragment,
+	PostFullFragment,
+	PublicationFragment,
+	SinglePostByPublicationDocument,
+	SlugPostsByPublicationDocument,
+	StaticPageFragment,
+} from '../generated/graphql';
+// @ts-ignore
+import { triggerCustomWidgetEmbed } from '@starter-kit/utils/trigger-custom-widget-embed';
+import { getFooterPosts } from '../lib/api/footerData';
+import { SocialShare } from '../components/social-share';
+import { TableOfContents } from '../components/table-of-contents';
+// CalloutBlock and QuizCard are available for use inside article content:
+// import { CalloutBlock } from '../components/callout-block';
+// import { QuizCard } from '../components/quiz-card';
 
 // ─── Reading Progress Bar ─────────────────────────────────────────────────────
 const ReadingProgressBar = () => {
@@ -38,26 +63,6 @@ const ReadingProgressBar = () => {
 		</div>
 	);
 };
-import { Container } from '../components/container';
-import { AppProvider } from '../components/contexts/appContext';
-import { CoverImage } from '../components/cover-image';
-import { DateFormatter } from '../components/date-formatter';
-import { Footer } from '../components/footer';
-import { Layout } from '../components/layout';
-import { MarkdownToHtml } from '../components/markdown-to-html';
-import { PersonalHeader } from '../components/personal-theme-header';
-import {
-	PageByPublicationDocument,
-	PostFragment,
-	PostFullFragment,
-	PublicationFragment,
-	SinglePostByPublicationDocument,
-	SlugPostsByPublicationDocument,
-	StaticPageFragment,
-} from '../generated/graphql';
-// @ts-ignore
-import { triggerCustomWidgetEmbed } from '@starter-kit/utils/trigger-custom-widget-embed';
-import { getFooterPosts } from '../lib/api/footerData';
 
 type PostProps = {
 	type: 'post';
@@ -176,12 +181,6 @@ const Post = ({ publication, post }: PostProps) => {
 						{post.title}
 					</h1>
 
-					{post.subtitle && (
-						<p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed font-normal mb-6">
-							{post.subtitle}
-						</p>
-					)}
-
 					{/* Meta row */}
 					<div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-5 border-t border-neutral-100 dark:border-neutral-800">
 						<div className="flex items-center gap-2">
@@ -225,6 +224,16 @@ const Post = ({ publication, post }: PostProps) => {
 							</>
 						)}
 					</div>
+
+					{/* ── TL;DR block ── */}
+					{(post.subtitle || post.brief) && (
+						<div className="mt-5 p-4 rounded-lg border border-blue-100 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30">
+							<p className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-1.5">TL;DR</p>
+							<p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
+								{post.subtitle || post.brief}
+							</p>
+						</div>
+					)}
 				</div>
 
 				{/* Right: cover image */}
@@ -233,86 +242,97 @@ const Post = ({ publication, post }: PostProps) => {
 						<img
 							src={coverImageSrc}
 							alt={`Cover Image for ${post.title}`}
-							className="w-full h-full object-cover"
-						/>
+							className="w-full h-full object-cover"/>
 					</div>
 				)}
 			</div>
 
-			{/* ── Table of Contents ── */}
-			{tocItems.length > 0 && (
-				<nav
-					aria-label="Table of contents"
-					className="mb-10 p-5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
-				>
-					<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
-						In this article
-					</p>
-					<ol className="flex flex-col gap-1.5 m-0 p-0 list-none">
-						{tocItems.map((item) => (
-							<li
-								key={item.id}
-								style={{ paddingLeft: `${(item.level - 1) * 0.875}rem` }}
-								className="m-0 p-0"
-							>
-								<a
-									href={`#${item.slug}`}
-									className="text-sm text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors leading-snug no-underline"
-								>
-									{item.title}
-								</a>
-							</li>
-						))}
-					</ol>
-				</nav>
-			)}
+			{/* ── 3-Column Reading Layout ── */}
+			<div className="flex gap-8 xl:gap-12 mt-12">
+				{/* Left: Social share (sticky, hidden below lg) */}
+				<SocialShare url={post.url} title={post.title} />
 
-			{/* ── Article Body ── */}
-			<div className="w-full">
-				<MarkdownToHtml contentMarkdown={post.content.markdown} />
-			</div>
+				{/* Center: article content */}
+				<div className="flex-1 min-w-0">
+					{/* Mobile/tablet inline ToC (hidden on xl where sidebar ToC appears) */}
+					{tocItems.length > 0 && (
+						<nav
+							aria-label="Table of contents"
+							className="xl:hidden mb-10 p-5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
+						>
+							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
+								In this article
+							</p>
+							<ol className="flex flex-col gap-1.5 m-0 p-0 list-none">
+								{tocItems.map((item) => (
+									<li
+										key={item.id}
+										style={{ paddingLeft: `${(item.level - 1) * 0.875}rem` }}
+										className="m-0 p-0"
+									>
+										<a
+											href={`#${item.slug}`}
+											className="text-sm text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors leading-snug no-underline"
+										>
+											{item.title}
+										</a>
+									</li>
+								))}
+							</ol>
+						</nav>
+					)}
 
-			{/* ── Tags ── */}
-			{tags.length > 0 && (
-				<div className="mt-12 pt-8 border-t border-neutral-100 dark:border-neutral-800">
-					<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
-						Tags
-					</p>
-					<ul className="flex flex-wrap gap-2 list-none m-0 p-0">
-						{tags.map((tag) => (
-							<li key={tag.id} className="m-0 p-0">
-								<Link
-									href={`/tag/${tag.slug}`}
-									className="inline-flex items-center px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full text-xs font-mono border border-neutral-200 dark:border-neutral-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 dark:hover:bg-blue-950 dark:hover:text-blue-300 dark:hover:border-blue-800 transition-colors"
-								>
-									#{tag.slug}
-								</Link>
-							</li>
-						))}
-					</ul>
+					{/* Article body */}
+					<div className="w-full">
+						<MarkdownToHtml contentMarkdown={post.content.markdown} />
+					</div>
+
+					{/* Tags */}
+					{tags.length > 0 && (
+						<div className="mt-12 pt-8 border-t border-neutral-100 dark:border-neutral-800">
+							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
+								Tags
+							</p>
+							<ul className="flex flex-wrap gap-2 list-none m-0 p-0">
+								{tags.map((tag) => (
+									<li key={tag.id} className="m-0 p-0">
+										<Link
+											href={`/tag/${tag.slug}`}
+											className="inline-flex items-center px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full text-xs font-mono border border-neutral-200 dark:border-neutral-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 dark:hover:bg-blue-950 dark:hover:text-blue-300 dark:hover:border-blue-800 transition-colors"
+										>
+											#{tag.slug}
+										</Link>
+									</li>
+								))}
+							</ul>
+						</div>
+					)}
+
+					{/* Author Card */}
+					<div className="mt-10 p-5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-4">
+						{post.author.profilePicture && (
+							<img
+								src={resizeImage(post.author.profilePicture, { w: 120, h: 120, c: 'face' })}
+								alt={post.author.name}
+								className="w-14 h-14 rounded-full ring-2 ring-neutral-200 dark:ring-neutral-700 flex-shrink-0"
+							/>
+						)}
+						<div>
+							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-0.5">
+								Written by
+							</p>
+							<p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">
+								{post.author.name}
+							</p>
+							<p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5 font-mono">
+								@{post.author.username}
+							</p>
+						</div>
+					</div>
 				</div>
-			)}
 
-			{/* ── Author Card ── */}
-			<div className="mt-10 p-5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-4">
-				{post.author.profilePicture && (
-					<img
-						src={resizeImage(post.author.profilePicture, { w: 120, h: 120, c: 'face' })}
-						alt={post.author.name}
-						className="w-14 h-14 rounded-full ring-2 ring-neutral-200 dark:ring-neutral-700 flex-shrink-0"
-					/>
-				)}
-				<div>
-					<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-0.5">
-						Written by
-					</p>
-					<p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">
-						{post.author.name}
-					</p>
-					<p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5 font-mono">
-						@{post.author.username}
-					</p>
-				</div>
+				{/* Right: sticky ToC (xl+) */}
+				<TableOfContents items={tocItems} />
 			</div>
 		</>
 	);

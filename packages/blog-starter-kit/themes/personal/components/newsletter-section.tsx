@@ -58,12 +58,20 @@ export const NewsletterSection = () => {
 	return (
 		<section id="newsletter-subscribe" className="w-full py-12">
 			<div className="bg-gradient-to-r from-blue-600 to-teal-600 rounded-lg p-8 md:p-12 text-white">
-				<h2 className="text-2xl md:text-3xl font-bold mb-4">
-					Stay Updated with Algorithm Insights
-				</h2>
-				<p className="text-blue-100 mb-6">
-					Get the latest articles, tutorials, and algorithm insights delivered directly to your inbox.
+				<p className="text-sm font-semibold uppercase tracking-wide text-blue-200 mb-3">
+					Free newsletter
 				</p>
+				<h2 className="text-2xl md:text-3xl font-bold mb-4">
+					Level Up Your Engineering Skills
+				</h2>
+				<p className="text-blue-100 mb-2">
+					Join engineers who get exclusive deep-dives on system design, algorithm breakdowns, and AI engineering tips — every week, straight to your inbox.
+				</p>
+				<ul className="text-sm text-blue-200 mb-6 space-y-1">
+					<li>✓ Weekly system design &amp; algorithm deep-dives</li>
+					<li>✓ AI &amp; LLM engineering insights</li>
+					<li>✓ Interview prep cheat sheets</li>
+				</ul>
 				<form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-3">
 					<input
 						type="email"
@@ -77,9 +85,9 @@ export const NewsletterSection = () => {
 					<button
 						type="submit"
 						disabled={isSubmitting}
-						className="px-6 py-3 bg-white text-blue-600 font-semibold rounded hover:bg-blue-50 transition-colors"
+						className="px-6 py-3 bg-white text-blue-600 font-semibold rounded hover:bg-blue-50 transition-colors whitespace-nowrap"
 					>
-						{isSubmitting ? 'Subscribing...' : 'Subscribe'}
+						{isSubmitting ? 'Subscribing...' : 'Get weekly insights'}
 					</button>
 				</form>
 				{submitted && (

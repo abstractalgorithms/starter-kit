@@ -36,6 +36,15 @@ type Props = {
 	footerPosts: PostFragment[];
 };
 
+const ACCENT_COLORS = [
+	'border-l-blue-500',
+	'border-l-emerald-500',
+	'border-l-purple-500',
+	'border-l-orange-500',
+	'border-l-teal-500',
+	'border-l-rose-500',
+] as const;
+
 export default function SeriesPage({ publication, series, footerPosts }: Props) {
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
@@ -74,53 +83,92 @@ export default function SeriesPage({ publication, series, footerPosts }: Props) 
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0">
-						<section className="w-full py-12">
-							<div className="mb-12">
-								<h1 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-neutral-50 mb-4">
-									All Series
-								</h1>
-								<p className="text-lg text-neutral-600 dark:text-neutral-300">
-									Comprehensive guides and tutorial series covering various topics.
+					<div className="max-w-6xl mx-auto w-full px-5 pt-10 pb-20">
+						{/* Back nav */}
+						<Link
+							href="/"
+							className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-10 group"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform"
+							>
+								<path
+									fillRule="evenodd"
+									d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+									clipRule="evenodd"
+								/>
+							</svg>
+							Home
+						</Link>
+
+						{/* Page header */}
+						<div className="mb-10">
+							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
+								Learning Paths
+							</p>
+							<h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3">
+								All Series
+							</h1>
+							<p className="text-lg text-neutral-500 dark:text-neutral-400 max-w-xl">
+								Structured, end-to-end guides — read them in order for the full picture.
+							</p>
+						</div>
+
+						{series.length > 0 ? (
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+								{series.map((s, i) => (
+									<Link
+										key={s.id}
+										href={`/series/${s.slug}`}
+										className={`group flex flex-col h-full rounded-xl border border-l-4 ${ACCENT_COLORS[i % ACCENT_COLORS.length]} border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden`}
+									>
+										{s.coverImage && (
+											<div className="w-full h-36 overflow-hidden">
+												<img
+													src={s.coverImage}
+													alt={s.name}
+													className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+												/>
+											</div>
+										)}
+										<div className="flex flex-col flex-grow p-5">
+											<h3 className="text-base font-bold text-neutral-900 dark:text-neutral-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-auto capitalize">
+												{s.name}
+											</h3>
+											<div className="flex items-center justify-between mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+												<span className="text-xs font-mono text-neutral-400 dark:text-neutral-500">
+													{s.postCount} article{s.postCount !== 1 ? 's' : ''}
+												</span>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													className="w-4 h-4 text-neutral-300 dark:text-neutral-600 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all"
+												>
+													<path
+														fillRule="evenodd"
+														d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+														clipRule="evenodd"
+													/>
+												</svg>
+											</div>
+										</div>
+									</Link>
+								))}
+							</div>
+						) : (
+							<div className="flex flex-col items-center justify-center py-20 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
+								<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
+									Coming soon
+								</p>
+								<p className="text-base text-neutral-500 dark:text-neutral-400">
+									No series available yet.
 								</p>
 							</div>
-
-							{series.length > 0 ? (
-								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-									{series.map((s) => (
-										<Link key={s.id} href={`/series/${s.slug}`}>
-											<div className="group h-full">
-												<div className="flex flex-col h-full p-6 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-300">
-													{s.coverImage && (
-														<div className="relative w-full h-48 overflow-hidden rounded-md mb-4 -m-6 mb-4">
-															<img
-																src={s.coverImage}
-																alt={s.name}
-																className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-															/>
-														</div>
-													)}
-													<div className="flex flex-col flex-grow">
-														<h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-3 capitalize">
-															{s.name}
-														</h3>
-														<div className="text-sm text-neutral-500 dark:text-neutral-400 pt-3 border-t border-neutral-200 dark:border-neutral-800">
-															{s.postCount} article{s.postCount !== 1 ? 's' : ''}
-														</div>
-													</div>
-												</div>
-											</div>
-										</Link>
-									))}
-								</div>
-							) : (
-								<div className="text-center py-12">
-									<p className="text-lg text-neutral-600 dark:text-neutral-400">
-										No series available yet.
-									</p>
-								</div>
-							)}
-						</section>
+						)}
 					</div>
 					<Footer />
 				</Container>

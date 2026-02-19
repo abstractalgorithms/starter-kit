@@ -9,7 +9,6 @@ import { AppProvider } from '../../components/contexts/appContext';
 import { DateFormatter } from '../../components/date-formatter';
 import { Footer } from '../../components/footer';
 import { Layout } from '../../components/layout';
-import { MinimalPosts } from '../../components/minimal-posts';
 import { PersonalHeader } from '../../components/personal-theme-header';
 import { getFooterPosts } from '../../lib/api/footerData';
 import {
@@ -37,6 +36,10 @@ type Props = {
 
 export default function SeriesDetailPage({ publication, posts, series, footerPosts }: Props) {
 	const title = `${series.name} - ${publication.title}`;
+	const totalReadTime = posts.reduce((sum, p) => sum + (p.readTimeInMinutes ?? 0), 0);
+	const latestDate = posts.length > 0
+		? posts.reduce((latest, p) => (p.publishedAt > latest ? p.publishedAt : latest), posts[0].publishedAt)
+		: null;
 
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
@@ -63,69 +66,152 @@ export default function SeriesDetailPage({ publication, posts, series, footerPos
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0">
-						<section className="w-full py-12">
-							{/* ── Series Hero: header + cover image side-by-side ── */}
-							<div className={`flex flex-col ${series.coverImage ? 'md:flex-row md:items-center md:gap-10' : ''} mb-12`}>
-								{/* Left: breadcrumb, label, title, description, count */}
-								<div className={series.coverImage ? 'flex-1 min-w-0' : 'w-full'}>
-									<Link
-										href="/series"
-										className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-50 transition-colors mb-4"
-									>
-										← All Series
-									</Link>
-									<p className="font-semibold uppercase text-sm text-neutral-600 dark:text-neutral-400 mb-3">
-										Series
-									</p>
-									<h1 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-neutral-50 mb-4">
-										{series.name}
-									</h1>
-									{series.description && (
-										<div
-											className="text-lg text-neutral-600 dark:text-neutral-300 mb-4"
-											dangerouslySetInnerHTML={{ __html: series.description }}
-										/>
-									)}
-									<p className="text-base text-neutral-500 dark:text-neutral-400">
-										{posts.length} article{posts.length !== 1 ? 's' : ''} in this series
-									</p>								{posts.length > 0 && (() => {
-									const latestDate = posts.reduce((latest, p) =>
-										p.publishedAt > latest ? p.publishedAt : latest, posts[0].publishedAt);
-									const totalRead = posts.reduce((sum, p) => sum + (p.readTimeInMinutes ?? 0), 0);
-									return (
-										<div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-											<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">{publication.title}</span>
-											<span className="text-neutral-200 dark:text-neutral-700">·</span>
-											<time className="text-sm text-neutral-400 dark:text-neutral-500">
-												<DateFormatter dateString={latestDate} />
-											</time>
-											<span className="text-neutral-200 dark:text-neutral-700">·</span>
-											<span className="text-sm text-neutral-400 dark:text-neutral-500">{totalRead} min read</span>
-										</div>
-									);
-								})()}								</div>
+					<div className="max-w-6xl mx-auto w-full px-5 pt-10 pb-20">
 
-								{/* Right: cover image */}
-								{series.coverImage && (
-									<div className="w-full md:w-2/5 shrink-0 mt-8 md:mt-0 h-52 md:h-64 rounded-xl overflow-hidden ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-sm">
-										<img
-											src={series.coverImage}
-											alt={series.name}
-											className="w-full h-full object-cover"
-										/>
-									</div>
+						{/* ── Back Navigation ── */}
+						<Link
+							href="/series"
+							className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-10 group"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform"
+							>
+								<path
+									fillRule="evenodd"
+									d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+									clipRule="evenodd"
+								/>
+							</svg>
+							All Series
+						</Link>
+
+						{/* ── Series Hero ── */}
+						<div className={`flex flex-col ${series.coverImage ? 'md:flex-row md:items-center md:gap-10' : ''} mb-12`}>
+							{/* Left: label, title, description, meta */}
+							<div className={series.coverImage ? 'flex-1 min-w-0' : 'w-full'}>
+								<p className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-2">
+									Series
+								</p>
+								<h1 className="text-4xl md:text-5xl font-extrabold leading-[1.15] tracking-tight text-neutral-900 dark:text-neutral-50 mb-4 capitalize">
+									{series.name}
+								</h1>
+								{series.description && (
+									<div
+										className="text-lg text-neutral-500 dark:text-neutral-400 leading-relaxed mb-4"
+										dangerouslySetInnerHTML={{ __html: series.description }}
+									/>
 								)}
+
+								{/* Meta row */}
+								<div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-5 border-t border-neutral-100 dark:border-neutral-800">
+									<span className="inline-flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400">
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+											<path d="M10.75 16.82A7.462 7.462 0 0115 15.5c.71 0 1.396.098 2.046.282A.75.75 0 0018 15.06v-11a.75.75 0 00-.546-.721A9.006 9.006 0 0015 3a8.963 8.963 0 00-4.25 1.065V16.82zM9.25 4.065A8.963 8.963 0 005 3c-.85 0-1.673.118-2.454.339A.75.75 0 002 4.06v11a.75.75 0 00.954.721A7.506 7.506 0 015 15.5c1.579 0 3.042.487 4.25 1.32V4.065z" />
+										</svg>
+										{posts.length} article{posts.length !== 1 ? 's' : ''}
+									</span>
+									{totalReadTime > 0 && (
+										<>
+											<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
+											<span className="inline-flex items-center gap-1 text-sm text-neutral-400 dark:text-neutral-500">
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+													<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" />
+												</svg>
+												~{totalReadTime} min total
+											</span>
+										</>
+									)}
+									{latestDate && (
+										<>
+											<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
+											<span className="text-sm text-neutral-400 dark:text-neutral-500">
+												Updated <DateFormatter dateString={latestDate} />
+											</span>
+										</>
+									)}
+								</div>
 							</div>
-							<hr className="border-neutral-200 dark:border-neutral-800 mb-10" />
-							{posts.length > 0 ? (
-								<MinimalPosts context="series" posts={posts} />
-							) : (
-								<p className="text-neutral-600 dark:text-neutral-400 py-8 text-center">
+
+							{/* Right: cover image */}
+							{series.coverImage && (
+								<div className="w-full md:w-2/5 shrink-0 mt-8 md:mt-0 h-52 md:h-64 rounded-xl overflow-hidden ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-sm">
+									<img
+										src={series.coverImage}
+										alt={series.name}
+										className="w-full h-full object-cover"
+									/>
+								</div>
+							)}
+						</div>
+
+						{/* ── Posts List ── */}
+						{posts.length > 0 ? (
+							<div className="flex flex-col gap-3">
+								<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1">
+									In this series
+								</p>
+								<ol className="flex flex-col gap-3 list-none m-0 p-0">
+									{posts.map((post, i) => (
+										<li key={post.id} className="m-0 p-0">
+											<Link
+												href={`/${post.slug}`}
+												className="group flex items-stretch gap-0 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 hover:border-blue-300 dark:hover:border-blue-800 hover:shadow-sm transition-all overflow-hidden"
+											>
+												{/* Left: step number + text */}
+												<div className="flex items-start gap-4 flex-1 min-w-0 p-4">
+													{/* Step number */}
+													<span className="flex-shrink-0 w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-xs font-bold font-mono text-neutral-500 dark:text-neutral-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-950 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-0.5">
+														{String(i + 1).padStart(2, '0')}
+													</span>
+													{/* Text content */}
+													<div className="flex-1 min-w-0">
+														<p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug line-clamp-2 mb-1">
+															{post.title}
+														</p>
+														{post.brief && (
+															<p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed mb-2">
+																{post.brief}
+															</p>
+														)}
+														<div className="flex items-center gap-2">
+															<span className="text-xs font-mono text-neutral-400 dark:text-neutral-500">
+																{post.readTimeInMinutes} min read
+															</span>
+															<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
+															<time className="text-xs text-neutral-400 dark:text-neutral-500">
+																<DateFormatter dateString={post.publishedAt} />
+															</time>
+														</div>
+													</div>
+												</div>
+												{/* Right: cover image */}
+												{post.coverImage?.url && (
+													<div className="flex-shrink-0 w-28 sm:w-36 self-stretch overflow-hidden">
+														<img
+															src={post.coverImage.url}
+															alt={post.title}
+															className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+														/>
+													</div>
+												)}
+											</Link>
+										</li>
+									))}
+								</ol>
+							</div>
+						) : (
+							<div className="flex flex-col items-center justify-center py-20 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
+								<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
+									Coming soon
+								</p>
+								<p className="text-base text-neutral-500 dark:text-neutral-400">
 									No posts in this series yet.
 								</p>
-							)}
-						</section>
+							</div>
+						)}
 					</div>
 					<Footer />
 				</Container>
