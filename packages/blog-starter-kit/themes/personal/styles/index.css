@@ -44,6 +44,9 @@ html {
     border-radius: 0.625rem;
     background-color: #1a1b26 !important;
     overflow-x: auto;
+    max-width: 100%;
+    white-space: pre;
+    -webkit-overflow-scrolling: touch;
     border: 1px solid rgba(255,255,255,0.06);
     font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 0.875rem !important;
@@ -62,6 +65,18 @@ html {
 .dark .prose pre code {
     background-color: transparent;
     color: #c0caf5;
+}
+
+/* ── Embedded media (images, iframes, videos) ────────────────────────────── */
+.hashnode-content-style img,
+.hashnode-content-style video,
+.hashnode-content-style embed {
+    max-width: 100%;
+    height: auto;
+}
+
+.hashnode-content-style iframe {
+    max-width: 100%;
 }
 
 /* ── Horizontal rule ─────────────────────────────────────────────────────── */
@@ -83,9 +98,13 @@ html {
 }
 
 .prose table {
+    display: block;
     width: 100%;
+    max-width: 100%;
     border-collapse: collapse;
     margin: 1.5rem 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .prose thead {

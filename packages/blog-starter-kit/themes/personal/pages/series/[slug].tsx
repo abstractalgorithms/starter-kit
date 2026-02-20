@@ -4,6 +4,7 @@ import request from 'graphql-request';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import { Container } from '../../components/container';
 import { AppProvider } from '../../components/contexts/appContext';
 import { DateFormatter } from '../../components/date-formatter';
@@ -34,12 +35,68 @@ type Props = {
 	footerPosts: PostFragment[];
 };
 
+const UNCATEGORIZED = '__uncategorized__';
+
+const toTitleCase = (str: string) =>
+	str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+
 export default function SeriesDetailPage({ publication, posts, series, footerPosts }: Props) {
 	const title = `${series.name} - ${publication.title}`;
 	const totalReadTime = posts.reduce((sum, p) => sum + (p.readTimeInMinutes ?? 0), 0);
 	const latestDate = posts.length > 0
 		? posts.reduce((latest, p) => (p.publishedAt > latest ? p.publishedAt : latest), posts[0].publishedAt)
 		: null;
+
+	// Build a stable global index map so step numbers always reflect series order
+	const globalIndexMap = useMemo(() => {
+		const m = new Map<string, number>();
+		posts.forEach((p, i) => m.set(p.id, i));
+		return m;
+	}, [posts]);
+
+	const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+	const { categories, grouped } = useMemo(() => {
+		const order: { slug: string; name: string }[] = [];
+		const seenCats = new Set<string>();
+		const map = new Map<string, PostFragment[]>();
+
+		// Each post is assigned to its FIRST valid tag only (primary category).
+		// This ensures every post appears exactly once — later groups show only the delta.
+		for (const post of posts) {
+			const tags = (post.tags ?? []).filter((t): t is NonNullable<typeof t> => !!t?.slug);
+			const primaryTag = tags[0];
+
+			if (!primaryTag) {
+				// No tags → Uncategorized
+				if (!seenCats.has(UNCATEGORIZED)) {
+					seenCats.add(UNCATEGORIZED);
+					order.push({ slug: UNCATEGORIZED, name: 'Uncategorized' });
+				}
+				map.set(UNCATEGORIZED, [...(map.get(UNCATEGORIZED) ?? []), post]);
+			} else {
+				// Only add to the primary (first) tag bucket
+				if (!seenCats.has(primaryTag.slug)) {
+					seenCats.add(primaryTag.slug);
+					order.push({ slug: primaryTag.slug, name: toTitleCase(primaryTag.name ?? primaryTag.slug) });
+				}
+				map.set(primaryTag.slug, [...(map.get(primaryTag.slug) ?? []), post]);
+			}
+		}
+
+		// Sort by post count descending (majority first); Uncategorized always last
+		const sorted = order
+			.filter(c => c.slug !== UNCATEGORIZED)
+			.sort((a, b) => (map.get(b.slug)?.length ?? 0) - (map.get(a.slug)?.length ?? 0));
+		if (seenCats.has(UNCATEGORIZED)) sorted.push({ slug: UNCATEGORIZED, name: 'Uncategorized' });
+
+		return { categories: sorted, grouped: map };
+	}, [posts]);
+
+	const visibleCategories = useMemo(
+		() => (activeCategory ? categories.filter(c => c.slug === activeCategory) : categories),
+		[categories, activeCategory]
+	);
 
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
@@ -149,58 +206,122 @@ export default function SeriesDetailPage({ publication, posts, series, footerPos
 
 						{/* ── Posts List ── */}
 						{posts.length > 0 ? (
-							<div className="flex flex-col gap-3">
-								<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1">
-									In this series
-								</p>
-								<ol className="flex flex-col gap-3 list-none m-0 p-0">
-									{posts.map((post, i) => (
-										<li key={post.id} className="m-0 p-0">
-											<Link
-												href={`/${post.slug}`}
-												className="group flex items-stretch gap-0 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 hover:border-blue-300 dark:hover:border-blue-800 hover:shadow-sm transition-all overflow-hidden"
+							<div className="flex flex-col gap-8">
+								{/* Category pill filters */}
+								{categories.length > 1 && (
+									<div className="flex flex-wrap gap-2">
+										<button
+											onClick={() => setActiveCategory(null)}
+											className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+												activeCategory === null
+													? 'bg-blue-600 text-white border-blue-600'
+													: 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400'
+											}`}
+										>
+											All
+										</button>
+										{categories.map((cat) => (
+											<button
+												key={cat.slug}
+												onClick={() => setActiveCategory(cat.slug === activeCategory ? null : cat.slug)}
+												className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+													activeCategory === cat.slug
+														? 'bg-blue-600 text-white border-blue-600'
+														: 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400'
+												}`}
 											>
-												{/* Left: step number + text */}
-												<div className="flex items-start gap-4 flex-1 min-w-0 p-4">
-													{/* Step number */}
-													<span className="flex-shrink-0 w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-xs font-bold font-mono text-neutral-500 dark:text-neutral-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-950 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-0.5">
-														{String(i + 1).padStart(2, '0')}
-													</span>
-													{/* Text content */}
-													<div className="flex-1 min-w-0">
-														<p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug line-clamp-2 mb-1">
-															{post.title}
-														</p>
-														{(post.subtitle || post.brief) && (
-															<p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed mb-2">
-																{post.subtitle || post.brief}
-															</p>
-														)}
+												{cat.name}
+												<span className={`text-xs tabular-nums ${
+													activeCategory === cat.slug ? 'text-blue-200' : 'text-neutral-400 dark:text-neutral-500'
+												}`}>
+													{grouped.get(cat.slug)?.length ?? 0}
+												</span>
+											</button>
+										))}
+									</div>
+								)}
+
+								{/* Grouped category sections */}
+								<div className="flex flex-col gap-14">
+									{visibleCategories.map((cat) => {
+										const catPosts = grouped.get(cat.slug) ?? [];
+										if (catPosts.length === 0) return null;
+										return (
+											<section key={cat.slug}>
+												{/* Category heading — only when showing all */}
+												{categories.length > 1 && (
+													<div className="flex items-center gap-3 mb-6">
 														<div className="flex items-center gap-2">
-															<span className="text-xs font-mono text-neutral-400 dark:text-neutral-500">
-																{post.readTimeInMinutes} min read
-															</span>
-															<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
-															<time className="text-xs text-neutral-400 dark:text-neutral-500">
-																<DateFormatter dateString={post.publishedAt} />
-															</time>
+															{cat.slug !== UNCATEGORIZED ? (
+																<Link
+																	href={`/tag/${cat.slug}`}
+																	className="text-lg md:text-xl font-bold text-neutral-900 dark:text-neutral-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+																>
+																	{cat.name}
+																</Link>
+															) : (
+																<h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-neutral-50">
+																	{cat.name}
+																</h3>
+															)}
+															<span className="text-sm font-mono text-neutral-400 dark:text-neutral-500">({catPosts.length})</span>
 														</div>
-													</div>
-												</div>
-												{/* Right: cover image */}
-												{post.coverImage?.url && (
-													<div className="flex-shrink-0 w-28 sm:w-36 self-stretch overflow-hidden">
-														<img
-															src={post.coverImage.url}
-															alt={post.title}
-															className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-														/>
+														<div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
 													</div>
 												)}
-											</Link>
-										</li>
-									))}
-								</ol>
+
+												<ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 list-none m-0 p-0">
+													{catPosts.map((post) => {
+														const stepNum = (globalIndexMap.get(post.id) ?? 0) + 1;
+														return (
+															<li key={post.id} className="m-0 p-0">
+																<Link href={`/${post.slug}`} className="group block h-full">
+																	<div className="flex flex-col h-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 overflow-hidden">
+																		{/* Cover image with step badge */}
+																		<div className="relative w-full h-48 overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0">
+																			{post.coverImage?.url ? (
+																				<img
+																					src={post.coverImage.url}
+																					alt={post.title}
+																					className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+																				/>
+																			) : (
+																				<div className="w-full h-full flex items-center justify-center">
+																					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 text-neutral-300 dark:text-neutral-700">
+																						<path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z" />
+																				</svg>
+																				</div>
+																			)}
+																			<span className="absolute top-3 left-3 w-8 h-8 rounded-full bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm flex items-center justify-center text-xs font-bold font-mono text-neutral-600 dark:text-neutral-300 shadow-sm border border-neutral-200 dark:border-neutral-700 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-colors">
+																				{String(stepNum).padStart(2, '0')}
+																			</span>
+																		</div>
+																		{/* Text content */}
+																		<section className="flex flex-col items-start gap-3 flex-grow p-5">
+																			<h3 className="text-lg font-bold leading-tight tracking-tight text-neutral-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+																				{post.title}
+																			</h3>
+																			{(post.subtitle || post.brief) && (
+																				<p className="text-neutral-600 dark:text-neutral-400 line-clamp-2 text-sm flex-grow leading-relaxed">
+																					{post.subtitle || post.brief}
+																				</p>
+																			)}
+																			<div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400 mt-auto pt-3 border-t border-neutral-200 dark:border-neutral-800 w-full">
+																				<time><DateFormatter dateString={post.publishedAt} /></time>
+																				<span className="text-neutral-300 dark:text-neutral-600">•</span>
+																				<span>{post.readTimeInMinutes} min read</span>
+																			</div>
+																		</section>
+																	</div>
+																</Link>
+															</li>
+														);
+													})}
+												</ol>
+											</section>
+										);
+									})}
+								</div>
 							</div>
 						) : (
 							<div className="flex flex-col items-center justify-center py-20 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">

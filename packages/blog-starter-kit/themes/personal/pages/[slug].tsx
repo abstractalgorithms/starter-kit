@@ -255,7 +255,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			</div>
 
 			{/* ── 3-Column Reading Layout ── */}
-			<div className="flex gap-8 xl:gap-12 mt-12">
+			<div className="flex gap-6 lg:gap-8 xl:gap-12 mt-12 min-w-0 w-full">
 				{/* Left: Social share (sticky, hidden below lg) */}
 				<SocialShare url={post.url} title={post.title} />
 
@@ -293,7 +293,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 					)}
 
 					{/* Article body */}
-					<div className="w-full">
+					<div className="w-full min-w-0 overflow-x-hidden">
 						<MarkdownToHtml contentMarkdown={post.content.markdown} />
 					</div>
 
@@ -327,7 +327,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 								className="w-14 h-14 rounded-full ring-2 ring-neutral-200 dark:ring-neutral-700 flex-shrink-0"
 							/>
 						)}
-						<div>
+						<div className="min-w-0 flex-1">
 							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-0.5">
 								Written by
 							</p>
@@ -381,8 +381,8 @@ export default function PostOrPage(props: Props) {
 				{props.type === 'post' && <ReadingProgressBar />}
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-6xl mx-auto w-full px-5 pt-10 pb-20">
-						<article>
+					<div className="max-w-6xl mx-auto w-full px-4 sm:px-5 pt-10 pb-20 overflow-x-hidden">
+						<article className="w-full min-w-0">
 							{props.type === 'post' && <Post {...props} />}
 							{props.type === 'page' && <Page {...props} />}
 						</article>
