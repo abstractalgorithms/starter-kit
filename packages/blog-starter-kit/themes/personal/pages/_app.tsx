@@ -2,6 +2,7 @@ import { ThemeProvider } from 'next-themes';
 import { AppProps } from 'next/app';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { useEffect } from 'react';
+import 'katex/dist/katex.min.css';
 import '../styles/index.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
