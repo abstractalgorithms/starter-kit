@@ -68,7 +68,7 @@ export const StartHereSection = ({ series }: Props) => {
 												{post.title}
 											</h3>
 											<p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
-												{post.brief}
+												{post.subtitle || post.brief}
 											</p>
 										</div>
 

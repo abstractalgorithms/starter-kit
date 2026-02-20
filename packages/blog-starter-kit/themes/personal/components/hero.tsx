@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAppContext } from './contexts/appContext';
 import { SearchBar } from './search-bar';
 
@@ -106,13 +107,14 @@ export const Hero = () => {
 					<SearchBar />
 
 					<div className="flex flex-wrap gap-2 mt-1">
-						{['System Design', 'Algorithms', 'LLM', 'Architecture'].map((tag) => (
-							<span
-								key={tag}
-								className="px-3 py-1 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700"
+						{[{ label: 'System Design', slug: 'system-design' }, { label: 'Algorithms', slug: 'algorithms' }, { label: 'LLM', slug: 'llm' }, { label: 'Architecture', slug: 'architecture' }].map(({ label, slug }) => (
+							<Link
+								key={slug}
+								href={`/tag/${slug}`}
+								className="px-3 py-1 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
 							>
-								{tag}
-							</span>
+								{label}
+							</Link>
 						))}
 					</div>
 				</div>

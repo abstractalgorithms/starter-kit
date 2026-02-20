@@ -12,14 +12,24 @@ type Props = {
 	items: TocItem[];
 };
 
+const decodeHtml = (html: string): string =>
+	html
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/&apos;/g, "'");
+
 export const TableOfContents = ({ items }: Props) => {
+	// The markdown renderer prefixes heading IDs with "heading-"
+	const toHeadingId = (slug: string) => `heading-${slug}`;
+
 	const [activeId, setActiveId] = useState<string>('');
 	const observerRef = useRef<IntersectionObserver | null>(null);
 
 	useEffect(() => {
 		if (items.length === 0) return;
-
-		const slugs = items.map((i) => i.slug);
 
 		observerRef.current = new IntersectionObserver(
 			(entries) => {
@@ -34,8 +44,8 @@ export const TableOfContents = ({ items }: Props) => {
 			{ rootMargin: '0px 0px -70% 0px', threshold: 0 },
 		);
 
-		slugs.forEach((slug) => {
-			const el = document.getElementById(slug);
+		items.forEach(({ slug }) => {
+			const el = document.getElementById(toHeadingId(slug));
 			if (el) observerRef.current!.observe(el);
 		});
 
@@ -52,7 +62,8 @@ export const TableOfContents = ({ items }: Props) => {
 			<nav aria-label="Table of contents">
 				<ol className="flex flex-col gap-0.5 list-none m-0 p-0 border-l border-neutral-200 dark:border-neutral-800">
 					{items.map((item) => {
-						const isActive = activeId === item.slug;
+						const headingId = toHeadingId(item.slug);
+						const isActive = activeId === headingId;
 						return (
 							<li
 								key={item.id}
@@ -60,14 +71,14 @@ export const TableOfContents = ({ items }: Props) => {
 								className="m-0 -ml-px"
 							>
 								<a
-									href={`#${item.slug}`}
+									href={`#${headingId}`}
 									className={`block py-1 pr-2 text-xs leading-snug no-underline transition-colors border-l-2 pl-3 ${
 										isActive
 											? 'border-blue-500 text-blue-600 dark:text-blue-400 font-medium'
 											: 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600'
 									}`}
 								>
-									{item.title}
+									{decodeHtml(item.title)}
 								</a>
 							</li>
 						);

@@ -53,7 +53,7 @@ export const FeaturedArticle = ({ post }: Props) => {
 									{post.title}
 								</h3>
 								<p className="text-neutral-500 dark:text-neutral-400 line-clamp-3 text-sm leading-relaxed">
-									{post.brief}
+								{post.subtitle || post.brief}
 								</p>
 							</div>
 

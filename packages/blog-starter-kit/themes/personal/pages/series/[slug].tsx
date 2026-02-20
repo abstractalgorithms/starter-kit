@@ -171,9 +171,9 @@ export default function SeriesDetailPage({ publication, posts, series, footerPos
 														<p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug line-clamp-2 mb-1">
 															{post.title}
 														</p>
-														{post.brief && (
+														{(post.subtitle || post.brief) && (
 															<p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed mb-2">
-																{post.brief}
+																{post.subtitle || post.brief}
 															</p>
 														)}
 														<div className="flex items-center gap-2">

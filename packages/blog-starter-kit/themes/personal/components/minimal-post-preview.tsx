@@ -6,6 +6,7 @@ type Author = Pick<User, 'name'>;
 
 type Props = {
 	title: string;
+	subtitle?: string | null;
 	brief: string;
 	date: string;
 	author: Author;
@@ -15,7 +16,7 @@ type Props = {
 	readTimeInMinutes?: number;
 };
 
-export const MinimalPostPreview = ({ title, brief, date, slug, commentCount, coverImage, readTimeInMinutes }: Props) => {
+export const MinimalPostPreview = ({ title, subtitle, brief, date, slug, commentCount, coverImage, readTimeInMinutes }: Props) => {
 	const postURL = `/${slug}`;
 
 	return (
