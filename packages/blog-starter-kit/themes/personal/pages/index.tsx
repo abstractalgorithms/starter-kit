@@ -14,6 +14,7 @@ import { Hero } from '../components/hero';
 import { AuthorSection } from '../components/author-section';
 import { StartHereSection, StartHereSeries } from '../components/start-here-section';
 import { TopicClusters, TopicCluster, TOPIC_CLUSTER_DEFS } from '../components/topic-clusters';
+import { RecentArticles } from '../components/recent-articles';
 import {
 	MorePostsByPublicationDocument,
 	MorePostsByPublicationQuery,
@@ -76,6 +77,7 @@ export default function Index({ publication, initialPosts, topicClusters, startH
 						<>
 							<FeaturedArticle post={featuredPost} />
 							<TopicClusters clusters={topicClusters} />
+							<RecentArticles posts={initialPosts} />
 						</>
 					)}
 						

@@ -19,6 +19,9 @@ const allowedTags = sanitizeHtml.defaults.allowedTags.concat([
 	'sup',
 	'details',
 	'summary',
+	'button',
+	'label',
+	'input',
 ]);
 const allowedAttributes = {
 	'*': ['id'],
@@ -29,6 +32,10 @@ const allowedAttributes = {
 	code: ['class'],
 	span: ['class'],
 	abbr: ['title'],
+	pre: ['class'],
+	button: ['class', 'onclick', 'type'],
+	label: ['class', 'for'],
+	input: ['type', 'name', 'value', 'data-*', 'class'],
 };
 // const disallowedTagsMode = 'discard';
 

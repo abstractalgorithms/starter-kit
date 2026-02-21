@@ -52,6 +52,16 @@ const markedOpts = {
 	sanitize: false,
 	// @ts-ignore
 	highlight: function (code, lang) {
+		// Handle Mermaid diagrams
+		if (lang === 'mermaid') {
+			return `<div class="mermaid-container"><pre class="mermaid">${code.trim()}</pre></div>`;
+		}
+
+		// Handle quiz blocks
+		if (lang === 'quiz') {
+			return `<div class="quiz-container" data-quiz-content="${encodeURIComponent(code)}"></div>`;
+		}
+
 		const highlightjs = require('./highlight');
 		// Fix to prevent content-preview API from crashing on inputting long codeblocks with mixed characters without language.
 		lang = lang || 'javascript';

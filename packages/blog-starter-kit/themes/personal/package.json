@@ -24,6 +24,7 @@
 		"html-react-parser": "^4.2.2",
 		"js-cookie": "^3.0.5",
 		"katex": "^0.16.28",
+		"mermaid": "^10.6.1",
 		"next-themes": "^0.3.0",
 		"react-waypoint": "^10.3.0",
 		"remark": "^14.0.2",
