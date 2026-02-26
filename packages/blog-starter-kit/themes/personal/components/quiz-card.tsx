@@ -72,8 +72,8 @@ const QuestionBlock = ({ question, index }: { question: Question; index: number 
 	};
 
 	return (
-		<div className="flex flex-col gap-3">
-			<p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">
+		<div className="flex flex-col gap-3 m-0">
+			<p className="m-0 text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">
 				<span className="text-neutral-400 dark:text-neutral-500 font-mono mr-1.5">Q{index + 1}.</span>
 				{question.q}
 			</p>
@@ -119,9 +119,9 @@ export const QuizCard = ({ title = 'Practice Quiz', questions }: Props) => {
 	const [allRevealed, setAllRevealed] = useState(false);
 
 	return (
-		<div className="my-10 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+		<div className="not-prose my-8 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
 			{/* Header */}
-			<div className="flex items-center justify-between gap-4 px-5 py-4 bg-gradient-to-r from-blue-600 to-teal-600">
+			<div className="flex items-center justify-between gap-4 px-5 py-3.5 bg-gradient-to-r from-sky-600 to-blue-600">
 				<div className="flex items-center gap-2.5">
 					<svg className="w-5 h-5 text-white/80" fill="currentColor" viewBox="0 0 20 20">
 						<path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
@@ -133,22 +133,15 @@ export const QuizCard = ({ title = 'Practice Quiz', questions }: Props) => {
 				</span>
 			</div>
 
-			{/* Instructions banner */}
-			<div className="px-5 py-2.5 bg-blue-50 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900/50">
-				<p className="text-xs text-blue-600 dark:text-blue-400">
-					Select an option to check your answer immediately.
-				</p>
-			</div>
-
 			{/* Questions */}
-			<div className="px-5 py-6 flex flex-col gap-8 bg-white dark:bg-neutral-950">
+			<div className="px-5 py-5 flex flex-col gap-6 bg-white dark:bg-neutral-950">
 				{questions.map((q, i) => (
 					<QuestionBlock key={i} question={q} index={i} />
 				))}
 			</div>
 
 			{/* Footer */}
-			<div className="px-5 py-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 flex items-center justify-between gap-4">
+			<div className="px-5 py-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 flex items-center justify-between gap-4">
 				<p className="text-xs text-neutral-500 dark:text-neutral-400">
 					Click any option to reveal the correct answer.
 				</p>

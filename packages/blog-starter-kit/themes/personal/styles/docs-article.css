@@ -1,0 +1,613 @@
+/*
+ * ============================================================
+ *  docs-article.css  —  Personal Theme
+ *  Modular styles for technical documentation / long-form posts.
+ *
+ *  Colour palette matches the personal theme's existing sky/blue
+ *  accent (#0284c7) and slate neutral scale.
+ *
+ *  Modules
+ *  -------
+ *  1. CSS Custom Properties (Design Tokens)
+ *  2. Typography
+ *  3. Layout
+ *  4. Visual Hierarchy  (headings, horizontal rules, sections)
+ *  5. Code Blocks       (supplements existing .prose pre rules)
+ *  6. Callouts          (.callout, .callout--warning, .callout--success)
+ *  7. Quiz Cards        (.quiz-card — complements existing .quiz-container)
+ *  8. Interactive Elements (buttons .btn, links, table helpers)
+ *  9. Accessibility
+ * 10. Responsive / Mobile (<600 px)
+ * ============================================================
+ */
+
+
+/* ============================================================
+   1. CSS CUSTOM PROPERTIES — Design Tokens
+   Scoped to :root so they cascade through every module below.
+   Override individual vars on a parent element to theme a
+   sub-section differently.
+   ============================================================ */
+
+:root {
+  /* Brand accent — mirrors personal theme's sky-600 */
+  --doc-accent:           #0284c7;
+  --doc-accent-dark:      #0369a1;
+  --doc-accent-subtle:    #e0f2fe;   /* sky-100 */
+
+  /* Status colours */
+  --doc-success:          #16a34a;   /* green-600 */
+  --doc-success-subtle:   #f0fdf4;
+  --doc-warning:          #d97706;   /* amber-600 */
+  --doc-warning-subtle:   #fffbeb;
+  --doc-danger:           #dc2626;   /* red-600 */
+  --doc-danger-subtle:    #fef2f2;
+
+  /* Surfaces */
+  --doc-bg:               #ffffff;
+  --doc-bg-subtle:        #f8fafc;   /* slate-50 */
+  --doc-bg-code:          #f1f5f9;   /* slate-100 */
+  --doc-bg-callout:       #eff6ff;   /* blue-50 */
+  --doc-border:           #e2e8f0;   /* slate-200 */
+  --doc-border-radius:    0.625rem;
+
+  /* Text — all pass WCAG AA (≥4.5:1) against white */
+  --doc-text-body:        #0f172a;   /* slate-900  ~17:1 */
+  --doc-text-muted:       #475569;   /* slate-600   ~7:1 */
+  --doc-text-link:        #0284c7;   /* sky-600     ~5:1 */
+
+  /* Typography */
+  --doc-font-body:        'Inter', 'Roboto', system-ui, -apple-system, sans-serif;
+  --doc-font-mono:        ui-monospace, 'Cascadia Code', 'Source Code Pro',
+                          Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  --doc-font-size-base:   1rem;
+  --doc-line-height:      1.6;
+
+  /* Spacing */
+  --doc-section-gap:      2rem;
+  --doc-content-width:    800px;
+  --doc-content-pad:      2rem;
+
+  /* Elevation */
+  --doc-shadow-card:      0 1px 3px rgba(0,0,0,0.07), 0 2px 8px rgba(0,0,0,0.05);
+  --doc-shadow-hover:     0 4px 16px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+
+  /* Motion */
+  --doc-transition:       150ms ease-in-out;
+}
+
+/* Dark mode overrides — toggled by `.dark` on <html> */
+.dark {
+  --doc-accent:           #38bdf8;   /* sky-400 */
+  --doc-accent-subtle:    #0c4a6e;
+  --doc-bg:               #0f172a;
+  --doc-bg-subtle:        #1e293b;
+  --doc-bg-code:          #1e293b;
+  --doc-bg-callout:       #1e3a5f;
+  --doc-border:           #334155;
+  --doc-text-body:        #f1f5f9;
+  --doc-text-muted:       #94a3b8;
+  --doc-text-link:        #7dd3fc;
+  --doc-success-subtle:   #14532d;
+  --doc-warning-subtle:   #422006;
+  --doc-danger-subtle:    #450a0a;
+}
+
+
+/* ============================================================
+   2. TYPOGRAPHY
+   Apply `.article-doc` to the outermost <article> or <div>
+   wrapping post body content.
+   ============================================================ */
+
+.article-doc {
+  font-family:  var(--doc-font-body);
+  font-size:    var(--doc-font-size-base);
+  line-height:  var(--doc-line-height);
+  color:        var(--doc-text-body);
+  background:   var(--doc-bg);
+  -webkit-font-smoothing:  antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering:          optimizeLegibility;
+}
+
+.article-doc p {
+  margin-block: 0 1rem;
+  max-width: 70ch;
+}
+
+/* Muted helper */
+.article-doc .text-muted {
+  color:     var(--doc-text-muted);
+  font-size: 0.875rem;
+}
+
+
+/* ============================================================
+   3. LAYOUT
+   Wrap the post body in `.doc-content` for constrained width
+   and centered layout.
+   ============================================================ */
+
+.doc-content {
+  max-width:      var(--doc-content-width);
+  margin-inline:  auto;
+  padding-inline: var(--doc-content-pad);
+  padding-block:  1.5rem 4rem;
+}
+
+/* Add `.doc-section` to each major <section> for automatic gap */
+.doc-section {
+  margin-bottom: var(--doc-section-gap);
+}
+
+/* `.doc-bleed` breaks a child out of the .doc-content column
+   (useful for wide tables / mermaid diagrams) */
+.doc-bleed {
+  margin-inline: calc(var(--doc-content-pad) * -1);
+  overflow-x: auto;
+}
+
+
+/* ============================================================
+   4. VISUAL HIERARCHY — Headings & Dividers
+   h2 ≈ 28 px (1.75 rem) · h3 ≈ 22 px (1.375 rem)
+   These selectors scope to .article-doc so they don't override
+   the global .prose heading rules outside post content.
+   ============================================================ */
+
+.article-doc h1 {
+  font-size:      2rem;
+  font-weight:    800;
+  line-height:    1.2;
+  letter-spacing: -0.025em;
+  margin-block:   0 1.5rem;
+  color: var(--doc-text-body);
+}
+
+/* h2 ≈ 28 px */
+.article-doc h2 {
+  font-size:      1.75rem;
+  font-weight:    700;
+  line-height:    1.3;
+  letter-spacing: -0.015em;
+  margin-block:   2.75rem 0.75rem;
+  padding-bottom: 0.45rem;
+  border-bottom:  2px solid var(--doc-border);
+  color: var(--doc-text-body);
+}
+
+/* h3 ≈ 22 px */
+.article-doc h3 {
+  font-size:    1.375rem;
+  font-weight:  600;
+  line-height:  1.4;
+  margin-block: 2rem 0.5rem;
+  color: var(--doc-text-body);
+}
+
+.article-doc h4 {
+  font-size:    1.125rem;
+  font-weight:  600;
+  line-height:  1.5;
+  margin-block: 1.5rem 0.4rem;
+}
+
+/* Anchor links inside headings */
+.article-doc h2 > a,
+.article-doc h3 > a,
+.article-doc h4 > a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.article-doc h2:hover > a::before,
+.article-doc h3:hover > a::before {
+  content: '# ';
+  color:   var(--doc-accent);
+  font-weight: 400;
+  font-size: 0.875em;
+}
+
+/* Horizontal rule */
+.article-doc hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--doc-border), transparent);
+  margin-block: var(--doc-section-gap);
+}
+
+
+/* ============================================================
+   5. CODE BLOCKS
+   Supplements the existing `.prose code` / `.prose pre` rules
+   in index.css. These selectors add a language label feature
+   and a styled left-border accent without redefining background.
+   ============================================================ */
+
+/* Language label on fenced blocks — add data-language="java" */
+.article-doc pre[data-language]::before {
+  content:        attr(data-language);
+  display:        block;
+  font-family:    var(--doc-font-body);
+  font-size:      0.7rem;
+  font-weight:    700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color:          #7dd3fc;   /* sky-300 — visible on #1a1b26 bg */
+  margin-bottom:  0.75rem;
+}
+
+/* Accent left border on fenced blocks */
+.article-doc pre {
+  border-left: 3px solid var(--doc-accent) !important;
+}
+
+/* Scrollable inline table/code wrapper */
+.doc-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+
+/* ============================================================
+   6. CALLOUTS
+   Apply `.callout` (+ optional modifier) to a <div> or <aside>.
+
+   Usage:
+     <div class="callout">…</div>
+     <div class="callout callout--warning">…</div>
+     <div class="callout callout--success">…</div>
+     <div class="callout callout--danger">…</div>
+
+   Icon slot (optional):
+     <div class="callout">
+       <span class="callout__icon" aria-hidden="true">💡</span>
+       <div class="callout__body">…</div>
+     </div>
+   ============================================================ */
+
+.callout {
+  display:        flex;
+  gap:            0.75rem;
+  align-items:    flex-start;
+  background:     var(--doc-bg-callout);
+  border-left:    4px solid var(--doc-accent);
+  border-radius:  0 var(--doc-border-radius) var(--doc-border-radius) 0;
+  padding:        1rem 1.25rem;
+  margin-block:   1.5rem;
+  font-size:      0.9375rem;
+  line-height:    1.6;
+  color:          var(--doc-text-body);
+}
+
+.callout__icon {
+  flex-shrink:  0;
+  font-size:    1.25rem;
+  line-height:  1;
+  margin-top:   0.1em;
+}
+
+.callout__body          { flex: 1; }
+.callout__body > *:first-child { margin-top: 0; }
+.callout__body > *:last-child  { margin-bottom: 0; }
+
+.callout--warning {
+  background:   var(--doc-warning-subtle);
+  border-color: var(--doc-warning);
+}
+
+.callout--success {
+  background:   var(--doc-success-subtle);
+  border-color: var(--doc-success);
+}
+
+.callout--danger {
+  background:   var(--doc-danger-subtle);
+  border-color: var(--doc-danger);
+}
+
+
+/* ============================================================
+   7. QUIZ CARDS  (.quiz-card)
+   A lightweight card skin that wraps the existing interactive
+   quiz machinery (.quiz-container / .quiz-option etc.).
+   Use `.quiz-card` as an outer wrapper for static quiz items
+   (e.g. rendered from markdown without JS interactivity).
+
+   Usage:
+     <div class="quiz-card">
+       <p class="quiz-card__question">1. Scenario: …</p>
+       <ul class="quiz-card__options">
+         <li>A) …</li>
+         <li class="quiz-card__option--correct">B) …  ✓</li>
+       </ul>
+     </div>
+   ============================================================ */
+
+.quiz-card {
+  background:    var(--doc-bg);
+  border:        1.5px solid var(--doc-border);
+  border-radius: var(--doc-border-radius);
+  box-shadow:    var(--doc-shadow-card);
+  padding:       1.5rem 1.75rem;
+  margin-block:  1.25rem;
+  transition:    box-shadow var(--doc-transition),
+                 transform  var(--doc-transition);
+}
+
+.quiz-card:hover {
+  box-shadow: var(--doc-shadow-hover);
+  transform:  translateY(-1px);
+}
+
+.quiz-card__question {
+  font-size:    1rem;
+  font-weight:  600;
+  line-height:  1.6;
+  margin-block: 0 1rem;
+  color: var(--doc-text-body);
+}
+
+.quiz-card__question .badge {
+  display:        inline-block;
+  background:     var(--doc-accent);
+  color:          #fff;
+  font-size:      0.68rem;
+  font-weight:    700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding:        0.15em 0.6em;
+  border-radius:  9999px;
+  margin-right:   0.45rem;
+  vertical-align: middle;
+}
+
+.quiz-card__options {
+  list-style: none;
+  margin:     0;
+  padding:    0;
+  display:    flex;
+  flex-direction: column;
+  gap:        0.45rem;
+}
+
+.quiz-card__options li {
+  padding:       0.6rem 0.9rem;
+  border:        1.5px solid var(--doc-border);
+  border-radius: 0.4rem;
+  font-size:     0.9375rem;
+  background:    var(--doc-bg-subtle);
+  transition:    border-color var(--doc-transition),
+                 background   var(--doc-transition);
+}
+
+.quiz-card__options li:hover {
+  border-color: var(--doc-accent);
+  background:   var(--doc-bg-callout);
+}
+
+.quiz-card__option--correct {
+  border-color: var(--doc-success) !important;
+  background:   var(--doc-success-subtle) !important;
+  color:        var(--doc-success);
+  font-weight:  600;
+}
+
+.dark .quiz-card__option--correct {
+  background: #14532d !important;
+  color: #86efac;
+}
+
+.quiz-card__answer {
+  margin-top:  0.9rem;
+  padding-top: 0.75rem;
+  border-top:  1px dashed var(--doc-border);
+  font-size:   0.875rem;
+  color:       var(--doc-text-muted);
+}
+
+.quiz-card__answer strong {
+  color: var(--doc-success);
+}
+
+
+/* ============================================================
+   8. INTERACTIVE ELEMENTS — Buttons & Links
+   ============================================================ */
+
+/* --- Links --- */
+.article-doc a {
+  color:           var(--doc-text-link);
+  text-decoration: none;
+  transition:      color var(--doc-transition);
+}
+
+.article-doc a:hover,
+.article-doc a:active {
+  text-decoration:        underline;
+  text-underline-offset:  3px;
+  text-decoration-color:  var(--doc-accent);
+}
+
+/* --- Buttons --- */
+/*
+ * Usage:
+ *   <button class="btn btn--primary">Check Answer</button>
+ *   <button class="btn btn--ghost btn--sm">Skip</button>
+ *   On mobile: add .btn--block-mobile for full-width
+ */
+
+.btn {
+  display:         inline-flex;
+  align-items:     center;
+  gap:             0.4rem;
+  font-family:     var(--doc-font-body);
+  font-size:       0.9375rem;
+  font-weight:     600;
+  line-height:     1;
+  padding:         0.65rem 1.35rem;
+  border-radius:   9999px;
+  border:          2px solid transparent;
+  cursor:          pointer;
+  text-decoration: none;
+  user-select:     none;
+  white-space:     nowrap;
+  transition:      background    var(--doc-transition),
+                   color         var(--doc-transition),
+                   border-color  var(--doc-transition),
+                   box-shadow    var(--doc-transition),
+                   transform     var(--doc-transition);
+}
+
+.btn:hover  { transform: scale(1.04); }
+.btn:active { transform: scale(0.97); }
+
+/* Primary — filled accent */
+.btn--primary {
+  background: var(--doc-accent);
+  color:      #fff;
+}
+
+.btn--primary:hover {
+  background: var(--doc-accent-dark);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+}
+
+/* Ghost — outlined */
+.btn--ghost {
+  background:   transparent;
+  border-color: var(--doc-accent);
+  color:        var(--doc-accent);
+}
+
+.btn--ghost:hover {
+  background: var(--doc-bg-callout);
+}
+
+/* Danger */
+.btn--danger {
+  background: var(--doc-danger);
+  color:      #fff;
+}
+
+.btn--danger:hover { background: #b91c1c; }
+
+/* Size modifier */
+.btn--sm {
+  font-size: 0.8125rem;
+  padding:   0.45rem 0.9rem;
+}
+
+/* --- Table helper --- */
+/*
+ * Wrap a table in `.table-scroll` to prevent overflow on
+ * narrow viewports without hiding the scrollbar.
+ */
+.table-scroll {
+  overflow-x:     auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius:  var(--doc-border-radius);
+  border:         1px solid var(--doc-border);
+  margin-block:   1.5rem;
+}
+
+.table-scroll table {
+  margin-block: 0;
+}
+
+
+/* ============================================================
+   9. ACCESSIBILITY
+   ============================================================ */
+
+/* Visible 3 px focus ring — keyboard and switch navigation */
+:is(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline:        3px solid var(--doc-accent);
+  outline-offset: 3px;
+  border-radius:  3px;
+}
+
+/* Remove ring for pointer interaction (progressive enhancement) */
+:is(a, button, input, select, textarea, [tabindex]):focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Skip-to-content — add as first child of <body> */
+.skip-to-content {
+  position:     absolute;
+  top:          -9999px;
+  left:         1rem;
+  z-index:      9999;
+  background:   var(--doc-accent);
+  color:        #fff;
+  padding:      0.6rem 1.2rem;
+  border-radius: var(--doc-border-radius);
+  font-weight:  700;
+  transition:   top var(--doc-transition);
+}
+
+.skip-to-content:focus-visible { top: 1rem; }
+
+/* Screen-reader-only utility */
+.sr-only {
+  position:   absolute;
+  width:      1px;
+  height:     1px;
+  padding:    0;
+  margin:     -1px;
+  overflow:   hidden;
+  clip:       rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Respect user motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration:        0.01ms !important;
+    animation-iteration-count: 1      !important;
+    transition-duration:       0.01ms !important;
+    scroll-behavior:           auto   !important;
+  }
+}
+
+
+/* ============================================================
+  10. RESPONSIVE / MOBILE  (<600 px)
+   ============================================================ */
+
+@media (max-width: 600px) {
+  :root {
+    --doc-content-pad: 1rem;
+    --doc-section-gap: 1.5rem;
+  }
+
+  .article-doc { font-size: 0.9375rem; }
+
+  /* h2: 28 px → ~20 px */
+  .article-doc h2 {
+    font-size:   1.25rem;
+    margin-block: 2rem 0.5rem;
+  }
+
+  /* h3: 22 px → ~18 px */
+  .article-doc h3 {
+    font-size:   1.125rem;
+    margin-block: 1.5rem 0.4rem;
+  }
+
+  .article-doc h1 { font-size: 1.625rem; }
+
+  /* Quiz / callout cards — tighter padding */
+  .quiz-card  { padding: 1rem 1.125rem; }
+  .callout    { padding: 0.85rem 1rem; }
+
+  /* Full-width buttons on mobile */
+  .btn--block-mobile {
+    width:           100%;
+    justify-content: center;
+  }
+}

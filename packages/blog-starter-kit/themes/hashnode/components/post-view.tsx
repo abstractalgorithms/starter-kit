@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { twJoin } from 'tailwind-merge';
@@ -16,6 +16,7 @@ import CustomImage from './custom-image';
 import { blurImageDimensions } from '../utils/const/images';
 import TocRenderDesign from './toc-render-design';
 import { PostFullFragment } from '../generated/graphql';
+import { InteractiveQuiz, parseQuizContent } from './interactive-quiz';
 
 moment.extend(relativeTime);
 moment.extend(localizedFormat);
@@ -42,6 +43,38 @@ function PostView(props: any) {
   ]);
 
   const memoizedPostContent = useMemo(() => imageReplacer(post.content, true), [post.content]);
+
+  // Hydrate any ```quiz``` fences that were converted to .quiz-container divs
+  useEffect(() => {
+    const containers = document.querySelectorAll<HTMLElement>('.quiz-container');
+    if (!containers.length) return;
+
+    let roots: import('react-dom/client').Root[] = [];
+
+    const mount = async () => {
+      const { createRoot } = await import('react-dom/client');
+      const { createElement } = await import('react');
+
+      containers.forEach((el) => {
+        const encoded = el.getAttribute('data-quiz-content') ?? '';
+        const rawText = encoded ? decodeURIComponent(encoded) : '';
+        const questions = rawText ? parseQuizContent(rawText) : [];
+
+        // Clear any previous mount
+        el.innerHTML = '';
+        const root = createRoot(el);
+        root.render(createElement(InteractiveQuiz, { questions }));
+        roots.push(root);
+      });
+    };
+
+    mount();
+
+    return () => {
+      roots.forEach((r) => r.unmount());
+      roots = [];
+    };
+  }, [memoizedPostContent]);
 
   return (
     <main className="blog-post-detail-card pb-24">
