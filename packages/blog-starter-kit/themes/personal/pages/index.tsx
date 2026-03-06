@@ -72,17 +72,16 @@ export default function Index({ publication, initialPosts, topicClusters, startH
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0 divide-y divide-neutral-200 dark:divide-neutral-800">
 						<Hero />
-					{startHereSeries && <StartHereSection series={startHereSeries} />}
-					{featuredPost && (
-						<>
-							<FeaturedArticle post={featuredPost} />
-							<TopicClusters clusters={topicClusters} />
-							<RecentArticles posts={initialPosts} />
-						</>
-					)}
-						
-					<NewsletterSection />
-					<AuthorSection />
+						{startHereSeries && <StartHereSection series={startHereSeries} />}
+						{featuredPost && (
+							<>
+								<FeaturedArticle post={featuredPost} />
+								<TopicClusters clusters={topicClusters} />
+							</>
+						)}
+						{initialPosts.length > 0 && <RecentArticles posts={initialPosts} />}
+						<NewsletterSection />
+						<AuthorSection />
 					</div>
 					<Footer />
 				</Container>
