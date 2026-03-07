@@ -11,9 +11,11 @@ fragment Post on Post {
 		url
 	}
 	publishedAt
+	updatedAt
 	slug
 	brief
 	readTimeInMinutes
+	views
 	tags {
 		id
 		name

@@ -33,9 +33,12 @@ type Props = {
 	initialPosts: PostFragment[];
 	topicClusters: TopicCluster[];
 	startHereSeries: StartHereSeries | null;
+	recentlyCreated: PostFragment[];
+	recentlyUpdated: PostFragment[];
+	topPosts: PostFragment[];
 };
 
-export default function Index({ publication, initialPosts, topicClusters, startHereSeries }: Props) {
+export default function Index({ publication, initialPosts, topicClusters, startHereSeries, recentlyCreated, recentlyUpdated, topPosts }: Props) {
 	const posts = initialPosts;
 	const featuredPost = publication.pinnedPost ?? posts[0];
 
@@ -79,7 +82,13 @@ export default function Index({ publication, initialPosts, topicClusters, startH
 								<TopicClusters clusters={topicClusters} />
 							</>
 						)}
-						{initialPosts.length > 0 && <RecentArticles posts={initialPosts} />}
+						{initialPosts.length > 0 && (
+						<RecentArticles
+							recentlyCreated={recentlyCreated}
+							recentlyUpdated={recentlyUpdated}
+							topPosts={topPosts}
+						/>
+					)}
 						<NewsletterSection />
 						<AuthorSection />
 					</div>
@@ -161,13 +170,29 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		};
 	}
 
+	// ── 5. Build 3 Recent Article clusters ──────────────────────────────────
+	// allPosts comes from the API sorted newest-first (publishedAt desc)
+	const recentlyCreated = allPosts.slice(0, 3);
+
+	const recentlyUpdated = allPosts
+		.filter((p) => p.updatedAt && p.updatedAt !== p.publishedAt)
+		.sort((a, b) => new Date(b.updatedAt!).getTime() - new Date(a.updatedAt!).getTime())
+		.slice(0, 3);
+
+	const topPosts = allPosts
+		.slice()
+		.sort((a, b) => b.views - a.views)
+		.slice(0, 3);
+
 	return {
 		props: {
 			publication,
 			initialPosts,
-			initialPageInfo: publication.posts.pageInfo,
-		topicClusters,
-		startHereSeries,
+			topicClusters,
+			startHereSeries,
+			recentlyCreated,
+			recentlyUpdated,
+			topPosts,
 		},
 		revalidate: 1,
 	};
