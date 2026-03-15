@@ -13,6 +13,9 @@ query TagPostsByPublication(
           ...Post
         }
       }
+      pageInfo {
+        ...PageInfo
+      }
     }
   }
 }

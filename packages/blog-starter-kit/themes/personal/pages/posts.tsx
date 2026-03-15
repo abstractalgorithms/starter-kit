@@ -245,13 +245,31 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 			notFound: true,
 		};
 	}
+
 	const initialPosts = (publication.posts.edges ?? []).map((edge) => edge.node);
+
+	// Paginate to collect ALL posts so that every category appears in the filter
+	const allPosts = [...initialPosts];
+	let cursor = publication.posts.pageInfo.endCursor;
+	let hasNextPage = !!publication.posts.pageInfo.hasNextPage;
+
+	while (hasNextPage && cursor) {
+		const next = await request<MorePostsByPublicationQuery, MorePostsByPublicationQueryVariables>(
+			GQL_ENDPOINT,
+			MorePostsByPublicationDocument,
+			{ first: 20, host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST, after: cursor },
+		);
+		if (!next.publication) break;
+		allPosts.push(...next.publication.posts.edges.map((e) => e.node));
+		cursor = next.publication.posts.pageInfo.endCursor;
+		hasNextPage = !!next.publication.posts.pageInfo.hasNextPage;
+	}
 
 	return {
 		props: {
 			publication,
-			initialPosts,
-			initialPageInfo: publication.posts.pageInfo,
+			initialPosts: allPosts,
+			initialPageInfo: { hasNextPage: false, endCursor: null },
 		},
 		revalidate: 1,
 	};

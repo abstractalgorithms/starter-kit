@@ -13,7 +13,7 @@ import { PersonalHeader } from '../components/personal-theme-header';
 import { Hero } from '../components/hero';
 import { AuthorSection } from '../components/author-section';
 import { StartHereSection, StartHereSeries } from '../components/start-here-section';
-import { TopicClusters, TopicCluster, TOPIC_CLUSTER_DEFS } from '../components/topic-clusters';
+import { TopicClusters, TopicCluster, buildTopicClusters } from '../components/topic-clusters';
 import { RecentArticles } from '../components/recent-articles';
 import {
 	MorePostsByPublicationDocument,
@@ -134,14 +134,8 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		hasNextPage = !!next.publication.posts.pageInfo.hasNextPage;
 	}
 
-	// ── 3. Build topic clusters ───────────────────────────────────────────────
-	// Posts are already newest-first from the API; take the 3 most recent per cluster.
-	const topicClusters: TopicCluster[] = TOPIC_CLUSTER_DEFS.map((def) => ({
-		...def,
-		posts: allPosts
-			.filter((p) => p.tags?.some((t) => t.slug === def.slug))
-			.slice(0, 3),
-	}));
+	// ── 3. Build topic clusters dynamically from top tags ────────────────────
+	const topicClusters: TopicCluster[] = buildTopicClusters(allPosts);
 
 	// ── 4. Derive "Start Here" series ─────────────────────────────────────────
 	// Find the series that has the most posts; its oldest posts become the

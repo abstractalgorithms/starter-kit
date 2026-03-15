@@ -2,24 +2,52 @@ import Link from 'next/link';
 import { PostFragment } from '../generated/graphql';
 import { DateFormatter } from './date-formatter';
 
-// ─── Cluster definition ──────────────────────────────────────────────────────
-// Add / remove clusters here. `slug` must match the Hashnode tag slug exactly.
-export const TOPIC_CLUSTER_DEFS = [
-	{ label: 'System Design', slug: 'system-design', color: 'blue' },
-	{ label: 'Algorithms', slug: 'algorithms', color: 'emerald' },
-	{ label: 'Machine Learning', slug: 'machine-learning', color: 'purple' },
-	{ label: 'AI Engineering', slug: 'artificial-intelligence', color: 'orange' },
-	{ label: 'Architecture', slug: 'architecture', color: 'teal' },
-] as const;
-
-export type ClusterColor = (typeof TOPIC_CLUSTER_DEFS)[number]['color'];
+export type ClusterColor = 'blue' | 'emerald' | 'purple' | 'orange' | 'teal';
 
 export type TopicCluster = {
 	label: string;
 	slug: string;
 	color: ClusterColor;
 	posts: PostFragment[];
+	postCount: number;
 };
+
+const COLOR_CYCLE: ClusterColor[] = ['blue', 'emerald', 'purple', 'orange', 'teal'];
+
+/**
+ * Derives topic clusters dynamically from all posts.
+ * Tags are ranked by how many posts use them; the top `maxClusters` become clusters.
+ */
+export function buildTopicClusters(
+	allPosts: PostFragment[],
+	maxClusters = 6,
+	postsPerCluster = 3,
+): TopicCluster[] {
+	const tagMap = new Map<string, { label: string; posts: PostFragment[] }>();
+
+	for (const post of allPosts) {
+		for (const tag of post.tags ?? []) {
+			if (!tag?.slug) continue;
+			const existing = tagMap.get(tag.slug);
+			if (existing) {
+				existing.posts.push(post);
+			} else {
+				tagMap.set(tag.slug, { label: tag.name ?? tag.slug, posts: [post] });
+			}
+		}
+	}
+
+	return [...tagMap.entries()]
+		.sort((a, b) => b[1].posts.length - a[1].posts.length)
+		.slice(0, maxClusters)
+		.map(([slug, { label, posts }], i) => ({
+			label,
+			slug,
+			color: COLOR_CYCLE[i % COLOR_CYCLE.length],
+			postCount: posts.length,
+			posts: posts.slice(0, postsPerCluster),
+		}));
+}
 
 // ─── Color palette (only reference full strings so Tailwind picks them up) ───
 const COLORS: Record<
@@ -108,7 +136,7 @@ const ClusterCard = ({ cluster }: { cluster: TopicCluster }) => {
 						{cluster.label}
 					</span>
 					<span className="text-xs text-neutral-400 dark:text-neutral-500">
-						{cluster.posts.length} post{cluster.posts.length !== 1 ? 's' : ''}
+						{cluster.postCount} post{cluster.postCount !== 1 ? 's' : ''}
 					</span>
 				</div>
 				<Link
