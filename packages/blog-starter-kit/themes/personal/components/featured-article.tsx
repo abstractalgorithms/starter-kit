@@ -36,13 +36,13 @@ const MainFeaturedCard = ({ post }: { post: PostFragment }) => {
 											key={tag.id}
 											className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
 										>
-											#{tag.slug}
+											{tag.name}
 										</span>
 									))}
 								</div>
 							)}
 
-							<h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-[1.2]">
+							<h3 className="text-2xl md:text-3xlfont-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-[1.2]">
 								{post.title}
 							</h3>
 							<p className="text-neutral-500 dark:text-neutral-400 line-clamp-3 text-sm leading-relaxed">
@@ -115,13 +115,13 @@ const SecondaryFeaturedCard = ({ post }: { post: PostFragment }) => {
 									key={tag.id}
 									className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
 								>
-									#{tag.slug}
+									{tag.name}
 								</span>
 							))}
 						</div>
 					)}
 
-					<h3 className="text-base font-bold tracking-tight text-neutral-900 dark:text-neutral-50 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
+					<h3 className="text-base font-boldtracking-tight text-neutral-900 dark:text-neutral-50 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
 						{post.title}
 					</h3>
 					<p className="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed flex-1">
