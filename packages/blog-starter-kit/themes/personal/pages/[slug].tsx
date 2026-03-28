@@ -199,6 +199,21 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</p>
 					)}
 
+					{/* Series badge */}
+					{post.series && (
+						<div className="mb-4">
+							<Link
+								href={`/series/${post.series.slug}`}
+								className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-800/60 transition-colors"
+							>
+								<svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+									<path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+								</svg>
+								{post.series.name}
+							</Link>
+						</div>
+					)}
+
 					{/* Meta row */}
 					<div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-5 border-t border-neutral-100 dark:border-neutral-800">
 						<div className="flex items-center gap-2">
