@@ -10,7 +10,7 @@ import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { NewsletterSection } from '../components/newsletter-section';
 import { PersonalHeader } from '../components/personal-theme-header';
-import { Hero } from '../components/hero';
+import { Hero, HeroStats } from '../components/hero';
 import { AuthorSection } from '../components/author-section';
 import { StartHereSection, StartHereSeries } from '../components/start-here-section';
 import { TopicClusters, TopicCluster, buildTopicClusters } from '../components/topic-clusters';
@@ -32,15 +32,21 @@ type Props = {
 	publication: PublicationFragment;
 	initialPosts: PostFragment[];
 	topicClusters: TopicCluster[];
-	startHereSeries: StartHereSeries | null;
+	featuredSeries: StartHereSeries[];
 	recentlyCreated: PostFragment[];
 	recentlyUpdated: PostFragment[];
 	topPosts: PostFragment[];
+	heroStats: HeroStats;
 };
 
-export default function Index({ publication, initialPosts, topicClusters, startHereSeries, recentlyCreated, recentlyUpdated, topPosts }: Props) {
+export default function Index({ publication, initialPosts, topicClusters, featuredSeries, recentlyCreated, recentlyUpdated, topPosts, heroStats }: Props) {
 	const posts = initialPosts;
-	const featuredPost = publication.pinnedPost ?? posts[0];
+
+	// Pinned post is always first; fill up to 3 featured posts from recent posts
+	const pinnedPost = publication.pinnedPost;
+	const featuredPosts: PostFragment[] = pinnedPost
+		? [pinnedPost, ...posts.filter((p) => p.id !== pinnedPost.id).slice(0, 2)]
+		: posts.slice(0, 3);
 
 	return (
 		<AppProvider publication={publication} posts={posts}>
@@ -74,11 +80,11 @@ export default function Index({ publication, initialPosts, topicClusters, startH
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0 divide-y divide-neutral-200 dark:divide-neutral-800">
-						<Hero />
-						{startHereSeries && <StartHereSection series={startHereSeries} />}
-						{featuredPost && (
+						<Hero {...heroStats} />
+						{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
+						{featuredPosts.length > 0 && (
 							<>
-								<FeaturedArticle post={featuredPost} />
+								<FeaturedArticle posts={featuredPosts} />
 								<TopicClusters clusters={topicClusters} />
 							</>
 						)}
@@ -137,9 +143,9 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 	// ── 3. Build topic clusters dynamically from top tags ────────────────────
 	const topicClusters: TopicCluster[] = buildTopicClusters(allPosts);
 
-	// ── 4. Derive "Start Here" series ─────────────────────────────────────────
-	// Find the series that has the most posts; its oldest posts become the
-	// curated reading list.
+	// ── 4. Derive featured series ─────────────────────────────────────────────
+	// Pick the top 3 series by post count; their oldest posts form the curated
+	// reading lists shown on the home page.
 	const seriesCountMap = new Map<string, { name: string; slug: string; count: number }>();
 	for (const post of allPosts) {
 		if (!post.series) continue;
@@ -148,21 +154,15 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		seriesCountMap.set(id, { name, slug, count: (prev?.count ?? 0) + 1 });
 	}
 
-	const topSeries = [...seriesCountMap.values()].sort((a, b) => b.count - a.count)[0] ?? null;
+	const topSeriesList = [...seriesCountMap.values()].sort((a, b) => b.count - a.count).slice(0, 3);
 
-	let startHereSeries: StartHereSeries | null = null;
-	if (topSeries) {
+	const featuredSeries: StartHereSeries[] = topSeriesList.map((series) => {
 		const seriesPosts = allPosts
-			.filter((p) => p.series?.slug === topSeries.slug)
+			.filter((p) => p.series?.slug === series.slug)
 			.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime())
 			.slice(0, 5);
-
-		startHereSeries = {
-			seriesName: topSeries.name,
-			seriesSlug: topSeries.slug,
-			posts: seriesPosts,
-		};
-	}
+		return { seriesName: series.name, seriesSlug: series.slug, posts: seriesPosts };
+	});
 
 	// ── 5. Build 3 Recent Article clusters ──────────────────────────────────
 	// allPosts comes from the API sorted newest-first (publishedAt desc)
@@ -178,15 +178,25 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		.sort((a, b) => b.views - a.views)
 		.slice(0, 3);
 
+	// ── 6. Compute hero stats for dynamic terminal + quick links ─────────────
+	const topSeries = topSeriesList[0] ?? null;
+	const heroStats: HeroStats = {
+		totalPosts: allPosts.length,
+		totalSeries: seriesCountMap.size,
+		topSeries: topSeries ? { name: topSeries.name, postCount: topSeries.count } : null,
+		topTags: topicClusters.slice(0, 6).map((c) => ({ label: c.label, slug: c.slug })),
+	};
+
 	return {
 		props: {
 			publication,
 			initialPosts,
 			topicClusters,
-			startHereSeries,
+			featuredSeries,
 			recentlyCreated,
 			recentlyUpdated,
 			topPosts,
+			heroStats,
 		},
 		revalidate: 1,
 	};

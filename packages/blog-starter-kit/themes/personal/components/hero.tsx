@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAppContext } from './contexts/appContext';
 import { SearchBar } from './search-bar';
 
-const ROTATING_TOPICS = [
+const DEFAULT_TOPICS = [
 	'LLM Engineering',
 	'System Design',
 	'Machine Learning',
@@ -12,24 +12,28 @@ const ROTATING_TOPICS = [
 	'Software Architecture',
 ];
 
-const TERMINAL_LINES = [
-	{ prompt: '$', cmd: 'abstract-algo search --topic "system-design"', delay: 0 },
-	{ prompt: '>', cmd: 'Found 12 deep-dives · 4 series · 38 articles', delay: 600, muted: true },
-	{ prompt: '$', cmd: 'abstract-algo run --series "LLM from Scratch"', delay: 1300 },
-	{ prompt: '>', cmd: 'Loading episode 1 of 6… ████████░░ 80%', delay: 1900, muted: true },
-	{ prompt: '$', cmd: 'abstract-algo recommend --level senior', delay: 2700 },
-	{ prompt: '>', cmd: 'CAP theorem, RAFT consensus, transformer attention', delay: 3300, muted: true },
+const DEFAULT_QUICK_LINKS = [
+	{ label: 'System Design', slug: 'system-design' },
+	{ label: 'Algorithms', slug: 'algorithms' },
+	{ label: 'LLM', slug: 'llm' },
+	{ label: 'Architecture', slug: 'architecture' },
 ];
 
-const TerminalWindow = () => {
+type TerminalLine = { prompt: string; cmd: string; delay: number; muted?: boolean };
+
+const TerminalWindow = ({ lines }: { lines: TerminalLine[] }) => {
 	const [visibleCount, setVisibleCount] = useState(0);
 
 	useEffect(() => {
-		if (visibleCount >= TERMINAL_LINES.length) return;
-		const line = TERMINAL_LINES[visibleCount];
+		setVisibleCount(0);
+	}, [lines]);
+
+	useEffect(() => {
+		if (visibleCount >= lines.length) return;
+		const line = lines[visibleCount];
 		const timer = setTimeout(() => setVisibleCount((n) => n + 1), line.delay + (visibleCount === 0 ? 500 : 0));
 		return () => clearTimeout(timer);
-	}, [visibleCount]);
+	}, [visibleCount, lines]);
 
 	return (
 		<div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-950 overflow-hidden shadow-xl shadow-neutral-950/10 dark:shadow-neutral-950/40">
@@ -42,7 +46,7 @@ const TerminalWindow = () => {
 			</div>
 			{/* Body */}
 			<div className="px-5 py-5 font-mono text-sm space-y-1.5 min-h-[200px]">
-				{TERMINAL_LINES.slice(0, visibleCount).map((line, i) => (
+				{lines.slice(0, visibleCount).map((line, i) => (
 					<div key={i} className="flex gap-2">
 						<span className={line.prompt === '$' ? 'text-emerald-400' : 'text-neutral-600'}>
 							{line.prompt}
@@ -52,7 +56,7 @@ const TerminalWindow = () => {
 						</span>
 					</div>
 				))}
-				{visibleCount < TERMINAL_LINES.length && (
+				{visibleCount < lines.length && (
 					<div className="flex gap-2">
 						<span className="text-emerald-400">$</span>
 						<span className="inline-block w-2 h-4 bg-emerald-400 animate-pulse" />
@@ -63,21 +67,55 @@ const TerminalWindow = () => {
 	);
 };
 
-export const Hero = () => {
+export type HeroStats = {
+	totalPosts: number;
+	totalSeries: number;
+	topSeries: { name: string; postCount: number } | null;
+	topTags: { label: string; slug: string }[];
+};
+
+export const Hero = ({ totalPosts, totalSeries, topSeries, topTags }: Partial<HeroStats>) => {
 	const { publication } = useAppContext();
 	const [topicIndex, setTopicIndex] = useState(0);
 	const [isVisible, setIsVisible] = useState(true);
+
+	const rotatingTopics = useMemo(
+		() => (topTags && topTags.length >= 3 ? topTags.slice(0, 6).map((t) => t.label) : DEFAULT_TOPICS),
+		[topTags],
+	);
+
+	const quickLinks = useMemo(
+		() => (topTags && topTags.length >= 3 ? topTags.slice(0, 4) : DEFAULT_QUICK_LINKS),
+		[topTags],
+	);
+
+	const terminalLines = useMemo<TerminalLine[]>(() => {
+		const statsText =
+			totalPosts != null && totalSeries != null
+				? `Found ${totalPosts} articles · ${totalSeries} series`
+				: 'Found 38 articles · 4 series';
+		const seriesName = topSeries?.name ?? 'LLM from Scratch';
+		const episodeCount = topSeries?.postCount ?? 6;
+		return [
+			{ prompt: '$', cmd: 'abstract-algo search --topic "system-design"', delay: 0 },
+			{ prompt: '>', cmd: statsText, delay: 600, muted: true },
+			{ prompt: '$', cmd: `abstract-algo run --series "${seriesName}"`, delay: 1300 },
+			{ prompt: '>', cmd: `Loading episode 1 of ${episodeCount}… ████████░░ 80%`, delay: 1900, muted: true },
+			{ prompt: '$', cmd: 'abstract-algo recommend --level senior', delay: 2700 },
+			{ prompt: '>', cmd: 'CAP theorem, RAFT consensus, transformer attention', delay: 3300, muted: true },
+		];
+	}, [totalPosts, totalSeries, topSeries]);
 
 	useEffect(() => {
 		const interval = setInterval(() => {
 			setIsVisible(false);
 			setTimeout(() => {
-				setTopicIndex((prev) => (prev + 1) % ROTATING_TOPICS.length);
+				setTopicIndex((prev) => (prev + 1) % rotatingTopics.length);
 				setIsVisible(true);
 			}, 300);
 		}, 4000);
 		return () => clearInterval(interval);
-	}, []);
+	}, [rotatingTopics]);
 
 	return (
 		<section className="w-full py-10 md:py-14">
@@ -95,7 +133,7 @@ export const Hero = () => {
 									isVisible ? 'opacity-100' : 'opacity-0'
 								}`}
 							>
-								{ROTATING_TOPICS[topicIndex]}
+								{rotatingTopics[topicIndex]}
 							</span>
 						</div>
 					</div>
@@ -107,7 +145,7 @@ export const Hero = () => {
 					<SearchBar />
 
 					<div className="flex flex-wrap gap-2 mt-1">
-						{[{ label: 'System Design', slug: 'system-design' }, { label: 'Algorithms', slug: 'algorithms' }, { label: 'LLM', slug: 'llm' }, { label: 'Architecture', slug: 'architecture' }].map(({ label, slug }) => (
+						{quickLinks.map(({ label, slug }) => (
 							<Link
 								key={slug}
 								href={`/tag/${slug}`}
@@ -121,7 +159,7 @@ export const Hero = () => {
 
 				{/* ── Right: Terminal ─────────────────────────────────────── */}
 				<div className="hidden md:block">
-					<TerminalWindow />
+					<TerminalWindow lines={terminalLines} />
 				</div>
 
 			</div>
