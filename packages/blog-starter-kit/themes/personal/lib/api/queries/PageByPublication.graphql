@@ -11,7 +11,9 @@ fragment StaticPage on StaticPage {
 	id
 	title
 	slug
+	hidden
 	content {
 		markdown
+		html
 	}
 }

@@ -10,9 +10,13 @@ import { AppProvider } from '../../components/contexts/appContext';
 import { DateFormatter } from '../../components/date-formatter';
 import { Footer } from '../../components/footer';
 import { Layout } from '../../components/layout';
+import { MarkdownToHtml } from '../../components/markdown-to-html';
 import { PersonalHeader } from '../../components/personal-theme-header';
 import { getFooterPosts } from '../../lib/api/footerData';
 import {
+	PageByPublicationDocument,
+	PageByPublicationQuery,
+	PageByPublicationQueryVariables,
 	PostFragment,
 	PublicationFragment,
 	SeriesPostsByPublicationDocument,
@@ -28,10 +32,16 @@ type SeriesInfo = {
 	description?: string | null;
 };
 
+type RoadmapPage = {
+	title: string;
+	markdown: string;
+} | null;
+
 type Props = {
 	publication: PublicationFragment;
 	posts: PostFragment[];
 	series: SeriesInfo;
+	roadmap: RoadmapPage;
 	footerPosts: PostFragment[];
 };
 
@@ -40,7 +50,45 @@ const UNCATEGORIZED = '__uncategorized__';
 const toTitleCase = (str: string) =>
 	str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 
-export default function SeriesDetailPage({ publication, posts, series, footerPosts }: Props) {
+const RoadmapSection = ({ title, markdown }: { title: string; markdown: string }) => {
+	const [open, setOpen] = useState(true);
+	return (
+		<div className="mb-12 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+			{/* Header */}
+			<button
+				onClick={() => setOpen((v) => !v)}
+				className="w-full flex items-center justify-between gap-4 px-6 py-4 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+			>
+				<div className="flex items-center gap-3">
+					<span className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400">
+						Roadmap
+					</span>
+					<span className="text-base font-bold text-neutral-900 dark:text-neutral-50">
+						{title}
+					</span>
+				</div>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					className={`w-5 h-5 flex-shrink-0 text-neutral-400 dark:text-neutral-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+				>
+					<path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+				</svg>
+			</button>
+			{/* Collapsible body */}
+			{open && (
+				<div className="px-6 pb-6 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+					<div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-code:text-sm">
+						<MarkdownToHtml contentMarkdown={markdown} />
+					</div>
+				</div>
+			)}
+		</div>
+	);
+};
+
+export default function SeriesDetailPage({ publication, posts, series, roadmap, footerPosts }: Props) {
 	const title = `${series.name} - ${publication.title}`;
 	const totalReadTime = posts.reduce((sum, p) => sum + (p.readTimeInMinutes ?? 0), 0);
 	const latestDate = posts.length > 0
@@ -203,6 +251,9 @@ export default function SeriesDetailPage({ publication, posts, series, footerPos
 								</div>
 							)}
 						</div>
+
+						{/* ── Roadmap (static page) ── */}
+						{roadmap && <RoadmapSection title={roadmap.title} markdown={roadmap.markdown} />}
 
 						{/* ── Posts List ── */}
 						{posts.length > 0 ? (
@@ -367,6 +418,28 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 	const posts = series.posts.edges.map((edge) => edge.node);
 	const footerPosts = await getFooterPosts();
 
+	// Try to fetch a matching static page (roadmap) using the series slug
+	let roadmap: RoadmapPage = null;
+	try {
+		const pageData = await request<PageByPublicationQuery, PageByPublicationQueryVariables>(
+			process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT,
+			PageByPublicationDocument,
+			{
+				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
+				slug: `${params.slug}-roadmap`,
+			},
+		);
+		const page = pageData.publication?.staticPage;
+		if (page && !page.hidden) {
+			roadmap = {
+				title: page.title,
+				markdown: page.content.markdown,
+			};
+		}
+	} catch {
+		// No matching page — silently skip
+	}
+
 	return {
 		props: {
 			publication,
@@ -378,6 +451,7 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 				coverImage: series.coverImage ?? null,
 				description: series.description?.html ?? null,
 			},
+			roadmap,
 			footerPosts,
 		},
 		revalidate: 1,
