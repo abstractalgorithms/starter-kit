@@ -23,6 +23,7 @@ import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { CoverImage } from '../components/cover-image';
 import { DateFormatter } from '../components/date-formatter';
+import { formatTagName } from '../utils/format';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { MarkdownToHtml } from '../components/markdown-to-html';
@@ -325,7 +326,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 											href={`/tag/${tag.slug}`}
 											className="inline-flex items-center px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full text-xs font-mono border border-neutral-200 dark:border-neutral-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 dark:hover:bg-blue-950 dark:hover:text-blue-300 dark:hover:border-blue-800 transition-colors"
 										>
-											{tag.name}
+											{formatTagName(tag.name)}
 										</Link>
 									</li>
 								))}

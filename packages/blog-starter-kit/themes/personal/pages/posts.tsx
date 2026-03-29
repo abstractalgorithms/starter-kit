@@ -12,6 +12,7 @@ import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { MinimalPosts } from '../components/minimal-posts';
 import { PersonalHeader } from '../components/personal-theme-header';
+import { formatTagName } from '../utils/format';
 import {
 	MorePostsByPublicationDocument,
 	MorePostsByPublicationQuery,
@@ -26,8 +27,6 @@ import {
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 
-const toTitleCase = (str: string) =>
-	str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 
 type Props = {
 	publication: PublicationFragment;
@@ -67,7 +66,7 @@ export default function AllPostsPage({ publication, initialPosts, initialPageInf
 				if (!primaryTag?.slug) continue;
 				if (!seen.has(primaryTag.slug)) {
 					seen.add(primaryTag.slug);
-					order.push({ slug: primaryTag.slug, name: toTitleCase(primaryTag.name ?? primaryTag.slug) });
+					order.push({ slug: primaryTag.slug, name: formatTagName(primaryTag.name ?? primaryTag.slug) });
 				}
 				map.set(primaryTag.slug, [...(map.get(primaryTag.slug) ?? []), post]);
 			}

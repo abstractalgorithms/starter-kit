@@ -10,6 +10,7 @@ import { Footer } from '../../components/footer';
 import { Layout } from '../../components/layout';
 import { MarkdownToHtml } from '../../components/markdown-to-html';
 import { PersonalHeader } from '../../components/personal-theme-header';
+import { formatTagName } from '../../utils/format';
 import type {
 	DraftByIdQuery,
 	DraftByIdQueryVariables,
@@ -49,7 +50,7 @@ export default function Post({ publication, post }: Props) {
 				href={`/tag/${tag.slug}`}
 				className="block rounded-full border px-2 py-1 font-medium hover:bg-slate-50 dark:border-neutral-800 dark:hover:bg-neutral-800 md:px-4"
 			>
-				{tag.name}
+				{formatTagName(tag.name)}
 			</Link>
 		</li>
 	));

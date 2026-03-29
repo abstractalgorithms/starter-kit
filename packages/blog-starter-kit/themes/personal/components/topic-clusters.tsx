@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PostFragment } from '../generated/graphql';
 import { DateFormatter } from './date-formatter';
+import { formatTagName } from '../utils/format';
 
 export type ClusterColor = 'blue' | 'emerald' | 'purple' | 'orange' | 'teal';
 
@@ -32,7 +33,7 @@ export function buildTopicClusters(
 			if (existing) {
 				existing.posts.push(post);
 			} else {
-				tagMap.set(tag.slug, { label: tag.name ?? tag.slug, posts: [post] });
+				tagMap.set(tag.slug, { label: formatTagName(tag.name ?? tag.slug), posts: [post] });
 			}
 		}
 	}

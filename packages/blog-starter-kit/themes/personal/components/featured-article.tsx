@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PostFragment } from '../generated/graphql';
 import { DateFormatter } from './date-formatter';
+import { formatTagName } from '../utils/format';
 
 type Props = {
 	posts: PostFragment[];
@@ -36,7 +37,7 @@ const MainFeaturedCard = ({ post }: { post: PostFragment }) => {
 											key={tag.id}
 											className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
 										>
-											{tag.name}
+											{formatTagName(tag.name)}
 										</span>
 									))}
 								</div>
@@ -115,7 +116,7 @@ const SecondaryFeaturedCard = ({ post }: { post: PostFragment }) => {
 									key={tag.id}
 									className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
 								>
-									{tag.name}
+									{formatTagName(tag.name)}
 								</span>
 							))}
 						</div>

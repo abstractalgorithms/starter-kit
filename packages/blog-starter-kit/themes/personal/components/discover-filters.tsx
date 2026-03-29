@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { PostFragment } from '../generated/graphql';
 import { DateFormatter } from './date-formatter';
+import { formatTagName } from '../utils/format';
 
 type Props = {
 	posts: PostFragment[];
@@ -20,7 +21,7 @@ export const DiscoverFilters = ({ posts }: Props) => {
 				post.tags.forEach((tag) => {
 					if (!tagMap.has(tag.slug)) {
 						tagMap.set(tag.slug, {
-							name: tag.name,
+							name: formatTagName(tag.name),
 							slug: tag.slug,
 							count: 0,
 						});
