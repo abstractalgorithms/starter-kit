@@ -1,11 +1,22 @@
-# This query is a placeholder
-# Series are accessed via SeriesPostsByPublication query with specific slugs
-# Or extracted from posts that include series data
-query PublicationSeriesInfo($host: String!) {
+query AllSeriesByPublication($host: String!, $first: Int!, $after: String) {
 	publication(host: $host) {
 		...Publication
-		posts(first: 0) {
-			totalDocuments
+		seriesList(first: $first, after: $after) {
+			edges {
+				node {
+					id
+					name
+					slug
+					description {
+						html
+						text
+					}
+					coverImage
+				}
+			}
+			pageInfo {
+				...PageInfo
+			}
 		}
 	}
 }

@@ -43,10 +43,10 @@ const MainFeaturedCard = ({ post }: { post: PostFragment }) => {
 								</div>
 							)}
 
-							<h3 className="text-2xl md:text-3xlfont-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-[1.2]">
+							<h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-[1.2]">
 								{post.title}
 							</h3>
-							<p className="text-neutral-500 dark:text-neutral-400 line-clamp-3 text-sm leading-relaxed">
+							<p className="text-sm font-medium text-neutral-600 dark:text-neutral-300 line-clamp-3 leading-relaxed">
 								{post.subtitle || post.brief}
 							</p>
 						</div>
@@ -122,10 +122,10 @@ const SecondaryFeaturedCard = ({ post }: { post: PostFragment }) => {
 						</div>
 					)}
 
-					<h3 className="text-base font-boldtracking-tight text-neutral-900 dark:text-neutral-50 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
+					<h3 className="text-base font-bold tracking-tight text-neutral-900 dark:text-neutral-50 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
 						{post.title}
 					</h3>
-					<p className="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed flex-1">
+					<p className="text-sm font-medium text-neutral-600 dark:text-neutral-300 line-clamp-2 leading-relaxed flex-1">
 						{post.subtitle || post.brief}
 					</p>
 

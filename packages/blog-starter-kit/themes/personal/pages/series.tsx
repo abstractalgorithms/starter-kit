@@ -9,7 +9,11 @@ import { AppProvider } from '../components/contexts/appContext';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { PersonalHeader } from '../components/personal-theme-header';
+import { formatTagName } from '../utils/format';
 import {
+	AllSeriesByPublicationDocument,
+	AllSeriesByPublicationQuery,
+	AllSeriesByPublicationQueryVariables,
 	PublicationFragment,
 	PostFragment,
 	MorePostsByPublicationDocument,
@@ -22,12 +26,17 @@ import {
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 
+type SeriesTag = { name: string; slug: string };
+
 type Series = {
 	id: string;
 	name: string;
 	slug: string;
-	coverImage?: string;
+	description: string;
+	coverImage: string | null;
 	postCount: number;
+	totalReadTime: number;
+	tags: SeriesTag[];
 };
 
 type Props = {
@@ -36,14 +45,88 @@ type Props = {
 	footerPosts: PostFragment[];
 };
 
-const ACCENT_COLORS = [
-	'border-l-blue-500',
-	'border-l-emerald-500',
-	'border-l-purple-500',
-	'border-l-orange-500',
-	'border-l-teal-500',
-	'border-l-rose-500',
-] as const;
+
+const SeriesCard = ({ s }: { s: Series }) => {
+	const hours = Math.floor(s.totalReadTime / 60);
+	const mins = s.totalReadTime % 60;
+	const duration = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
+
+	return (
+		<Link
+			href={`/series/${s.slug}`}
+			className="group flex flex-col h-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 overflow-hidden"
+		>
+			{/* Cover image */}
+			{s.coverImage ? (
+				<div className="w-full h-48 overflow-hidden flex-shrink-0">
+					<img
+						src={s.coverImage}
+						alt={s.name}
+						className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+					/>
+				</div>
+			) : (
+				<div className="w-full h-20 flex-shrink-0 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800">
+					<svg className="w-8 h-8 text-neutral-300 dark:text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+					</svg>
+				</div>
+			)}
+
+			<div className="flex flex-col flex-grow p-5 gap-3">
+				{/* Title */}
+				<h3 className="text-lg font-bold leading-tight tracking-tight text-black dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+					{s.name}
+				</h3>
+
+				{/* Description */}
+				{s.description && (
+					<p className="text-neutral-600 dark:text-neutral-400 line-clamp-2 text-sm flex-grow">
+						{s.description}
+					</p>
+				)}
+
+				{/* Tags */}
+				{s.tags.length > 0 && (
+					<div className="flex flex-wrap gap-1.5">
+						{s.tags.slice(0, 4).map((tag) => (
+							<span
+								key={tag.slug}
+								className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
+							>
+								{formatTagName(tag.name)}
+							</span>
+						))}
+					</div>
+				)}
+
+				{/* Spacer */}
+				<div className="flex-1" />
+
+				{/* Footer stats */}
+				<div className="flex items-center justify-between pt-3 border-t border-neutral-200 dark:border-neutral-800">
+					<div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400">
+						<span className="inline-flex items-center gap-1">
+							<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+							</svg>
+							{s.postCount} article{s.postCount !== 1 ? 's' : ''}
+						</span>
+
+						{s.totalReadTime > 0 && (
+							<span className="inline-flex items-center gap-1">
+								<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+								{duration}
+							</span>
+						)}
+					</div>
+				</div>
+			</div>
+		</Link>
+	);
+};
 
 export default function SeriesPage({ publication, series, footerPosts }: Props) {
 	return (
@@ -118,45 +201,9 @@ export default function SeriesPage({ publication, series, footerPosts }: Props) 
 						</div>
 
 						{series.length > 0 ? (
-							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-								{series.map((s, i) => (
-									<Link
-										key={s.id}
-										href={`/series/${s.slug}`}
-										className={`group flex flex-col h-full rounded-xl border border-l-4 ${ACCENT_COLORS[i % ACCENT_COLORS.length]} border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden`}
-									>
-										{s.coverImage && (
-											<div className="w-full h-36 overflow-hidden">
-												<img
-													src={s.coverImage}
-													alt={s.name}
-													className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-												/>
-											</div>
-										)}
-										<div className="flex flex-col flex-grow p-5">
-											<h3 className="text-base font-bold text-neutral-900 dark:text-neutral-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-auto capitalize">
-												{s.name}
-											</h3>
-											<div className="flex items-center justify-between mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800">
-												<span className="text-xs font-mono text-neutral-400 dark:text-neutral-500">
-													{s.postCount} article{s.postCount !== 1 ? 's' : ''}
-												</span>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													className="w-4 h-4 text-neutral-300 dark:text-neutral-600 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all"
-												>
-													<path
-														fillRule="evenodd"
-														d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
-														clipRule="evenodd"
-													/>
-												</svg>
-											</div>
-										</div>
-									</Link>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+								{series.map((s) => (
+									<SeriesCard key={s.id} s={s} />
 								))}
 							</div>
 						) : (
@@ -179,67 +226,105 @@ export default function SeriesPage({ publication, series, footerPosts }: Props) 
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
 	try {
-		const data = await request<PostsByPublicationQuery, PostsByPublicationQueryVariables>(
+		// ── 1. Fetch all posts (for tag + read-time aggregation) ───────────────
+		const postsData = await request<PostsByPublicationQuery, PostsByPublicationQueryVariables>(
 			GQL_ENDPOINT,
 			PostsByPublicationDocument,
-			{
-				first: 50,
-				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
-			},
+			{ first: 20, host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST },
 		);
 
-		const publication = data.publication;
-		if (!publication) {
-			return {
-				notFound: true,
-			};
-		}
+		const publication = postsData.publication;
+		if (!publication) return { notFound: true };
 
-		// Extract unique series from posts
-		const seriesMap = new Map<string, Series>();
-		
-		const allPosts = [...(publication.posts.edges ?? []).map((e) => e.node)];
-		let cursor = publication.posts.pageInfo?.endCursor;
-		let hasNextPage = !!publication.posts.pageInfo?.hasNextPage;
+		const allPosts: PostFragment[] = [...(postsData.publication?.posts.edges ?? []).map((e) => e.node)];
+		let cursor = postsData.publication?.posts.pageInfo?.endCursor;
+		let hasNextPage = !!postsData.publication?.posts.pageInfo?.hasNextPage;
 
 		while (hasNextPage && cursor) {
-			const nextPage = await request<MorePostsByPublicationQuery, MorePostsByPublicationQueryVariables>(
+			const next = await request<MorePostsByPublicationQuery, MorePostsByPublicationQueryVariables>(
 				GQL_ENDPOINT,
 				MorePostsByPublicationDocument,
 				{ first: 20, host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST, after: cursor },
 			);
-			if (!nextPage.publication) break;
-			allPosts.push(...nextPage.publication.posts.edges.map((e) => e.node));
-			cursor = nextPage.publication.posts.pageInfo.endCursor;
-			hasNextPage = !!nextPage.publication.posts.pageInfo.hasNextPage;
+			if (!next.publication) break;
+			allPosts.push(...next.publication.posts.edges.map((e) => e.node));
+			cursor = next.publication.posts.pageInfo.endCursor;
+			hasNextPage = !!next.publication.posts.pageInfo.hasNextPage;
 		}
 
-		allPosts.forEach((post) => {
-			const s = post.series;
-			if (s && s.id && !seriesMap.has(s.id)) {
-				seriesMap.set(s.id, {
-					id: s.id,
-					name: s.name,
-					slug: s.slug,
-					postCount: allPosts.filter((p) => p.series?.id === s.id).length,
-				});
+		// ── 2. Fetch series metadata (description + cover) — falls back gracefully ──
+		type RawSeries = { id: string; name: string; slug: string; description?: { text?: string } | null; coverImage?: string | null };
+		let rawSeriesMap = new Map<string, RawSeries>();
+		try {
+			let seriesCursor: string | null | undefined = undefined;
+			let seriesHasNextPage = true;
+			while (seriesHasNextPage) {
+				const seriesPage: AllSeriesByPublicationQuery = await request<AllSeriesByPublicationQuery, AllSeriesByPublicationQueryVariables>(
+					GQL_ENDPOINT,
+					AllSeriesByPublicationDocument,
+					{ first: 20, host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST, after: seriesCursor },
+				);
+				for (const edge of seriesPage.publication?.seriesList?.edges ?? []) {
+					rawSeriesMap.set(edge.node.id, edge.node);
+				}
+				seriesCursor = seriesPage.publication?.seriesList?.pageInfo?.endCursor;
+				seriesHasNextPage = !!seriesPage.publication?.seriesList?.pageInfo?.hasNextPage;
 			}
-		});
+		} catch (err) {
+			console.warn('seriesList query failed, falling back to post-derived series:', err);
+		}
 
-		const series = Array.from(seriesMap.values()).sort((a, b) => b.postCount - a.postCount);
+		// ── 3. Aggregate per-series data from posts ────────────────────────────
+		// Collect all unique series ids from posts
+		const seriesIdOrder: string[] = [];
+		const seenIds = new Set<string>();
+		for (const post of allPosts) {
+			if (post.series?.id && !seenIds.has(post.series.id)) {
+				seenIds.add(post.series.id);
+				seriesIdOrder.push(post.series.id);
+				// Seed rawSeriesMap if seriesList query returned nothing
+				if (!rawSeriesMap.has(post.series.id)) {
+					rawSeriesMap.set(post.series.id, { id: post.series.id, name: post.series.name, slug: post.series.slug });
+				}
+			}
+		}
+
+		const series: Series[] = [...rawSeriesMap.values()].map((s) => {
+			const seriesPosts = allPosts.filter((p) => p.series?.id === s.id);
+
+			const tagMap = new Map<string, { name: string; slug: string; count: number }>();
+			for (const post of seriesPosts) {
+				for (const tag of post.tags ?? []) {
+					if (!tag?.slug) continue;
+					const existing = tagMap.get(tag.slug);
+					tagMap.set(tag.slug, { name: tag.name, slug: tag.slug, count: (existing?.count ?? 0) + 1 });
+				}
+			}
+			const tags = [...tagMap.values()]
+				.sort((a, b) => b.count - a.count)
+				.slice(0, 4)
+				.map(({ name, slug }) => ({ name, slug }));
+
+			return {
+				id: s.id,
+				name: s.name,
+				slug: s.slug,
+				description: s.description?.text ?? '',
+				coverImage: s.coverImage ?? null,
+				postCount: seriesPosts.length,
+				totalReadTime: seriesPosts.reduce((sum, p) => sum + (p.readTimeInMinutes ?? 0), 0),
+				tags,
+			};
+		}).sort((a, b) => b.postCount - a.postCount);
 
 		return {
-			props: {
-				publication,
-				series,
-				footerPosts: allPosts,
-			},
+			props: { publication, series, footerPosts: allPosts },
 			revalidate: 1,
 		};
 	} catch (error) {
-		console.error('Error fetching series:', error);
-		return {
-			notFound: true,
-		};
+		console.error('Error fetching series page data:', error);
+		return { notFound: true };
 	}
 };
+
+
