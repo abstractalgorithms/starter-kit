@@ -65,11 +65,116 @@ function makeExpandBtn(getHtml: () => string): HTMLButtonElement {
 	return btn;
 }
 
+const COPY_ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+const CHECK_ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+const LINK_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
+
+// ── Toast (lazy singleton) ────────────────────────────────────────────────
+let _toast: HTMLDivElement | null = null;
+let _toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+function showToast(message: string) {
+	if (typeof document === 'undefined') return;
+	if (!_toast) {
+		_toast = document.createElement('div');
+		_toast.className = 'heading-anchor-toast';
+		// Append inside <main> so the --font-plus-jakarta-sans CSS variable is in scope
+		const mount = document.querySelector('main') ?? document.body;
+		mount.appendChild(_toast);
+	}
+	_toast.textContent = message;
+	_toast.classList.add('is-visible');
+	if (_toastTimer) clearTimeout(_toastTimer);
+	_toastTimer = setTimeout(() => _toast?.classList.remove('is-visible'), 2000);
+}
+
 const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 	const content = markdownToHtml(contentMarkdown);
 	useEmbeds({ enabled: true });
 	useQuizHandler();
 	const containerRef = useRef<HTMLDivElement>(null);
+
+	// Inject copy buttons into all <pre> code blocks
+	useEffect(() => {
+		if (!containerRef.current) return;
+		const DIAGRAM_LANGUAGES = ['mermaid', 'chart', 'plantuml', 'graphviz', 'dot', 'ditaa', 'nomnoml'];
+		containerRef.current.querySelectorAll('pre').forEach((pre) => {
+			if (pre.parentElement?.classList.contains('code-block-outer')) return;
+			// Skip diagram blocks (mermaid, etc.) — marked.js uses `lang-X` prefix
+			if (pre.classList.contains('mermaid')) return;
+			const codeEl = pre.querySelector('code');
+			if (codeEl && DIAGRAM_LANGUAGES.some(
+				(lang) => codeEl.classList.contains(`lang-${lang}`) || codeEl.classList.contains(`language-${lang}`)
+			)) return;
+			if (pre.querySelector('svg')) return;
+
+			const wrapper = document.createElement('div');
+			wrapper.className = 'code-block-outer';
+			pre.parentNode!.insertBefore(wrapper, pre);
+			wrapper.appendChild(pre);
+
+			const copyBtn = document.createElement('button');
+			copyBtn.className = 'code-copy-btn';
+			copyBtn.title = 'Copy code';
+			copyBtn.setAttribute('aria-label', 'Copy code');
+			copyBtn.innerHTML = COPY_ICON;
+
+			copyBtn.addEventListener('click', async (e) => {
+				e.preventDefault();
+				const code = pre.querySelector('code')?.innerText ?? pre.innerText;
+				try {
+					await navigator.clipboard.writeText(code);
+				} catch {
+					const ta = document.createElement('textarea');
+					ta.value = code;
+					ta.style.cssText = 'position:fixed;opacity:0';
+					document.body.appendChild(ta);
+					ta.select();
+					document.execCommand('copy');
+					document.body.removeChild(ta);
+				}
+				copyBtn.innerHTML = CHECK_ICON;
+				copyBtn.classList.add('code-copy-btn--copied');
+				setTimeout(() => {
+					copyBtn.innerHTML = COPY_ICON;
+					copyBtn.classList.remove('code-copy-btn--copied');
+				}, 2000);
+			});
+
+			wrapper.appendChild(copyBtn);
+		});
+	}, [content]);
+
+	// Inject anchor links into all headings that have an id
+	useEffect(() => {
+		if (!containerRef.current) return;
+		containerRef.current.querySelectorAll<HTMLHeadingElement>('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]').forEach((heading) => {
+			if (heading.querySelector('.heading-anchor')) return;
+			const anchor = document.createElement('a');
+			anchor.href = `#${heading.id}`;
+			anchor.className = 'heading-anchor';
+			anchor.setAttribute('aria-label', `Link to section: ${heading.textContent}`);
+			anchor.innerHTML = LINK_ICON;
+			anchor.addEventListener('click', async (e) => {
+				e.preventDefault();
+				const url = `${window.location.origin}${window.location.pathname}#${heading.id}`;
+				try {
+					await navigator.clipboard.writeText(url);
+				} catch {
+					const ta = document.createElement('textarea');
+					ta.value = url;
+					ta.style.cssText = 'position:fixed;opacity:0';
+					document.body.appendChild(ta);
+					ta.select();
+					document.execCommand('copy');
+					document.body.removeChild(ta);
+				}
+				window.history.replaceState(null, '', `#${heading.id}`);
+				showToast('Link copied!');
+			});
+			heading.appendChild(anchor);
+		});
+	}, [content]);
 
 	useEffect(() => {
 		if (containerRef.current) {
