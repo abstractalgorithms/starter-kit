@@ -9,10 +9,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	}
 
 	try {
+		const body = { ...req.body };
+		if (typeof body.url === 'string') {
+			body.url = body.url.replace('abstractalgorithms.hashnode.dev', 'abstractalgorithms.dev');
+		}
+
 		const upstream = await fetch(UPSTREAM_URL, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(req.body),
+			body: JSON.stringify(body),
 		});
 
 		const data = await upstream.json();
