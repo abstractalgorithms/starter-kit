@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-const AI_SHARE_API = 'https://splendid-sfogliatella-6bc915.netlify.app/api/ai-generate-share';
+const AI_SHARE_API = '/api/ai-generate-share';
 
 type Platform = 'linkedin' | 'twitter';
 
