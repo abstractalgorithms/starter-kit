@@ -273,12 +273,12 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			{/* ── 3-Column Reading Layout ── */}
 			<div className="flex gap-6 lg:gap-8 xl:gap-12 mt-12 min-w-0 w-full">
 				{/* Left: Social share (sticky, hidden below lg) */}
-				<SocialShare url={post.url} title={post.title} />
+				<SocialShare url={post.url} title={post.title} excerpt={post.brief ?? ''} tags={(post.tags ?? []).map((t) => t.name)} />
 
 				{/* Center: article content */}
 				<div className="flex-1 min-w-0">
 					{/* Mobile/tablet: share bar (lg+ handled by sticky sidebar) */}
-					<MobileShareBar url={post.url} title={post.title} />
+					<MobileShareBar url={post.url} title={post.title} excerpt={post.brief ?? ''} tags={(post.tags ?? []).map((t) => t.name)} />
 
 					{/* Mobile/tablet inline ToC (hidden on xl where sidebar ToC appears) */}
 					{tocItems.length > 0 && (
