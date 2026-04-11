@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { isNewsletterSubscribeEnabled } from '../lib/features';
 
 export const NewsletterFloater = () => {
   const [visible, setVisible] = useState(false);
@@ -35,6 +36,7 @@ export const NewsletterFloater = () => {
     section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  if (!isNewsletterSubscribeEnabled) return null;
   if (!visible) return null;
 
   return (

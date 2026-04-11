@@ -6,6 +6,7 @@ import {
 	SubscribeToNewsletterMutation,
 	SubscribeToNewsletterMutationVariables,
 } from '../generated/graphql';
+import { isNewsletterSubscribeEnabled } from '../lib/features';
 import { useAppContext } from './contexts/appContext';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
@@ -16,6 +17,10 @@ export const NewsletterSection = () => {
 	const [submitted, setSubmitted] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+	if (!isNewsletterSubscribeEnabled) {
+		return null;
+	}
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
