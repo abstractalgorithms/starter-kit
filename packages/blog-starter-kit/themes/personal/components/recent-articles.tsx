@@ -18,11 +18,23 @@ type ClusterKind = 'created' | 'updated' | 'top';
 
 const CLUSTER_META: Record<
 	ClusterKind,
-	{ label: string; badge: string; pill: string; pillText: string; border: string; link: string; arrow: string }
+	{
+		label: string;
+		badge: string;
+		description: string;
+		href: string;
+		pill: string;
+		pillText: string;
+		border: string;
+		link: string;
+		arrow: string;
+	}
 > = {
 	created: {
 		label: 'Recently Added',
 		badge: 'New',
+		description: 'Latest posts in publish order.',
+		href: '/posts?view=created',
 		pill: 'bg-blue-100 dark:bg-blue-900/40',
 		pillText: 'text-blue-700 dark:text-blue-300',
 		border: 'border-l-blue-500',
@@ -32,6 +44,8 @@ const CLUSTER_META: Record<
 	updated: {
 		label: 'Recently Updated',
 		badge: 'Updated',
+		description: 'All refreshed posts sorted by last update.',
+		href: '/posts?view=updated',
 		pill: 'bg-emerald-100 dark:bg-emerald-900/40',
 		pillText: 'text-emerald-700 dark:text-emerald-300',
 		border: 'border-l-emerald-500',
@@ -41,6 +55,8 @@ const CLUSTER_META: Record<
 	top: {
 		label: 'Top Posts',
 		badge: 'Popular',
+		description: 'Browse every post by popularity.',
+		href: '/posts?view=top',
 		pill: 'bg-orange-100 dark:bg-orange-900/40',
 		pillText: 'text-orange-700 dark:text-orange-300',
 		border: 'border-l-orange-500',
@@ -133,13 +149,29 @@ const ClusterCard = ({ posts, kind }: { posts: PostFragment[]; kind: ClusterKind
 		<div
 			className={`rounded-xl border border-l-4 border-neutral-200 dark:border-neutral-800 ${c.border} bg-white dark:bg-neutral-900 overflow-hidden flex flex-col`}
 		>
-			<div className="px-5 pt-5 pb-3 flex items-center gap-2">
-				<span className={`text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${c.pill} ${c.pillText}`}>
-					{c.badge}
-				</span>
-				<span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-					{c.label}
-				</span>
+			<div className="px-5 pt-5 pb-3 flex items-start justify-between gap-4">
+				<div>
+					<div className="flex items-center gap-2">
+						<span className={`text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${c.pill} ${c.pillText}`}>
+							{c.badge}
+						</span>
+						<span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+							{c.label}
+						</span>
+					</div>
+					<p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+						{c.description}
+					</p>
+				</div>
+				<Link
+					href={c.href}
+					className={`shrink-0 text-sm font-semibold ${c.link} flex items-center gap-1 transition-colors`}
+				>
+					View all
+					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+					</svg>
+				</Link>
 			</div>
 			<div className="px-5 pb-5 flex-1">
 				{posts.map((post, i) => (
@@ -176,7 +208,7 @@ export const RecentArticles = ({ recentlyCreated, recentlyUpdated, topPosts }: P
 					href="/posts"
 					className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 transition-colors"
 				>
-					View all
+					Browse all posts
 					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
 					</svg>

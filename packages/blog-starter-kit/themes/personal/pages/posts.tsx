@@ -4,120 +4,198 @@ import request from 'graphql-request';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useState, useMemo } from 'react';
-import { Waypoint } from 'react-waypoint';
+import { useRouter } from 'next/router';
+import { useMemo, useState } from 'react';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
+import { DateFormatter } from '../components/date-formatter';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
-import { MinimalPosts } from '../components/minimal-posts';
 import { PersonalHeader } from '../components/personal-theme-header';
-import { formatTagName } from '../utils/format';
 import {
 	MorePostsByPublicationDocument,
 	MorePostsByPublicationQuery,
 	MorePostsByPublicationQueryVariables,
-	PageInfoFragment,
 	PostFragment,
 	PostsByPublicationDocument,
 	PostsByPublicationQuery,
 	PostsByPublicationQueryVariables,
 	PublicationFragment,
 } from '../generated/graphql';
+import {
+	DEFAULT_SORT_BY_VIEW,
+	filterPosts,
+	getEffectiveUpdatedAt,
+	getPostsForView,
+	parsePostListSort,
+	parsePostListView,
+	POST_SORT_OPTIONS,
+	POST_VIEW_META,
+	PostListSort,
+	PostListView,
+	sortPosts,
+} from '../lib/post-listing';
+import { formatTagName } from '../utils/format';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
-
 
 type Props = {
 	publication: PublicationFragment;
 	initialPosts: PostFragment[];
-	initialPageInfo: PageInfoFragment;
 };
 
-const UNCATEGORIZED = '__uncategorized__';
+type QueryUpdates = Partial<
+	Record<'view' | 'sort' | 'tag' | 'series' | 'createdFrom' | 'createdTo' | 'updatedFrom' | 'updatedTo', string | null>
+>;
 
-export default function AllPostsPage({ publication, initialPosts, initialPageInfo }: Props) {
-	const [posts, setPosts] = useState<PostFragment[]>(
-		[...initialPosts].sort((a, b) =>
-			new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime()
-		)
-	);
-	const [pageInfo, setPageInfo] = useState<Props['initialPageInfo']>(initialPageInfo);
-	const [loadedMore, setLoadedMore] = useState(false);
-	const [activeCategory, setActiveCategory] = useState<string | null>(null);
+const formatViews = (views: number) => {
+	if (views >= 1_000_000) {
+		return `${(views / 1_000_000).toFixed(1)}M`;
+	}
 
-	/** Build ordered list of categories and a map from category slug → posts */
-	const { categories, grouped } = useMemo(() => {
-		const order: { slug: string; name: string }[] = [];
-		const seen = new Set<string>();
-		const map = new Map<string, PostFragment[]>();
+	if (views >= 1_000) {
+		return `${(views / 1_000).toFixed(1)}K`;
+	}
 
-		for (const post of posts) {
-			const tags = (post.tags ?? []).filter((t): t is NonNullable<typeof t> => !!t?.slug);
-			if (tags.length === 0) {
-				if (!seen.has(UNCATEGORIZED)) {
-					seen.add(UNCATEGORIZED);
-					order.push({ slug: UNCATEGORIZED, name: 'Uncategorized' });
-				}
-				map.set(UNCATEGORIZED, [...(map.get(UNCATEGORIZED) ?? []), post]);
-			} else {
-				// Assign to the primary (first) tag only so each post appears exactly once
-				const primaryTag = tags[0];
-				if (!primaryTag?.slug) continue;
-				if (!seen.has(primaryTag.slug)) {
-					seen.add(primaryTag.slug);
-					order.push({ slug: primaryTag.slug, name: formatTagName(primaryTag.name ?? primaryTag.slug) });
-				}
-				map.set(primaryTag.slug, [...(map.get(primaryTag.slug) ?? []), post]);
-			}
+	return `${views}`;
+};
+
+const getQueryValue = (value: string | string[] | undefined) =>
+	typeof value === 'string' && value.length > 0 ? value : '';
+
+const buildTagOptions = (posts: PostFragment[]) => {
+	const tags = new Map<string, { slug: string; name: string; count: number }>();
+
+	posts.forEach((post) => {
+		post.tags?.forEach((tag) => {
+			const existing = tags.get(tag.slug);
+			tags.set(tag.slug, {
+				slug: tag.slug,
+				name: formatTagName(tag.name),
+				count: (existing?.count ?? 0) + 1,
+			});
+		});
+	});
+
+	return [...tags.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+};
+
+const buildSeriesOptions = (posts: PostFragment[]) => {
+	const series = new Map<string, { slug: string; name: string; count: number }>();
+
+	posts.forEach((post) => {
+		if (!post.series) {
+			return;
 		}
 
-		// Sort by post count descending (majority first); Uncategorized always last
-		const sorted = order
-			.filter(c => c.slug !== UNCATEGORIZED)
-			.sort((a, b) => (map.get(b.slug)?.length ?? 0) - (map.get(a.slug)?.length ?? 0));
-		if (seen.has(UNCATEGORIZED)) sorted.push({ slug: UNCATEGORIZED, name: 'Uncategorized' });
+		const existing = series.get(post.series.slug);
+		series.set(post.series.slug, {
+			slug: post.series.slug,
+			name: post.series.name,
+			count: (existing?.count ?? 0) + 1,
+		});
+	});
 
-		return { categories: sorted, grouped: map };
-	}, [posts]);
+	return [...series.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+};
 
-	const visibleCategories = useMemo(
-		() => (activeCategory ? categories.filter(c => c.slug === activeCategory) : categories),
-		[categories, activeCategory]
+export default function AllPostsPage({ publication, initialPosts }: Props) {
+	const router = useRouter();
+	const [searchTerm, setSearchTerm] = useState('');
+
+	const view = parsePostListView(router.query.view);
+	const sort = parsePostListSort(router.query.sort, view);
+	const tagSlug = getQueryValue(router.query.tag);
+	const seriesSlug = getQueryValue(router.query.series);
+	const createdFrom = getQueryValue(router.query.createdFrom);
+	const createdTo = getQueryValue(router.query.createdTo);
+	const updatedFrom = getQueryValue(router.query.updatedFrom);
+	const updatedTo = getQueryValue(router.query.updatedTo);
+
+	const updateQuery = (updates: QueryUpdates) => {
+		const nextState = {
+			view,
+			sort,
+			tag: tagSlug,
+			series: seriesSlug,
+			createdFrom,
+			createdTo,
+			updatedFrom,
+			updatedTo,
+			...updates,
+		};
+
+		const nextQuery = Object.fromEntries(
+			Object.entries(nextState).filter(([, value]) => value && value.length > 0),
+		);
+
+		router.replace(
+			{
+				pathname: '/posts',
+				query: nextQuery,
+			},
+			undefined,
+			{ shallow: true, scroll: false },
+		);
+	};
+
+	const clearFilters = () => {
+		setSearchTerm('');
+		router.replace('/posts', undefined, { shallow: true, scroll: false });
+	};
+
+	const tagOptions = useMemo(() => buildTagOptions(initialPosts), [initialPosts]);
+	const seriesOptions = useMemo(() => buildSeriesOptions(initialPosts), [initialPosts]);
+
+	const viewCounts = useMemo(
+		() => ({
+			all: getPostsForView(initialPosts, 'all').length,
+			created: getPostsForView(initialPosts, 'created').length,
+			updated: getPostsForView(initialPosts, 'updated').length,
+			top: getPostsForView(initialPosts, 'top').length,
+		}),
+		[initialPosts],
 	);
 
-	const loadMore = async () => {
-		const data = await request<MorePostsByPublicationQuery, MorePostsByPublicationQueryVariables>(
-			GQL_ENDPOINT,
-			MorePostsByPublicationDocument,
-			{
-				first: 20,
-				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
-				after: pageInfo.endCursor,
-			},
-		);
-		if (!data.publication) return;
-		const newPosts = data.publication.posts.edges.map((edge) => edge.node);
-		const combined = [...posts, ...newPosts].sort((a, b) =>
-			new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime()
-		);
-		setPosts(combined);
-		setPageInfo(data.publication.posts.pageInfo);
-		setLoadedMore(true);
-	};
+	const filteredPosts = useMemo(() => {
+		const basePosts = getPostsForView(initialPosts, view);
+		const matchingPosts = filterPosts(basePosts, {
+			searchTerm,
+			tagSlug: tagSlug || null,
+			seriesSlug: seriesSlug || null,
+			createdFrom,
+			createdTo,
+			updatedFrom,
+			updatedTo,
+		});
+
+		return sortPosts(matchingPosts, sort);
+	}, [createdFrom, createdTo, initialPosts, searchTerm, seriesSlug, sort, tagSlug, updatedFrom, updatedTo, view]);
+
+	const activeFilterCount = [
+		searchTerm,
+		tagSlug,
+		seriesSlug,
+		createdFrom,
+		createdTo,
+		updatedFrom,
+		updatedTo,
+	].filter(Boolean).length;
+
+	const activeView = POST_VIEW_META[view];
 
 	return (
 		<AppProvider publication={publication} footerPosts={initialPosts}>
 			<Layout>
 				<Head>
 					<title>All Posts - {publication.title}</title>
-					<meta name="description" content={`All posts from ${publication.title}`} />
+					<meta name="description" content={`Browse all posts from ${publication.title}`} />
 					<meta property="og:title" content={`All Posts - ${publication.title}`} />
-					<meta property="og:description" content={`All posts from ${publication.title}`} />
+					<meta property="og:description" content={`Browse all posts from ${publication.title}`} />
 					<meta property="og:image" content={publication.ogMetaData.image || getAutogeneratedPublicationOG(publication)} />
 					<meta property="twitter:card" content="summary_large_image" />
 					<meta property="twitter:title" content={`All Posts - ${publication.title}`} />
-					<meta property="twitter:description" content={`All posts from ${publication.title}`} />
+					<meta property="twitter:description" content={`Browse all posts from ${publication.title}`} />
 					<meta property="twitter:image" content={publication.ogMetaData.image || getAutogeneratedPublicationOG(publication)} />
 					<script
 						type="application/ld+json"
@@ -127,98 +205,274 @@ export default function AllPostsPage({ publication, initialPosts, initialPageInf
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-4 sm:px-5 py-12 flex flex-col gap-10">
-
-						{/* ── Page heading ── */}
-						<div>
-							<h1 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-neutral-50 mb-3">
-								All Posts
-							</h1>
-							<p className="text-lg text-neutral-600 dark:text-neutral-300">
-								{posts.length} article{posts.length !== 1 ? 's' : ''} grouped by category.
-							</p>
+						<div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+							<div>
+								<p className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400 mb-2">
+									Post explorer
+								</p>
+								<h1 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-neutral-50 mb-3">
+									{activeView.label}
+								</h1>
+								<p className="text-lg text-neutral-600 dark:text-neutral-300 max-w-3xl">
+									{activeView.description}
+								</p>
+							</div>
+							<div className="text-sm text-neutral-500 dark:text-neutral-400">
+								{filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''}
+								{activeFilterCount > 0 ? ` · ${activeFilterCount} filter${activeFilterCount !== 1 ? 's' : ''} active` : ''}
+							</div>
 						</div>
 
-						{/* ── Category pill filter ── */}
-						{categories.length > 1 && (
-							<div className="flex flex-wrap gap-2">
+						<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+							{(
+								[
+									['all', 'Explore all posts'],
+									['created', 'Newest posts first'],
+									['updated', 'Latest refreshed posts'],
+									['top', 'Most popular posts'],
+								] as Array<[PostListView, string]>
+							).map(([preset, hint]) => (
 								<button
-									onClick={() => setActiveCategory(null)}
-									className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-										activeCategory === null
-											? 'bg-blue-600 text-white border-blue-600'
-											: 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400'
+									key={preset}
+									onClick={() =>
+										updateQuery({
+											view: preset === 'all' ? null : preset,
+											sort: DEFAULT_SORT_BY_VIEW[preset],
+										})
+									}
+									className={`rounded-xl border p-4 text-left transition-colors ${
+										view === preset
+											? 'border-blue-600 bg-blue-50 dark:bg-blue-950/30'
+											: 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-400'
 									}`}
 								>
-									All
-								</button>
-								{categories.map((cat) => (
-									<button
-										key={cat.slug}
-										onClick={() => setActiveCategory(cat.slug === activeCategory ? null : cat.slug)}
-										className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-											activeCategory === cat.slug
-												? 'bg-blue-600 text-white border-blue-600'
-												: 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400'
-										}`}
-									>
-										{cat.name}
-										<span className={`text-xs tabular-nums ${activeCategory === cat.slug ? 'text-blue-200' : 'text-neutral-400 dark:text-neutral-500'}`}>
-											{grouped.get(cat.slug)?.length ?? 0}
+									<div className="flex items-center justify-between gap-3">
+										<span className="text-base font-semibold text-neutral-900 dark:text-neutral-50">
+											{POST_VIEW_META[preset].label}
 										</span>
-									</button>
-								))}
-							</div>
-						)}
-
-						{/* ── Grouped sections ── */}
-						<div className="flex flex-col gap-16">
-							{visibleCategories.map((cat) => {
-								const catPosts = grouped.get(cat.slug) ?? [];
-								if (catPosts.length === 0) return null;
-								return (
-									<section key={cat.slug} id={`cat-${cat.slug}`}>
-										{/* Section header */}
-										<div className="flex items-center gap-3 mb-6">
-											<div className="flex items-center gap-2">
-												{cat.slug !== UNCATEGORIZED ? (
-													<Link
-														href={`/tag/${cat.slug}`}
-														className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-													>
-														{cat.name}
-													</Link>
-												) : (
-													<h2 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-50">
-														{cat.name}
-													</h2>
-												)}
-												<span className="text-sm font-mono text-neutral-400 dark:text-neutral-500">
-													({catPosts.length})
-												</span>
-											</div>
-											<div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
-										</div>
-
-										{/* Posts grid */}
-										<MinimalPosts context="home" posts={catPosts} />
-									</section>
-								);
-							})}
+										<span className="text-sm font-mono text-neutral-500 dark:text-neutral-400">
+											{viewCounts[preset]}
+										</span>
+									</div>
+									<p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+										{hint}
+									</p>
+								</button>
+							))}
 						</div>
 
-						{/* ── Load more ── */}
-						{!loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
-							<div className="flex justify-center">
-								<button
-									onClick={loadMore}
-									className="px-6 py-2.5 text-sm font-medium rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-								>
-									Load more posts
-								</button>
+						<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6">
+							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+								<div className="xl:col-span-2">
+									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+										Search posts
+									</label>
+									<input
+										type="text"
+										value={searchTerm}
+										onChange={(e) => setSearchTerm(e.target.value)}
+										placeholder="Search by title, summary, or subtitle"
+										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+									/>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+										Sort by
+									</label>
+									<select
+										value={sort}
+										onChange={(e) => updateQuery({ sort: e.target.value as PostListSort })}
+										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+									>
+										{POST_SORT_OPTIONS.map((option) => (
+											<option key={option.value} value={option.value}>
+												{option.label}
+											</option>
+										))}
+									</select>
+								</div>
+								<div className="flex items-end">
+									<button
+										onClick={clearFilters}
+										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 px-4 py-3 text-sm font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+									>
+										Reset filters
+									</button>
+								</div>
+
+								<div>
+									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+										Filter by tag
+									</label>
+									<select
+										value={tagSlug}
+										onChange={(e) => updateQuery({ tag: e.target.value || null })}
+										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+									>
+										<option value="">All tags</option>
+										{tagOptions.map((tag) => (
+											<option key={tag.slug} value={tag.slug}>
+												{tag.name} ({tag.count})
+											</option>
+										))}
+									</select>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+										Filter by series
+									</label>
+									<select
+										value={seriesSlug}
+										onChange={(e) => updateQuery({ series: e.target.value || null })}
+										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+									>
+										<option value="">All series</option>
+										{seriesOptions.map((series) => (
+											<option key={series.slug} value={series.slug}>
+												{series.name} ({series.count})
+											</option>
+										))}
+									</select>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+										Created after
+									</label>
+									<input
+										type="date"
+										value={createdFrom}
+										onChange={(e) => updateQuery({ createdFrom: e.target.value || null })}
+										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+									/>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+										Created before
+									</label>
+									<input
+										type="date"
+										value={createdTo}
+										onChange={(e) => updateQuery({ createdTo: e.target.value || null })}
+										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+									/>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+										Updated after
+									</label>
+									<input
+										type="date"
+										value={updatedFrom}
+										onChange={(e) => updateQuery({ updatedFrom: e.target.value || null })}
+										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+									/>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+										Updated before
+									</label>
+									<input
+										type="date"
+										value={updatedTo}
+										onChange={(e) => updateQuery({ updatedTo: e.target.value || null })}
+										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+									/>
+								</div>
 							</div>
-						)}
-						{loadedMore && pageInfo.hasNextPage && pageInfo.endCursor && (
-							<Waypoint onEnter={loadMore} bottomOffset={'10%'} />
+						</div>
+
+						{filteredPosts.length > 0 ? (
+							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+								{filteredPosts.map((post) => (
+									<article
+										key={post.id}
+										className="flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+									>
+										{post.coverImage?.url ? (
+											<Link href={`/${post.slug}`} className="block overflow-hidden">
+												<img
+													src={post.coverImage.url}
+													alt={post.title}
+													className="h-52 w-full object-cover transition-transform duration-300 hover:scale-105"
+												/>
+											</Link>
+										) : null}
+										<div className="flex flex-1 flex-col p-5">
+											<div className="mb-3 flex flex-wrap gap-2">
+												{post.series ? (
+													<button
+														onClick={() => updateQuery({ series: post.series?.slug || null })}
+														className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-200 dark:bg-purple-900/40 dark:text-purple-200"
+													>
+														Series: {post.series.name}
+													</button>
+												) : null}
+												{post.tags?.slice(0, 2).map((tag) => (
+													<button
+														key={tag.id}
+														onClick={() => updateQuery({ tag: tag.slug })}
+														className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-200"
+													>
+														{formatTagName(tag.name)}
+													</button>
+												))}
+											</div>
+											<Link href={`/${post.slug}`} className="group">
+												<h2 className="text-xl font-bold text-neutral-900 transition-colors group-hover:text-blue-600 dark:text-neutral-50 dark:group-hover:text-blue-400">
+													{post.title}
+												</h2>
+											</Link>
+											<p className="mt-3 line-clamp-3 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+												{post.brief}
+											</p>
+											<div className="mt-5 grid grid-cols-2 gap-3 text-sm text-neutral-500 dark:text-neutral-400">
+												<div>
+													<p className="text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+														Created
+													</p>
+													<DateFormatter dateString={post.publishedAt} />
+												</div>
+												<div>
+													<p className="text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+														Updated
+													</p>
+													<DateFormatter dateString={getEffectiveUpdatedAt(post)} />
+												</div>
+												<div>
+													<p className="text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+														Popularity
+													</p>
+													<p>{formatViews(post.views)} views</p>
+												</div>
+												<div>
+													<p className="text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+														Read time
+													</p>
+													<p>{post.readTimeInMinutes} min read</p>
+												</div>
+											</div>
+											<div className="mt-5 flex items-center justify-between border-t border-neutral-200 pt-4 text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
+												<span>{post.comments.totalDocuments} comment{post.comments.totalDocuments !== 1 ? 's' : ''}</span>
+												<Link
+													href={`/${post.slug}`}
+													className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+												>
+													Read post
+												</Link>
+											</div>
+										</div>
+									</article>
+								))}
+							</div>
+						) : (
+							<div className="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 px-6 py-16 text-center">
+								<h2 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-50">
+									No posts match the current filters
+								</h2>
+								<p className="mt-3 text-neutral-600 dark:text-neutral-400">
+									Try resetting filters, changing the view preset, or broadening the date range.
+								</p>
+							</div>
 						)}
 					</div>
 					<Footer />
@@ -245,10 +499,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		};
 	}
 
-	const initialPosts = (publication.posts.edges ?? []).map((edge) => edge.node);
-
-	// Paginate to collect ALL posts so that every category appears in the filter
-	const allPosts = [...initialPosts];
+	const allPosts = (publication.posts.edges ?? []).map((edge) => edge.node);
 	let cursor = publication.posts.pageInfo.endCursor;
 	let hasNextPage = !!publication.posts.pageInfo.hasNextPage;
 
@@ -258,8 +509,12 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 			MorePostsByPublicationDocument,
 			{ first: 20, host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST, after: cursor },
 		);
-		if (!next.publication) break;
-		allPosts.push(...next.publication.posts.edges.map((e) => e.node));
+
+		if (!next.publication) {
+			break;
+		}
+
+		allPosts.push(...next.publication.posts.edges.map((edge) => edge.node));
 		cursor = next.publication.posts.pageInfo.endCursor;
 		hasNextPage = !!next.publication.posts.pageInfo.hasNextPage;
 	}
@@ -268,7 +523,6 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		props: {
 			publication,
 			initialPosts: allPosts,
-			initialPageInfo: { hasNextPage: false, endCursor: null },
 		},
 		revalidate: 1,
 	};
