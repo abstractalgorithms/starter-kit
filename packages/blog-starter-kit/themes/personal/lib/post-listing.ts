@@ -162,7 +162,7 @@ export const parsePostListSort = (
 		return DEFAULT_SORT_BY_VIEW[fallbackView];
 	}
 
-	return POST_SORT_OPTIONS.some((option) => option.value === value as PostListSort)
+	return POST_SORT_OPTIONS.some((option) => option.value === (value as PostListSort))
 		? (value as PostListSort)
 		: DEFAULT_SORT_BY_VIEW[fallbackView];
 };

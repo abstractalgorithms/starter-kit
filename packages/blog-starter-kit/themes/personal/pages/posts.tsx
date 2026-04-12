@@ -29,7 +29,6 @@ import {
 	getPostsForView,
 	parsePostListSort,
 	parsePostListView,
-	POST_SORT_OPTIONS,
 	POST_VIEW_META,
 	PostListSort,
 	PostListView,
@@ -44,9 +43,19 @@ type Props = {
 	initialPosts: PostFragment[];
 };
 
-type QueryUpdates = Partial<
-	Record<'view' | 'sort' | 'tag' | 'series' | 'createdFrom' | 'createdTo' | 'updatedFrom' | 'updatedTo', string | null>
->;
+type QueryUpdates = Partial<Record<'view' | 'sort' | 'tag' | 'series', string | null>>;
+type SortField = 'created' | 'updated' | 'popular';
+
+const SORT_ROW_OPTIONS: Array<{
+	field: SortField;
+	label: string;
+	desc: PostListSort;
+	asc: PostListSort;
+}> = [
+	{ field: 'created', label: 'Created on', desc: 'created-desc', asc: 'created-asc' },
+	{ field: 'updated', label: 'Updated on', desc: 'updated-desc', asc: 'updated-asc' },
+	{ field: 'popular', label: 'Popularity', desc: 'popular-desc', asc: 'popular-asc' },
+];
 
 const formatViews = (views: number) => {
 	if (views >= 1_000_000) {
@@ -99,6 +108,47 @@ const buildSeriesOptions = (posts: PostFragment[]) => {
 	return [...series.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 };
 
+const getSortField = (sort: PostListSort): SortField => {
+	if (sort.startsWith('created')) {
+		return 'created';
+	}
+
+	if (sort.startsWith('updated')) {
+		return 'updated';
+	}
+
+	return 'popular';
+};
+
+const isAscendingSort = (sort: PostListSort) => sort.endsWith('asc');
+
+const getNextSort = (currentSort: PostListSort, field: SortField): PostListSort => {
+	const option = SORT_ROW_OPTIONS.find((item) => item.field === field);
+	if (!option) {
+		return currentSort;
+	}
+
+	if (getSortField(currentSort) === field) {
+		return isAscendingSort(currentSort) ? option.desc : option.asc;
+	}
+
+	return option.desc;
+};
+
+const getVisibleOptions = <T extends { slug: string }>(
+	options: T[],
+	selectedSlug: string,
+	limit: number,
+) => {
+	const topOptions = options.slice(0, limit);
+	if (!selectedSlug || topOptions.some((option) => option.slug === selectedSlug)) {
+		return topOptions;
+	}
+
+	const selected = options.find((option) => option.slug === selectedSlug);
+	return selected ? [selected, ...topOptions.slice(0, Math.max(limit - 1, 0))] : topOptions;
+};
+
 export default function AllPostsPage({ publication, initialPosts }: Props) {
 	const router = useRouter();
 	const [searchTerm, setSearchTerm] = useState('');
@@ -107,10 +157,6 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 	const sort = parsePostListSort(router.query.sort, view);
 	const tagSlug = getQueryValue(router.query.tag);
 	const seriesSlug = getQueryValue(router.query.series);
-	const createdFrom = getQueryValue(router.query.createdFrom);
-	const createdTo = getQueryValue(router.query.createdTo);
-	const updatedFrom = getQueryValue(router.query.updatedFrom);
-	const updatedTo = getQueryValue(router.query.updatedTo);
 
 	const updateQuery = (updates: QueryUpdates) => {
 		const nextState = {
@@ -118,10 +164,6 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 			sort,
 			tag: tagSlug,
 			series: seriesSlug,
-			createdFrom,
-			createdTo,
-			updatedFrom,
-			updatedTo,
 			...updates,
 		};
 
@@ -146,6 +188,14 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 
 	const tagOptions = useMemo(() => buildTagOptions(initialPosts), [initialPosts]);
 	const seriesOptions = useMemo(() => buildSeriesOptions(initialPosts), [initialPosts]);
+	const visibleTagOptions = useMemo(
+		() => getVisibleOptions(tagOptions, tagSlug, 6),
+		[tagOptions, tagSlug],
+	);
+	const visibleSeriesOptions = useMemo(
+		() => getVisibleOptions(seriesOptions, seriesSlug, 5),
+		[seriesOptions, seriesSlug],
+	);
 
 	const viewCounts = useMemo(
 		() => ({
@@ -163,26 +213,18 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 			searchTerm,
 			tagSlug: tagSlug || null,
 			seriesSlug: seriesSlug || null,
-			createdFrom,
-			createdTo,
-			updatedFrom,
-			updatedTo,
+			createdFrom: '',
+			createdTo: '',
+			updatedFrom: '',
+			updatedTo: '',
 		});
 
 		return sortPosts(matchingPosts, sort);
-	}, [createdFrom, createdTo, initialPosts, searchTerm, seriesSlug, sort, tagSlug, updatedFrom, updatedTo, view]);
+	}, [initialPosts, searchTerm, seriesSlug, sort, tagSlug, view]);
 
-	const activeFilterCount = [
-		searchTerm,
-		tagSlug,
-		seriesSlug,
-		createdFrom,
-		createdTo,
-		updatedFrom,
-		updatedTo,
-	].filter(Boolean).length;
-
+	const activeFilterCount = [searchTerm, tagSlug, seriesSlug].filter(Boolean).length;
 	const activeView = POST_VIEW_META[view];
+	const activeSortField = getSortField(sort);
 
 	return (
 		<AppProvider publication={publication} footerPosts={initialPosts}>
@@ -204,7 +246,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-6xl mx-auto w-full px-4 sm:px-5 py-12 flex flex-col gap-10">
+					<div className="max-w-6xl mx-auto w-full px-4 sm:px-5 py-12 flex flex-col gap-8">
 						<div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
 							<div>
 								<p className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400 mb-2">
@@ -219,166 +261,163 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 							</div>
 							<div className="text-sm text-neutral-500 dark:text-neutral-400">
 								{filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''}
-								{activeFilterCount > 0 ? ` · ${activeFilterCount} filter${activeFilterCount !== 1 ? 's' : ''} active` : ''}
+								{activeFilterCount > 0 ? ` · ${activeFilterCount} active filter${activeFilterCount !== 1 ? 's' : ''}` : ''}
 							</div>
 						</div>
 
-						<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-							{(
-								[
-									['all', 'Explore all posts'],
-									['created', 'Newest posts first'],
-									['updated', 'Latest refreshed posts'],
-									['top', 'Most popular posts'],
-								] as Array<[PostListView, string]>
-							).map(([preset, hint]) => (
-								<button
-									key={preset}
-									onClick={() =>
-										updateQuery({
-											view: preset === 'all' ? null : preset,
-											sort: DEFAULT_SORT_BY_VIEW[preset],
-										})
-									}
-									className={`rounded-xl border p-4 text-left transition-colors ${
-										view === preset
-											? 'border-blue-600 bg-blue-50 dark:bg-blue-950/30'
-											: 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-400'
-									}`}
-								>
-									<div className="flex items-center justify-between gap-3">
-										<span className="text-base font-semibold text-neutral-900 dark:text-neutral-50">
-											{POST_VIEW_META[preset].label}
-										</span>
-										<span className="text-sm font-mono text-neutral-500 dark:text-neutral-400">
-											{viewCounts[preset]}
-										</span>
-									</div>
-									<p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-										{hint}
-									</p>
-								</button>
-							))}
-						</div>
-
-						<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6">
-							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-								<div className="xl:col-span-2">
-									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-										Search posts
-									</label>
+						<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 flex flex-col gap-5">
+							<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+								<div className="flex flex-wrap items-center gap-2">
+									<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mr-1">
+										View
+									</span>
+									{(['all', 'created', 'updated', 'top'] as PostListView[]).map((preset) => (
+										<button
+											key={preset}
+											onClick={() =>
+												updateQuery({
+													view: preset === 'all' ? null : preset,
+													sort: DEFAULT_SORT_BY_VIEW[preset],
+												})
+											}
+											className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+												view === preset
+													? 'bg-blue-600 text-white'
+													: 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'
+											}`}
+										>
+											{POST_VIEW_META[preset].label} <span className="opacity-70">({viewCounts[preset]})</span>
+										</button>
+									))}
+								</div>
+								<div className="w-full lg:max-w-sm">
 									<input
 										type="text"
 										value={searchTerm}
 										onChange={(e) => setSearchTerm(e.target.value)}
-										placeholder="Search by title, summary, or subtitle"
-										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-										Sort by
-									</label>
-									<select
-										value={sort}
-										onChange={(e) => updateQuery({ sort: e.target.value as PostListSort })}
-										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-									>
-										{POST_SORT_OPTIONS.map((option) => (
-											<option key={option.value} value={option.value}>
-												{option.label}
-											</option>
-										))}
-									</select>
-								</div>
-								<div className="flex items-end">
-									<button
-										onClick={clearFilters}
-										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 px-4 py-3 text-sm font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-									>
-										Reset filters
-									</button>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-										Filter by tag
-									</label>
-									<select
-										value={tagSlug}
-										onChange={(e) => updateQuery({ tag: e.target.value || null })}
-										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-									>
-										<option value="">All tags</option>
-										{tagOptions.map((tag) => (
-											<option key={tag.slug} value={tag.slug}>
-												{tag.name} ({tag.count})
-											</option>
-										))}
-									</select>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-										Filter by series
-									</label>
-									<select
-										value={seriesSlug}
-										onChange={(e) => updateQuery({ series: e.target.value || null })}
-										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-									>
-										<option value="">All series</option>
-										{seriesOptions.map((series) => (
-											<option key={series.slug} value={series.slug}>
-												{series.name} ({series.count})
-											</option>
-										))}
-									</select>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-										Created after
-									</label>
-									<input
-										type="date"
-										value={createdFrom}
-										onChange={(e) => updateQuery({ createdFrom: e.target.value || null })}
-										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-										Created before
-									</label>
-									<input
-										type="date"
-										value={createdTo}
-										onChange={(e) => updateQuery({ createdTo: e.target.value || null })}
-										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-										Updated after
-									</label>
-									<input
-										type="date"
-										value={updatedFrom}
-										onChange={(e) => updateQuery({ updatedFrom: e.target.value || null })}
-										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-										Updated before
-									</label>
-									<input
-										type="date"
-										value={updatedTo}
-										onChange={(e) => updateQuery({ updatedTo: e.target.value || null })}
-										className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-3 text-neutral-900 dark:text-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+										placeholder="Search posts..."
+										className="w-full rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-2.5 text-neutral-900 dark:text-neutral-50 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
 									/>
 								</div>
 							</div>
+
+							<div className="flex flex-wrap items-center gap-3">
+								<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+									Sort by
+								</span>
+								{SORT_ROW_OPTIONS.map((option) => {
+									const isActive = activeSortField === option.field;
+									const direction = isActive && isAscendingSort(sort) ? '↑' : '↓';
+
+									return (
+										<button
+											key={option.field}
+											onClick={() => updateQuery({ sort: getNextSort(sort, option.field) })}
+											className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+												isActive
+													? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+													: 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'
+											}`}
+										>
+											{option.label}
+											<span className={`text-base leading-none ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+												{direction}
+											</span>
+										</button>
+									);
+								})}
+							</div>
+
+							<div className="flex flex-col gap-3">
+								<div className="flex flex-wrap items-center gap-2">
+									<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mr-1">
+										Tags
+									</span>
+									<button
+										onClick={() => updateQuery({ tag: null })}
+										className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+											!tagSlug
+												? 'bg-blue-600 text-white'
+												: 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'
+										}`}
+									>
+										All
+									</button>
+									{visibleTagOptions.map((tag) => (
+										<button
+											key={tag.slug}
+											onClick={() => updateQuery({ tag: tag.slug })}
+											className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+												tagSlug === tag.slug
+													? 'bg-blue-600 text-white'
+													: 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'
+											}`}
+										>
+											{tag.name}
+										</button>
+									))}
+								</div>
+
+								{seriesOptions.length > 0 && (
+									<div className="flex flex-wrap items-center gap-2">
+										<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mr-1">
+											Series
+										</span>
+										<button
+											onClick={() => updateQuery({ series: null })}
+											className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+												!seriesSlug
+													? 'bg-purple-600 text-white'
+													: 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'
+											}`}
+										>
+											All
+										</button>
+										{visibleSeriesOptions.map((series) => (
+											<button
+												key={series.slug}
+												onClick={() => updateQuery({ series: series.slug })}
+												className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+													seriesSlug === series.slug
+														? 'bg-purple-600 text-white'
+														: 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700'
+												}`}
+											>
+												{series.name}
+											</button>
+										))}
+									</div>
+								)}
+							</div>
+
+							{activeFilterCount > 0 && (
+								<div className="flex flex-wrap items-center gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+									<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+										Active
+									</span>
+									{searchTerm ? (
+										<span className="rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
+											Search: {searchTerm}
+										</span>
+									) : null}
+									{tagSlug ? (
+										<span className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
+											Tag: {tagOptions.find((tag) => tag.slug === tagSlug)?.name ?? tagSlug}
+										</span>
+									) : null}
+									{seriesSlug ? (
+										<span className="rounded-full bg-purple-100 px-3 py-1 text-sm text-purple-700 dark:bg-purple-900/40 dark:text-purple-200">
+											Series: {seriesOptions.find((series) => series.slug === seriesSlug)?.name ?? seriesSlug}
+										</span>
+									) : null}
+									<button
+										onClick={clearFilters}
+										className="ml-1 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+									>
+										Clear all
+									</button>
+								</div>
+							)}
 						</div>
 
 						{filteredPosts.length > 0 ? (
@@ -470,7 +509,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 									No posts match the current filters
 								</h2>
 								<p className="mt-3 text-neutral-600 dark:text-neutral-400">
-									Try resetting filters, changing the view preset, or broadening the date range.
+									Try clearing filters or switching the active view.
 								</p>
 							</div>
 						)}
