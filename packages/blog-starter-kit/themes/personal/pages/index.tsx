@@ -13,7 +13,7 @@ import { PersonalHeader } from '../components/personal-theme-header';
 import { Hero, HeroStats } from '../components/hero';
 import { AuthorSection } from '../components/author-section';
 import { StartHereSection, StartHereSeries } from '../components/start-here-section';
-import { TopicClusters, TopicCluster, buildTopicClusters } from '../components/topic-clusters';
+import { TopicCluster, buildTopicClusters } from '../components/topic-clusters';
 import { RecentArticles } from '../components/recent-articles';
 import {
 	MorePostsByPublicationDocument,
@@ -31,7 +31,6 @@ const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 type Props = {
 	publication: PublicationFragment;
 	initialPosts: PostFragment[];
-	topicClusters: TopicCluster[];
 	featuredSeries: StartHereSeries[];
 	recentlyCreated: PostFragment[];
 	recentlyUpdated: PostFragment[];
@@ -39,7 +38,7 @@ type Props = {
 	heroStats: HeroStats;
 };
 
-export default function Index({ publication, initialPosts, topicClusters, featuredSeries, recentlyCreated, recentlyUpdated, topPosts, heroStats }: Props) {
+export default function Index({ publication, initialPosts, featuredSeries, recentlyCreated, recentlyUpdated, topPosts, heroStats }: Props) {
 	const posts = initialPosts;
 
 	// Pinned post is always first; fill up to 3 featured posts from recent posts
@@ -83,10 +82,7 @@ export default function Index({ publication, initialPosts, topicClusters, featur
 						<Hero {...heroStats} />
 						{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
 						{featuredPosts.length > 0 && (
-							<>
-								<FeaturedArticle posts={featuredPosts} />
-								<TopicClusters clusters={topicClusters} />
-							</>
+						<FeaturedArticle posts={featuredPosts} />
 						)}
 						{initialPosts.length > 0 && (
 						<RecentArticles
@@ -191,7 +187,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		props: {
 			publication,
 			initialPosts,
-			topicClusters,
+
 			featuredSeries,
 			recentlyCreated,
 			recentlyUpdated,

@@ -35,12 +35,14 @@ import {
 	sortPosts,
 } from '../lib/post-listing';
 import { formatTagName } from '../utils/format';
+import { TopicClusters, TopicCluster, buildTopicClusters } from '../components/topic-clusters';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 
 type Props = {
 	publication: PublicationFragment;
 	initialPosts: PostFragment[];
+	topicClusters: TopicCluster[];
 };
 
 type QueryUpdates = Partial<Record<'view' | 'sort' | 'tag' | 'series', string | null>>;
@@ -149,7 +151,7 @@ const getVisibleOptions = <T extends { slug: string }>(
 	return selected ? [selected, ...topOptions.slice(0, Math.max(limit - 1, 0))] : topOptions;
 };
 
-export default function AllPostsPage({ publication, initialPosts }: Props) {
+export default function AllPostsPage({ publication, initialPosts, topicClusters }: Props) {
 	const router = useRouter();
 	const [searchTerm, setSearchTerm] = useState('');
 
@@ -265,6 +267,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 							</div>
 						</div>
 
+					{topicClusters.length > 0 && <TopicClusters clusters={topicClusters} />}
 						<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 flex flex-col gap-5">
 							<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 								<div className="flex flex-wrap items-center gap-2">
@@ -558,10 +561,13 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		hasNextPage = !!next.publication.posts.pageInfo.hasNextPage;
 	}
 
+	const topicClusters: TopicCluster[] = buildTopicClusters(allPosts);
+
 	return {
 		props: {
 			publication,
 			initialPosts: allPosts,
+			topicClusters,
 		},
 		revalidate: 1,
 	};

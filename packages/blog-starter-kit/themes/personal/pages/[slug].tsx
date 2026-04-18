@@ -44,6 +44,7 @@ import { triggerCustomWidgetEmbed } from '@starter-kit/utils/trigger-custom-widg
 import { getFooterPosts } from '../lib/api/footerData';
 import { SocialShare, MobileShareBar } from '../components/social-share';
 import { TableOfContents } from '../components/table-of-contents';
+import { PostChatbot } from '../components/post-chatbot';
 // CalloutBlock and QuizCard are available for use inside article content:
 // import { CalloutBlock } from '../components/callout-block';
 // import { QuizCard } from '../components/quiz-card';
@@ -391,6 +392,9 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 				{/* Right: sticky ToC (xl+) */}
 				<TableOfContents items={tocItems} />
 			</div>
+
+			{/* Floating AI Chatbot */}
+			<PostChatbot postTitle={post.title} postContent={post.content.markdown} />
 		</>
 	);
 };
