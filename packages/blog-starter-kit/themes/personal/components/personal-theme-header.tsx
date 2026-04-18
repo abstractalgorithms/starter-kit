@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import request from 'graphql-request';
 import { KeyboardEventHandler, useCallback, useEffect, useRef, useState } from 'react';
+import { AiTechTicker } from './ai-tech-ticker';
 import {
 	SearchPostsOfPublicationDocument,
 	SearchPostsOfPublicationQuery,
@@ -223,6 +224,7 @@ export const PersonalHeader = () => {
 
 	return (
 		<header className="w-full bg-white dark:bg-neutral-950">
+			<AiTechTicker />
 			<div className="max-w-6xl mx-auto px-5 py-2.5 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
 				<h1>
 					<Link
