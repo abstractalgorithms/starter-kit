@@ -12,11 +12,11 @@ type PostLocation = {
 	totalInPhase: number;
 };
 
-const PHASE_COLORS: Record<LearningPhase['color'], { pill: string; activePill: string; text: string }> = {
-	emerald: { pill: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', activePill: 'bg-emerald-600 text-white', text: 'text-emerald-600 dark:text-emerald-400' },
-	blue:    { pill: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',           activePill: 'bg-blue-600 text-white',    text: 'text-blue-600 dark:text-blue-400'    },
-	purple:  { pill: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',   activePill: 'bg-purple-600 text-white',  text: 'text-purple-600 dark:text-purple-400' },
-	rose:    { pill: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',           activePill: 'bg-rose-600 text-white',    text: 'text-rose-600 dark:text-rose-400'    },
+const PHASE_COLORS: Record<LearningPhase['color'], { activePill: string; bar: string; text: string }> = {
+	emerald: { activePill: 'bg-emerald-600 text-white', bar: 'from-emerald-500 to-teal-500', text: 'text-emerald-600 dark:text-emerald-400' },
+	blue:    { activePill: 'bg-blue-600 text-white',    bar: 'from-blue-500 to-cyan-500',     text: 'text-blue-600 dark:text-blue-400'    },
+	purple:  { activePill: 'bg-purple-600 text-white',  bar: 'from-purple-500 to-violet-500', text: 'text-purple-600 dark:text-purple-400' },
+	rose:    { activePill: 'bg-rose-600 text-white',    bar: 'from-rose-500 to-pink-500',     text: 'text-rose-600 dark:text-rose-400'    },
 };
 
 function findPostInPath(slug: string, path: StoredLearningPath): PostLocation | null {
@@ -25,7 +25,6 @@ function findPostInPath(slug: string, path: StoredLearningPath): PostLocation | 
 		const postIdx = phase.posts.findIndex((p) => p.slug === slug);
 		if (postIdx === -1) continue;
 
-		// Build a flat ordered list of all posts across all phases for prev/next
 		const flatPosts: LearnPost[] = path.phases.flatMap((ph) => ph.posts);
 		const flatIdx = flatPosts.findIndex((p) => p.slug === slug);
 
@@ -59,8 +58,6 @@ export const LearningPathNav = ({ slug }: Props) => {
 	const [path, setPath] = useState<StoredLearningPath | null>(null);
 	const [location, setLocation] = useState<PostLocation | null>(null);
 	const [readCount, setReadCount] = useState(0);
-	const [collapsed, setCollapsed] = useState(false);
-	const [phaseMenuOpen, setPhaseMenuOpen] = useState(false);
 
 	useEffect(() => {
 		try {
@@ -69,9 +66,7 @@ export const LearningPathNav = ({ slug }: Props) => {
 			const stored: StoredLearningPath = JSON.parse(raw);
 			const loc = findPostInPath(slug, stored);
 			if (!loc) return;
-			// Mark this post as read
 			markRead(slug);
-			// Re-read after marking
 			const updatedRaw = localStorage.getItem(LP_STORAGE_KEY);
 			const updated: StoredLearningPath = updatedRaw ? JSON.parse(updatedRaw) : stored;
 			setPath(updated);
@@ -91,177 +86,101 @@ export const LearningPathNav = ({ slug }: Props) => {
 	const totalPosts = path.phases.reduce((s, p) => s + p.posts.length, 0);
 	const progressPct = Math.round((readCount / totalPosts) * 100);
 	const c = PHASE_COLORS[location.phase.color];
-
-	// Flat index across all phases for "X of N" display
 	const flatAll = path.phases.flatMap((ph) => ph.posts);
 	const globalIdx = flatAll.findIndex((p) => p.slug === slug);
 
 	return (
 		<>
-			{/* Overlay to close phase menu */}
-			{phaseMenuOpen && (
-				<div className="fixed inset-0 z-40" onClick={() => setPhaseMenuOpen(false)} />
-			)}
+			{/* Fixed bottom bar — single compact row */}
+			<div className="fixed bottom-0 inset-x-0 z-50">
+				{/* Thin progress bar flush to top of the nav */}
+				<div className="h-[3px] bg-neutral-200 dark:bg-neutral-800">
+					<div
+						className={`h-full bg-gradient-to-r ${c.bar} transition-all duration-700`}
+						style={{ width: `${progressPct}%` }}
+					/>
+				</div>
 
-			{/* Fixed bottom bar */}
-			<div className="fixed bottom-0 inset-x-0 z-50 flex justify-center pointer-events-none">
-				<div className="pointer-events-auto w-full max-w-5xl mx-4 mb-4 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md shadow-2xl overflow-hidden">
+				{/* Single row */}
+				<div className="bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
+					<div className="max-w-5xl mx-auto px-3 sm:px-4 h-12 flex items-center gap-2 sm:gap-3">
 
-					{/* Progress bar */}
-					<div className="h-0.5 bg-neutral-100 dark:bg-neutral-800">
-						<div
-							className="h-full bg-gradient-to-r from-blue-500 to-teal-500 transition-all duration-500"
-							style={{ width: `${progressPct}%` }}
-						/>
+						{/* Phase badge — hidden on very small screens */}
+						<span className={`hidden xs:inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${c.activePill}`}>
+							<span>{location.phase.emoji}</span>
+							<span>Ph.{location.phase.number}</span>
+						</span>
+
+						{/* Context label — grows to fill space */}
+						<div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden">
+							<span className={`shrink-0 text-[10px] font-bold uppercase tracking-wide ${c.text} hidden sm:block`}>
+								{location.phase.label}
+							</span>
+							<span className="hidden sm:block text-neutral-300 dark:text-neutral-700 text-xs">·</span>
+							<span className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
+								{globalIdx + 1}/{totalPosts}
+								<span className="hidden sm:inline"> · {location.postIndex + 1} of {location.totalInPhase} in phase</span>
+							</span>
+						</div>
+
+						{/* ← Prev */}
+						{location.prev ? (
+							<Link
+								href={`/${location.prev.slug}`}
+								className="shrink-0 inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:border-blue-300 dark:hover:border-blue-700 transition-all group"
+								title={location.prev.title}
+							>
+								<svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+								</svg>
+								<span className="hidden sm:inline truncate max-w-[90px]">{location.prev.title}</span>
+								<span className="sm:hidden">Prev</span>
+							</Link>
+						) : (
+							<span className="shrink-0 px-2.5 py-1.5 text-[11px] text-neutral-300 dark:text-neutral-700 select-none">← Start</span>
+						)}
+
+						{/* → Next */}
+						{location.next ? (
+							<Link
+								href={`/${location.next.slug}`}
+								className="shrink-0 inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all group"
+								title={location.next.title}
+							>
+								<span className="hidden sm:inline truncate max-w-[90px]">{location.next.title}</span>
+								<span className="sm:hidden">Next</span>
+								<svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+								</svg>
+							</Link>
+						) : (
+							<span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+								<svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+									<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+								</svg>
+								<span className="hidden sm:inline">Complete!</span>
+							</span>
+						)}
+
+						{/* Divider */}
+						<span className="shrink-0 w-px h-5 bg-neutral-200 dark:bg-neutral-700" />
+
+						{/* Exit */}
+						<button
+							onClick={handleExit}
+							className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+							title="Exit learning path"
+						>
+							<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
 					</div>
-
-					{collapsed ? (
-						/* ── Collapsed mini bar ── */
-						<div className="flex items-center justify-between gap-3 px-4 py-2.5">
-							<div className="flex items-center gap-2 min-w-0">
-								<span className="text-sm">🎯</span>
-								<span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 truncate max-w-[180px] sm:max-w-xs">
-									{path.headline}
-								</span>
-								<span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${c.activePill}`}>
-									{location.phase.emoji} Ph.{location.phase.number}
-								</span>
-							</div>
-							<div className="flex items-center gap-2 flex-shrink-0">
-								<span className="text-[10px] text-neutral-400">{readCount}/{totalPosts} read</span>
-								<button
-									onClick={() => setCollapsed(false)}
-									className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-								>
-									Expand
-								</button>
-							</div>
-						</div>
-					) : (
-						/* ── Expanded full bar ── */
-						<div className="px-4 py-3 flex flex-col gap-2.5">
-							{/* Top row: path name + stats + exit */}
-							<div className="flex items-start justify-between gap-3">
-								<div className="min-w-0">
-									<div className="flex items-center gap-2 flex-wrap">
-										<span className="text-sm">🎯</span>
-										<p className="text-xs font-bold text-neutral-800 dark:text-neutral-100 truncate max-w-[260px] sm:max-w-md">
-											{path.headline}
-										</p>
-									</div>
-									<p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-0.5">
-										{readCount} of {totalPosts} articles read · {progressPct}% complete
-									</p>
-								</div>
-								<div className="flex items-center gap-2 flex-shrink-0">
-									<button
-										onClick={() => setCollapsed(true)}
-										className="w-6 h-6 flex items-center justify-center rounded-md text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-										title="Collapse"
-									>
-										<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-										</svg>
-									</button>
-									<button
-										onClick={handleExit}
-										className="w-6 h-6 flex items-center justify-center rounded-md text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-										title="Exit learning path"
-									>
-										<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-										</svg>
-									</button>
-								</div>
-							</div>
-
-							{/* Bottom row: phase chips + nav */}
-							<div className="flex items-center justify-between gap-3 flex-wrap">
-								{/* Phase chips */}
-								<div className="relative flex items-center gap-1.5 flex-wrap">
-									{path.phases.map((phase) => {
-										const isActive = phase.number === location.phase.number;
-										const pc = PHASE_COLORS[phase.color];
-										const firstSlug = phase.posts[0]?.slug;
-										return (
-											<Link
-												key={phase.number}
-												href={`/${firstSlug}`}
-												className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${isActive ? pc.activePill + ' shadow-sm' : pc.pill + ' hover:opacity-80'}`}
-												title={`Go to Phase ${phase.number}: ${phase.label}`}
-											>
-												<span>{phase.emoji}</span>
-												<span className="hidden sm:inline">Ph.{phase.number}:</span>
-												<span>{phase.label}</span>
-											</Link>
-										);
-									})}
-								</div>
-
-								{/* Prev / position / Next */}
-								<div className="flex items-center gap-2 flex-shrink-0">
-									{location.prev ? (
-										<Link
-											href={`/${location.prev.slug}`}
-											className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:border-blue-300 dark:hover:border-blue-700 transition-all group"
-											title={location.prev.title}
-										>
-											<svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-											</svg>
-											<span className="hidden sm:inline truncate max-w-[100px]">{location.prev.title}</span>
-											<span className="sm:hidden">Prev</span>
-										</Link>
-									) : (
-										<span className="px-3 py-1.5 text-xs text-neutral-300 dark:text-neutral-600">
-											← Start
-										</span>
-									)}
-
-									<span className={`text-[11px] font-bold px-2 py-1 rounded-lg tabular-nums ${c.activePill}`}>
-										{globalIdx + 1} / {totalPosts}
-									</span>
-
-									{location.next ? (
-										<Link
-											href={`/${location.next.slug}`}
-											className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 hover:border-blue-300 dark:hover:border-blue-700 transition-all group"
-											title={location.next.title}
-										>
-											<span className="hidden sm:inline truncate max-w-[100px]">{location.next.title}</span>
-											<span className="sm:hidden">Next</span>
-											<svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-											</svg>
-										</Link>
-									) : (
-										<span className="px-3 py-1.5 text-xs text-neutral-300 dark:text-neutral-600 inline-flex items-center gap-1">
-											<svg className="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
-												<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-											</svg>
-											Path complete!
-										</span>
-									)}
-								</div>
-							</div>
-
-							{/* Current post context line */}
-							<div className="flex items-center gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800">
-								<span className={`text-[10px] font-bold uppercase tracking-wide ${c.text}`}>
-									{location.phase.emoji} Phase {location.phase.number} · {location.phase.label}
-								</span>
-								<span className="text-neutral-300 dark:text-neutral-600">·</span>
-								<span className="text-[10px] text-neutral-400 dark:text-neutral-500">
-									Article {location.postIndex + 1} of {location.totalInPhase} in this phase
-								</span>
-							</div>
-						</div>
-					)}
 				</div>
 			</div>
 
-			{/* Bottom spacer so page content isn't hidden behind the nav */}
-			<div className="h-28" />
+			{/* Bottom spacer so last content isn't hidden behind nav */}
+			<div className="h-16" />
 		</>
 	);
 };
