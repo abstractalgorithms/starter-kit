@@ -51,9 +51,13 @@ const STOP_WORDS = new Set([
 
 // Semantic synonym expansion: query term → related terms to also match
 const SYNONYMS: Record<string, string[]> = {
-	'distributed': ['replication', 'partition', 'consensus', 'raft', 'paxos', 'shard'],
-	'system design': ['scalability', 'architecture', 'microservice', 'load balancer', 'cdn'],
-	'database': ['sql', 'nosql', 'postgres', 'mysql', 'mongodb', 'cassandra', 'redis'],
+	'distributed': ['replication', 'partition', 'consensus', 'raft', 'paxos', 'shard', 'consistency', 'availability'],
+	'system design': ['scalability', 'architecture', 'microservice', 'load balancer', 'cdn', 'api gateway', 'database', 'caching', 'queue', 'storage'],
+	'system': ['architecture', 'scalability', 'design', 'service', 'component', 'infrastructure'],
+	'design': ['architecture', 'pattern', 'scalability', 'service', 'system', 'structure'],
+	'interview': ['prep', 'design', 'system', 'problem', 'solution', 'approach', 'scalability', 'architecture'],
+	'prep': ['design', 'system', 'architecture', 'interview', 'scalability', 'problem', 'approach'],
+	'database': ['sql', 'nosql', 'postgres', 'mysql', 'mongodb', 'cassandra', 'redis', 'storage', 'replication', 'sharding'],
 	'algorithm': ['data structure', 'complexity', 'sorting', 'graph', 'tree', 'dynamic programming'],
 	'llm': ['large language model', 'gpt', 'transformer', 'fine-tuning', 'rag', 'embedding'],
 	'ml': ['machine learning', 'neural network', 'model', 'training', 'inference'],
@@ -62,7 +66,6 @@ const SYNONYMS: Record<string, string[]> = {
 	'kubernetes': ['k8s', 'container', 'docker', 'pod', 'deployment', 'orchestration'],
 	'kafka': ['streaming', 'event', 'message queue', 'pub sub', 'consumer'],
 	'caching': ['redis', 'memcached', 'cdn', 'cache invalidation', 'ttl'],
-	'interview': ['prep', 'leetcode', 'problem', 'solution', 'approach', 'coding'],
 };
 
 function tokenize(text: string): string[] {
@@ -203,8 +206,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse<Learni
 			return a.post.readTimeInMinutes - b.post.readTimeInMinutes;
 		});
 
-	// Take top 15 results total
-	const topScored = scored.slice(0, 15);
+	// Take top 30 results total
+	const topScored = scored.slice(0, 30);
 
 	// Group by difficulty
 	const groups: Record<string, LearnPost[]> = { foundation: [], core: [], deep: [], advanced: [] };
@@ -213,13 +216,13 @@ export default function handler(req: NextApiRequest, res: NextApiResponse<Learni
 		groups[diff].push(post);
 	}
 
-	// Cap each phase at 4 posts, keep best-scored (already sorted)
+	// Cap each phase at 8 posts, keep best-scored (already sorted)
 	const phaseOrder: Array<'foundation' | 'core' | 'deep' | 'advanced'> = ['foundation', 'core', 'deep', 'advanced'];
 	const phases: LearningPhase[] = [];
 	let phaseNum = 1;
 
 	for (const key of phaseOrder) {
-		const pPosts = groups[key].slice(0, 4);
+		const pPosts = groups[key].slice(0, 8);
 		if (pPosts.length === 0) continue;
 		const totalMinutes = pPosts.reduce((s, p) => s + p.readTimeInMinutes, 0);
 		const meta = PHASE_META[key];

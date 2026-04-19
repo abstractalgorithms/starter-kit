@@ -43,6 +43,7 @@ const EXAMPLES = [
 // ─── Phase color map ──────────────────────────────────────────────────────────
 const COLOR: Record<LearningPhase['color'], {
 	header: string; badge: string; border: string; dot: string; pill: string;
+	tab: string; tabActive: string; tabBorder: string;
 }> = {
 	emerald: {
 		header: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800',
@@ -50,6 +51,9 @@ const COLOR: Record<LearningPhase['color'], {
 		border: 'border-emerald-200 dark:border-emerald-800',
 		dot: 'bg-emerald-500',
 		pill: 'bg-emerald-600 hover:bg-emerald-700',
+		tab: 'text-neutral-500 dark:text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400',
+		tabActive: 'text-emerald-700 dark:text-emerald-300 font-bold',
+		tabBorder: 'border-emerald-500',
 	},
 	blue: {
 		header: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800',
@@ -57,6 +61,9 @@ const COLOR: Record<LearningPhase['color'], {
 		border: 'border-blue-200 dark:border-blue-800',
 		dot: 'bg-blue-500',
 		pill: 'bg-blue-600 hover:bg-blue-700',
+		tab: 'text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400',
+		tabActive: 'text-blue-700 dark:text-blue-300 font-bold',
+		tabBorder: 'border-blue-500',
 	},
 	purple: {
 		header: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800',
@@ -64,6 +71,9 @@ const COLOR: Record<LearningPhase['color'], {
 		border: 'border-purple-200 dark:border-purple-800',
 		dot: 'bg-purple-500',
 		pill: 'bg-purple-600 hover:bg-purple-700',
+		tab: 'text-neutral-500 dark:text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400',
+		tabActive: 'text-purple-700 dark:text-purple-300 font-bold',
+		tabBorder: 'border-purple-500',
 	},
 	rose: {
 		header: 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800',
@@ -71,6 +81,9 @@ const COLOR: Record<LearningPhase['color'], {
 		border: 'border-rose-200 dark:border-rose-800',
 		dot: 'bg-rose-500',
 		pill: 'bg-rose-600 hover:bg-rose-700',
+		tab: 'text-neutral-500 dark:text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400',
+		tabActive: 'text-rose-700 dark:text-rose-300 font-bold',
+		tabBorder: 'border-rose-500',
 	},
 };
 
@@ -118,61 +131,100 @@ const PhasePostRow = ({ post, color }: { post: LearnPost; color: LearningPhase['
 	);
 };
 
-const PhaseCard = ({ phase, isFirst }: { phase: LearningPhase; isFirst: boolean }) => {
+// ─── Horizontal phase viewer ──────────────────────────────────────────────────
+
+const PhaseViewer = ({ phases }: { phases: LearningPhase[] }) => {
+	const [activeIdx, setActiveIdx] = useState(0);
+	const phase = phases[activeIdx];
 	const c = COLOR[phase.color];
+
+	const goTo = (idx: number) => setActiveIdx(Math.max(0, Math.min(phases.length - 1, idx)));
+
 	return (
 		<div className={`rounded-2xl border overflow-hidden ${c.border}`}>
-			{/* Phase header */}
+			{/* ── Phase tab strip ── */}
+			<div className="flex items-stretch overflow-x-auto border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 scrollbar-none">
+				{phases.map((ph, i) => {
+					const tc = COLOR[ph.color];
+					const isActive = i === activeIdx;
+					return (
+						<button
+							key={ph.number}
+							onClick={() => goTo(i)}
+							className={`relative flex-shrink-0 flex items-center gap-2 px-4 sm:px-5 py-3.5 text-sm transition-colors whitespace-nowrap border-b-2 ${
+								isActive
+									? `${tc.tabActive} ${tc.tabBorder} bg-neutral-50 dark:bg-neutral-800/60`
+									: `${tc.tab} border-transparent`
+							}`}
+						>
+							<span className={`w-5 h-5 rounded-full ${tc.dot} text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0`}>
+								{ph.number}
+							</span>
+							<span className="hidden xs:inline">{ph.emoji}</span>
+							<span className="font-semibold">{ph.label}</span>
+							<span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? tc.badge : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}>
+								{ph.posts.length}
+							</span>
+						</button>
+					);
+				})}
+			</div>
+
+			{/* ── Active phase header ── */}
 			<div className={`px-5 py-4 border-b ${c.header}`}>
-				<div className="flex items-start justify-between gap-3">
-					<div className="flex items-center gap-3">
-						<span className={`w-7 h-7 rounded-full ${c.dot} text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
-							{phase.number}
-						</span>
-						<div>
-							<div className="flex items-center gap-2">
-								<span className="text-lg">{phase.emoji}</span>
-								<h3 className="text-base font-bold text-neutral-900 dark:text-neutral-50">
-									Phase {phase.number}: {phase.label}
-								</h3>
-							</div>
-							<p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-								{phase.description}
-							</p>
-						</div>
+				<div className="flex items-center justify-between gap-3">
+					<div>
+						<p className="text-xs text-neutral-500 dark:text-neutral-400">{phase.description}</p>
 					</div>
 					<div className="flex-shrink-0 text-right">
 						<p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 whitespace-nowrap">
-							{phase.posts.length} articles
-						</p>
-						<p className="text-xs text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
-							~{phase.totalMinutes} min
+							{phase.posts.length} articles · ~{phase.totalMinutes} min
 						</p>
 					</div>
 				</div>
 			</div>
 
-			{/* Posts */}
+			{/* ── Post list ── */}
 			<div className="p-4 flex flex-col gap-2.5 bg-white/50 dark:bg-neutral-900/50">
 				{phase.posts.map((post) => (
 					<PhasePostRow key={post.id} post={post} color={phase.color} />
 				))}
 			</div>
 
-			{/* Phase CTA */}
-			{isFirst && (
-				<div className={`px-5 py-3 border-t ${c.border} bg-white dark:bg-neutral-900`}>
-					<Link
-						href={`/${phase.posts[0].slug}`}
-						className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold transition-colors ${c.pill}`}
-					>
-						Start Phase 1
-						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-						</svg>
-					</Link>
-				</div>
-			)}
+			{/* ── Bottom nav: prev phase / start CTA / next phase ── */}
+			<div className={`px-5 py-3 border-t ${c.border} bg-white dark:bg-neutral-900 flex items-center justify-between gap-3`}>
+				<button
+					onClick={() => goTo(activeIdx - 1)}
+					disabled={activeIdx === 0}
+					className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-500 dark:text-neutral-400 disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-neutral-50 dark:hover:enabled:bg-neutral-800 transition-colors"
+				>
+					<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+					</svg>
+					Prev Phase
+				</button>
+
+				<Link
+					href={`/${phase.posts[0].slug}`}
+					className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold transition-colors ${c.pill}`}
+				>
+					Start Phase {phase.number}
+					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+					</svg>
+				</Link>
+
+				<button
+					onClick={() => goTo(activeIdx + 1)}
+					disabled={activeIdx === phases.length - 1}
+					className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-500 dark:text-neutral-400 disabled:opacity-30 disabled:cursor-not-allowed hover:enabled:bg-neutral-50 dark:hover:enabled:bg-neutral-800 transition-colors"
+				>
+					Next Phase
+					<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+					</svg>
+				</button>
+			</div>
 		</div>
 	);
 };
@@ -380,11 +432,7 @@ export const LearnToday = ({ allPosts }: Props) => {
 							</p>
 						</div>
 					) : (
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-							{result.phases.map((phase, i) => (
-								<PhaseCard key={phase.number} phase={phase} isFirst={i === 0} />
-							))}
-						</div>
+						<PhaseViewer phases={result.phases} />
 					)}
 				</div>
 			)}
