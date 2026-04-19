@@ -45,6 +45,7 @@ import { getFooterPosts } from '../lib/api/footerData';
 import { SocialShare, MobileShareBar } from '../components/social-share';
 import { TableOfContents } from '../components/table-of-contents';
 import { PostChatbot } from '../components/post-chatbot';
+import { LearningPathNav } from '../components/learning-path-nav';
 // CalloutBlock and QuizCard are available for use inside article content:
 // import { CalloutBlock } from '../components/callout-block';
 // import { QuizCard } from '../components/quiz-card';
@@ -170,7 +171,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			{/* ── Back Navigation ── */}
 			<Link
 				href="/"
-				className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-8 group"
+				className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-4 md:mb-8 group"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -188,15 +189,15 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			</Link>
 
 			{/* ── Post Hero: header + cover image side-by-side ── */}
-			<div className={`flex flex-col ${coverImageSrc ? 'md:flex-row md:items-center md:gap-10' : ''} mb-12`}>
+			<div className={`flex flex-col ${coverImageSrc ? 'md:flex-row md:items-center md:gap-10' : ''} mb-8 md:mb-12`}>
 				{/* Left: title, subtitle, meta */}
 				<div className={coverImageSrc ? 'flex-1 min-w-0' : 'w-full'}>
-					<h1 className="text-4xl md:text-5xl font-extrabold leading-[1.15] tracking-tight text-neutral-900 dark:text-neutral-50 mb-4">
+					<h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-[1.15] tracking-tight text-neutral-900 dark:text-neutral-50 mb-3 md:mb-4">
 						{post.title}
 					</h1>
 
 					{post.subtitle && (
-						<p className="text-lg md:text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed mb-4">
+						<p className="text-base md:text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed mb-3 md:mb-4">
 							{post.subtitle}
 						</p>
 					)}
@@ -262,7 +263,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 				</div>
 				{/* Right: cover image */}
 				{!!coverImageSrc && (
-					<div className="w-full md:w-2/5 shrink-0 mt-8 md:mt-0 h-52 md:h-64 rounded-xl overflow-hidden ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-sm">
+					<div className="w-full md:w-2/5 shrink-0 mt-6 md:mt-0 h-40 sm:h-52 md:h-64 rounded-xl overflow-hidden ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-sm">
 						<img
 							src={coverImageSrc}
 							alt={`Cover Image for ${post.title}`}
@@ -272,50 +273,19 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			</div>
 
 			{/* ── 3-Column Reading Layout ── */}
-			<div className="flex gap-6 lg:gap-8 xl:gap-12 mt-12 min-w-0 w-full">
+			<div className="flex gap-6 lg:gap-8 xl:gap-12 mt-6 md:mt-12 min-w-0 w-full">
 				{/* Left: Social share (sticky, hidden below lg) */}
 				<SocialShare url={post.url} title={post.title} excerpt={post.brief ?? ''} tags={(post.tags ?? []).map((t) => t.name)} />
 
 				{/* Center: article content */}
 				<div className="flex-1 min-w-0">
-					{/* Mobile/tablet: share bar (lg+ handled by sticky sidebar) */}
-					<MobileShareBar url={post.url} title={post.title} excerpt={post.brief ?? ''} tags={(post.tags ?? []).map((t) => t.name)} />
-
-					{/* Mobile/tablet inline ToC (hidden on xl where sidebar ToC appears) */}
-					{tocItems.length > 0 && (
-						<nav
-							aria-label="Table of contents"
-							className="xl:hidden mb-10 p-5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
-						>
-							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
-								In this article
-							</p>
-							<ol className="flex flex-col gap-1.5 m-0 p-0 list-none">
-								{tocItems.map((item) => (
-									<li
-										key={item.id}
-										style={{ paddingLeft: `${(item.level - 1) * 0.875}rem` }}
-										className="m-0 p-0"
-									>
-										<a
-											href={`#heading-${item.slug}`}
-											className="text-sm text-neutral-600 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors leading-snug no-underline"
-										>
-											{decodeHtml(item.title)}
-										</a>
-									</li>
-								))}
-							</ol>
-						</nav>
-					)}
-
-					{/* AI Disclaimer */}
-					<div className="mb-8 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5 dark:border-amber-800/60 dark:bg-amber-950/40">
+					{/* AI Disclaimer — compact on mobile, full on sm+ */}
+					<div className="mb-6 flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 dark:border-amber-800/60 dark:bg-amber-950/40">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
 							fill="currentColor"
-							className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500 dark:text-amber-400"
+							className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-500 dark:text-amber-400"
 							aria-hidden="true"
 						>
 							<path
@@ -325,8 +295,8 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 							/>
 						</svg>
 						<p className="text-xs leading-relaxed text-amber-800 dark:text-amber-300">
-							<span className="font-semibold">AI-assisted content.</span>{' '}
-							This post may have been written or enhanced with the help of AI tools. While efforts are made to ensure accuracy, the content may contain errors or inaccuracies. Please verify critical information independently.
+							<span className="font-semibold">AI-assisted content.</span>
+							<span className="hidden sm:inline"> This post may have been written or enhanced with AI tools. Please verify critical information independently.</span>
 						</p>
 					</div>
 
@@ -334,6 +304,9 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 					<div className="w-full min-w-0 overflow-x-hidden">
 						<MarkdownToHtml contentMarkdown={post.content.markdown} />
 					</div>
+
+					{/* Share — mobile/tablet (desktop uses sticky sidebar) */}
+					<MobileShareBar url={post.url} title={post.title} excerpt={post.brief ?? ''} tags={(post.tags ?? []).map((t) => t.name)} />
 
 					{/* Tags */}
 					{tags.length > 0 && (
@@ -395,6 +368,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 
 			{/* Floating AI Chatbot */}
 			<PostChatbot postTitle={post.title} postContent={post.content.markdown} />
+			<LearningPathNav slug={post.slug} />
 		</>
 	);
 };

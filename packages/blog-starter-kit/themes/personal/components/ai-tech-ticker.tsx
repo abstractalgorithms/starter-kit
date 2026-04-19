@@ -33,6 +33,18 @@ const SPEED_OPTIONS: { label: string; value: Speed }[] = [
 	{ label: '5×', value: 5 },
 ];
 
+// Maps each category to relevant blog tag slugs for the "Explore on this blog" section
+const CATEGORY_RELATED: Record<string, { label: string; slug: string }[]> = {
+	LLM:             [{ label: 'LLM Engineering', slug: 'llm' }, { label: 'Machine Learning', slug: 'machine-learning' }],
+	Vision:          [{ label: 'Computer Vision', slug: 'computer-vision' }, { label: 'ML Research', slug: 'machine-learning' }],
+	NLP:             [{ label: 'NLP', slug: 'nlp' }, { label: 'LLM Engineering', slug: 'llm' }],
+	Robotics:        [{ label: 'Robotics', slug: 'robotics' }, { label: 'ML Research', slug: 'machine-learning' }],
+	'Generative AI': [{ label: 'Generative AI', slug: 'generative-ai' }, { label: 'LLM Engineering', slug: 'llm' }],
+	'ML/Research':   [{ label: 'ML Research', slug: 'machine-learning' }, { label: 'System Design', slug: 'system-design' }],
+	Hardware:        [{ label: 'Hardware', slug: 'hardware' }, { label: 'System Design', slug: 'system-design' }],
+	Multimodal:      [{ label: 'Multimodal AI', slug: 'multimodal' }, { label: 'LLM Engineering', slug: 'llm' }],
+};
+
 function formatTimeAgo(timestamp: string): string {
 	const diffMs = Date.now() - new Date(timestamp).getTime();
 	const mins = Math.floor(diffMs / 60_000);
@@ -228,18 +240,42 @@ export const AiTechTicker = () => {
 						{item.context}
 					</p>
 
-					{/* Source attribution */}
-					<a
-						href={item.source.url}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
-					>
-						<svg className="w-3.5 h-3.5 flex-shrink-0 opacity-60 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-						</svg>
-						{item.source.name}
-					</a>
+					{/* Source + Related Guides row */}
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+						{/* Source attribution */}
+						<a
+							href={item.source.url}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
+						>
+							<svg className="w-3.5 h-3.5 flex-shrink-0 opacity-60 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+							</svg>
+							{item.source.name}
+						</a>
+
+						{/* Related Guides */}
+						{(CATEGORY_RELATED[item.category] ?? []).length > 0 && (
+							<div className="flex items-center gap-2 flex-wrap">
+								<span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
+									Explore on this blog:
+								</span>
+								{(CATEGORY_RELATED[item.category] ?? []).map((tag) => (
+									<a
+										key={tag.slug}
+										href={`/tag/${tag.slug}`}
+										className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cat.bg} ${cat.text} hover:opacity-80 transition-opacity`}
+									>
+										{tag.label}
+										<svg className="w-2.5 h-2.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+										</svg>
+									</a>
+								))}
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 

@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { PostFragment } from '../generated/graphql';
-import { DateFormatter } from './date-formatter';
 import { formatTagName } from '../utils/format';
 
 export type ClusterColor = 'blue' | 'emerald' | 'purple' | 'orange' | 'teal';
@@ -15,14 +14,10 @@ export type TopicCluster = {
 
 const COLOR_CYCLE: ClusterColor[] = ['blue', 'emerald', 'purple', 'orange', 'teal'];
 
-/**
- * Derives topic clusters dynamically from all posts.
- * Tags are ranked by how many posts use them; the top `maxClusters` become clusters.
- */
 export function buildTopicClusters(
 	allPosts: PostFragment[],
 	maxClusters = 6,
-	postsPerCluster = 3,
+	postsPerCluster = 4,
 ): TopicCluster[] {
 	const tagMap = new Map<string, { label: string; posts: PostFragment[] }>();
 
@@ -50,7 +45,14 @@ export function buildTopicClusters(
 		}));
 }
 
-// ─── Color palette (only reference full strings so Tailwind picks them up) ───
+// ─── Difficulty badge helper ──────────────────────────────────────────────────
+const getDifficulty = (mins: number) => {
+	if (mins <= 6)  return { label: 'Beginner',     cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' };
+	if (mins <= 20) return { label: 'Intermediate', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' };
+	return              { label: 'Advanced',        cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' };
+};
+
+// ─── Color palette ────────────────────────────────────────────────────────────
 const COLORS: Record<
 	ClusterColor,
 	{ label: string; pill: string; pillText: string; border: string; link: string }
@@ -92,36 +94,35 @@ const COLORS: Record<
 	},
 };
 
-// ─── Single post row inside a cluster ────────────────────────────────────────
-const ClusterPostRow = ({ post, color }: { post: PostFragment; color: ClusterColor }) => {
+// ─── Compact 2×2 post card ────────────────────────────────────────────────────
+const ClusterPostCard = ({ post, color }: { post: PostFragment; color: ClusterColor }) => {
+	const diff = getDifficulty(post.readTimeInMinutes ?? 5);
 	const c = COLORS[color];
 	return (
-		<Link href={`/${post.slug}`} className="group flex gap-4 items-start py-4 border-b last:border-b-0 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors rounded px-2 -mx-2">
-			{post.coverImage && (
+		<Link
+			href={`/${post.slug}`}
+			className="group flex flex-col gap-2 p-2.5 rounded-lg border border-neutral-100 dark:border-neutral-800 hover:border-blue-300 dark:hover:border-blue-700 hover:-translate-y-0.5 hover:shadow-md bg-neutral-50 dark:bg-neutral-950/50 transition-all duration-200 overflow-hidden"
+		>
+			{post.coverImage ? (
 				<img
 					src={post.coverImage.url}
 					alt={post.title}
-					className="w-14 h-14 rounded-md object-cover flex-shrink-0 group-hover:scale-105 transition-transform duration-300"
+					className="w-full h-20 object-cover rounded-md group-hover:scale-[1.03] transition-transform duration-300"
 				/>
-			)}
-			<div className="flex-1 min-w-0">
-				<h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug mb-1">
-					{post.title}
-				</h4>
-				<div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-					<DateFormatter dateString={post.publishedAt} />
-					<span>·</span>
-					<span>{post.readTimeInMinutes} min read</span>
+			) : (
+				<div className={`w-full h-20 rounded-md flex items-center justify-center text-xl ${c.pill}`}>
+					📄
 				</div>
+			)}
+			<div className="flex items-center justify-between gap-1">
+				<span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${diff.cls}`}>
+					{diff.label}
+				</span>
+				<span className="text-[9px] text-neutral-400 dark:text-neutral-500 shrink-0">{post.readTimeInMinutes}m</span>
 			</div>
-			<svg
-				className={`w-4 h-4 flex-shrink-0 mt-0.5 transition-colors ${c.label} opacity-0 group-hover:opacity-100`}
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-			>
-				<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-			</svg>
+			<h4 className="text-xs font-semibold text-neutral-900 dark:text-neutral-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
+				{post.title}
+			</h4>
 		</Link>
 	);
 };
@@ -150,9 +151,9 @@ const ClusterCard = ({ cluster }: { cluster: TopicCluster }) => {
 					</svg>
 				</Link>
 			</div>
-			<div className="px-5 pb-4">
-				{cluster.posts.slice(0, 3).map((post) => (
-					<ClusterPostRow key={post.id} post={post} color={cluster.color} />
+			<div className="px-4 pb-4 grid grid-cols-2 gap-2">
+				{cluster.posts.map((post) => (
+					<ClusterPostCard key={post.id} post={post} color={cluster.color} />
 				))}
 			</div>
 		</div>
@@ -188,3 +189,4 @@ export const TopicClusters = ({ clusters }: Props) => {
 		</section>
 	);
 };
+

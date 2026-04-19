@@ -35,14 +35,13 @@ import {
 	sortPosts,
 } from '../lib/post-listing';
 import { formatTagName } from '../utils/format';
-import { TopicClusters, TopicCluster, buildTopicClusters } from '../components/topic-clusters';
+import { LearningPaths } from '../components/learning-paths';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 
 type Props = {
 	publication: PublicationFragment;
 	initialPosts: PostFragment[];
-	topicClusters: TopicCluster[];
 };
 
 type QueryUpdates = Partial<Record<'view' | 'sort' | 'tag' | 'series', string | null>>;
@@ -151,9 +150,10 @@ const getVisibleOptions = <T extends { slug: string }>(
 	return selected ? [selected, ...topOptions.slice(0, Math.max(limit - 1, 0))] : topOptions;
 };
 
-export default function AllPostsPage({ publication, initialPosts, topicClusters }: Props) {
+export default function AllPostsPage({ publication, initialPosts }: Props) {
 	const router = useRouter();
 	const [searchTerm, setSearchTerm] = useState('');
+	const [searchFocused, setSearchFocused] = useState(false);
 
 	const view = parsePostListView(router.query.view);
 	const sort = parsePostListSort(router.query.sort, view);
@@ -228,6 +228,24 @@ export default function AllPostsPage({ publication, initialPosts, topicClusters 
 	const activeView = POST_VIEW_META[view];
 	const activeSortField = getSortField(sort);
 
+	const postCounts = useMemo(() => {
+		const counts: Record<string, number> = {};
+		for (const post of initialPosts) {
+			for (const tag of post.tags ?? []) {
+				if (tag?.slug) counts[tag.slug] = (counts[tag.slug] ?? 0) + 1;
+			}
+		}
+		return counts;
+	}, [initialPosts]);
+
+	const searchPreviewPosts = useMemo(() => {
+		if (searchTerm.length < 2) return [];
+		const q = searchTerm.toLowerCase();
+		return initialPosts
+			.filter((p) => p.title.toLowerCase().includes(q) || (p.brief ?? '').toLowerCase().includes(q))
+			.slice(0, 5);
+	}, [initialPosts, searchTerm]);
+
 	return (
 		<AppProvider publication={publication} footerPosts={initialPosts}>
 			<Layout>
@@ -267,7 +285,22 @@ export default function AllPostsPage({ publication, initialPosts, topicClusters 
 							</div>
 						</div>
 
-					{topicClusters.length > 0 && <TopicClusters clusters={topicClusters} />}
+					<LearningPaths postCounts={postCounts} />
+
+					{/* ── Section divider ─────────────────────────────────── */}
+					<div className="flex items-center gap-4">
+						<div className="flex-1 border-t border-neutral-200 dark:border-neutral-800" />
+						<div className="flex flex-col items-center gap-1">
+							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+								Browse &amp; Filter
+							</p>
+							<h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">
+								All Posts
+							</h2>
+						</div>
+						<div className="flex-1 border-t border-neutral-200 dark:border-neutral-800" />
+					</div>
+
 						<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 flex flex-col gap-5">
 							<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 								<div className="flex flex-wrap items-center gap-2">
@@ -293,14 +326,49 @@ export default function AllPostsPage({ publication, initialPosts, topicClusters 
 										</button>
 									))}
 								</div>
-								<div className="w-full lg:max-w-sm">
+								<div className="w-full lg:max-w-sm relative">
 									<input
 										type="text"
 										value={searchTerm}
 										onChange={(e) => setSearchTerm(e.target.value)}
+										onFocus={() => setSearchFocused(true)}
+										onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
 										placeholder="Search posts..."
 										className="w-full rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-2.5 text-neutral-900 dark:text-neutral-50 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
 									/>
+									{searchFocused && searchPreviewPosts.length > 0 && (
+										<div className="absolute top-full mt-2 left-0 right-0 z-50 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-xl overflow-hidden">
+											{searchPreviewPosts.map((post) => (
+												<Link
+													key={post.id}
+													href={`/${post.slug}`}
+													className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors border-b border-neutral-100 dark:border-neutral-800 last:border-0"
+												>
+													{post.coverImage?.url ? (
+														<img
+															src={post.coverImage.url}
+															alt=""
+															className="w-10 h-10 rounded-md object-cover flex-shrink-0"
+														/>
+													) : (
+														<div className="w-10 h-10 rounded-md bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0">
+															<svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+															</svg>
+														</div>
+													)}
+													<div className="flex-1 min-w-0">
+														<p className="text-sm font-medium text-neutral-900 dark:text-neutral-50 line-clamp-1">
+															{post.title}
+														</p>
+														<p className="text-xs text-neutral-400 dark:text-neutral-500">
+															{post.readTimeInMinutes} min read
+														</p>
+													</div>
+												</Link>
+											))}
+										</div>
+									)}
 								</div>
 							</div>
 
@@ -428,7 +496,7 @@ export default function AllPostsPage({ publication, initialPosts, topicClusters 
 								{filteredPosts.map((post) => (
 									<article
 										key={post.id}
-										className="flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+										className="group flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700"
 									>
 										{post.coverImage?.url ? (
 											<Link href={`/${post.slug}`} className="block overflow-hidden">
@@ -494,7 +562,12 @@ export default function AllPostsPage({ publication, initialPosts, topicClusters 
 												</div>
 											</div>
 											<div className="mt-5 flex items-center justify-between border-t border-neutral-200 pt-4 text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-												<span>{post.comments.totalDocuments} comment{post.comments.totalDocuments !== 1 ? 's' : ''}</span>
+												<span>
+												{post.comments.totalDocuments > 0
+													? `${post.comments.totalDocuments} comment${post.comments.totalDocuments !== 1 ? 's' : ''}`
+													: <em className="text-neutral-400 dark:text-neutral-500">Start the conversation</em>
+												}
+											</span>
 												<Link
 													href={`/${post.slug}`}
 													className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
@@ -561,13 +634,10 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		hasNextPage = !!next.publication.posts.pageInfo.hasNextPage;
 	}
 
-	const topicClusters: TopicCluster[] = buildTopicClusters(allPosts);
-
 	return {
 		props: {
 			publication,
 			initialPosts: allPosts,
-			topicClusters,
 		},
 		revalidate: 1,
 	};

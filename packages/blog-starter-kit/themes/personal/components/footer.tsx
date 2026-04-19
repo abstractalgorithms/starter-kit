@@ -139,8 +139,11 @@ export const Footer = () => {
 							<ul className="space-y-2.5">
 								{topTags.map((tag) => (
 									<li key={tag.slug}>
-										<Link href={`/tag/${tag.slug}`} className={`${linkClass} capitalize`}>
-											{tag.name}
+										<Link href={`/tag/${tag.slug}`} className={`${linkClass} capitalize flex items-center justify-between gap-3`}>
+											<span>{tag.name}</span>
+											<span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 tabular-nums bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">
+												{tag.count}
+											</span>
 										</Link>
 									</li>
 								))}
@@ -170,11 +173,6 @@ export const Footer = () => {
 								</p>
 							</div>
 						</div>
-						{publication.author.followersCount > 0 && (
-							<p className="text-xs text-neutral-400 dark:text-neutral-500">
-								{publication.author.followersCount.toLocaleString()} followers on Hashnode
-							</p>
-						)}
 					</div>
 
 				</div>

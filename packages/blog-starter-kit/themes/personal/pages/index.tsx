@@ -16,6 +16,7 @@ import { StartHereSection, StartHereSeries } from '../components/start-here-sect
 import { TopicCluster, buildTopicClusters } from '../components/topic-clusters';
 import { RecentArticles } from '../components/recent-articles';
 import { AiTechTicker } from '../components/ai-tech-ticker';
+import { LearnToday, LearnPost } from '../components/learn-today';
 import {
 	MorePostsByPublicationDocument,
 	MorePostsByPublicationQuery,
@@ -32,6 +33,7 @@ const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 type Props = {
 	publication: PublicationFragment;
 	initialPosts: PostFragment[];
+	allPosts: LearnPost[];
 	featuredSeries: StartHereSeries[];
 	recentlyCreated: PostFragment[];
 	recentlyUpdated: PostFragment[];
@@ -39,7 +41,7 @@ type Props = {
 	heroStats: HeroStats;
 };
 
-export default function Index({ publication, initialPosts, featuredSeries, recentlyCreated, recentlyUpdated, topPosts, heroStats }: Props) {
+export default function Index({ publication, initialPosts, allPosts, featuredSeries, recentlyCreated, recentlyUpdated, topPosts, heroStats }: Props) {
 	const posts = initialPosts;
 
 	// Pinned post is always first; fill up to 3 featured posts from recent posts
@@ -81,7 +83,9 @@ export default function Index({ publication, initialPosts, featuredSeries, recen
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0 divide-y divide-neutral-200 dark:divide-neutral-800">
 						<Hero {...heroStats} />
+					<LearnToday allPosts={allPosts} />
 					<AiTechTicker />
+					<NewsletterSection />
 					{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
 					{featuredPosts.length > 0 && (
 						<FeaturedArticle posts={featuredPosts} />
@@ -93,7 +97,6 @@ export default function Index({ publication, initialPosts, featuredSeries, recen
 							topPosts={topPosts}
 						/>
 					)}
-						<NewsletterSection />
 						<AuthorSection />
 					</div>
 					<Footer />
@@ -189,7 +192,18 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		props: {
 			publication,
 			initialPosts,
-
+			allPosts: allPosts.map((p) => ({
+				id: p.id,
+				title: p.title,
+				slug: p.slug,
+				brief: p.brief,
+				readTimeInMinutes: p.readTimeInMinutes,
+				views: p.views,
+				publishedAt: p.publishedAt,
+				coverImage: p.coverImage ?? null,
+				tags: p.tags ?? null,
+				series: p.series ?? null,
+			})),
 			featuredSeries,
 			recentlyCreated,
 			recentlyUpdated,

@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import { useAppContext } from './contexts/appContext';
-import { SearchBar } from './search-bar';
 
 const DEFAULT_TOPICS = [
 	'LLM Engineering',
@@ -10,13 +8,6 @@ const DEFAULT_TOPICS = [
 	'Design Patterns',
 	'Technical Interviews',
 	'Software Architecture',
-];
-
-const DEFAULT_QUICK_LINKS = [
-	{ label: 'System Design', slug: 'system-design' },
-	{ label: 'Algorithms', slug: 'algorithms' },
-	{ label: 'LLM', slug: 'llm' },
-	{ label: 'Architecture', slug: 'architecture' },
 ];
 
 type TerminalLine = { prompt: string; cmd: string; delay: number; muted?: boolean };
@@ -84,11 +75,6 @@ export const Hero = ({ totalPosts, totalSeries, topSeries, topTags }: Partial<He
 		[topTags],
 	);
 
-	const quickLinks = useMemo(
-		() => (topTags && topTags.length >= 3 ? topTags.slice(0, 4) : DEFAULT_QUICK_LINKS),
-		[topTags],
-	);
-
 	const terminalLines = useMemo<TerminalLine[]>(() => {
 		const statsText =
 			totalPosts != null && totalSeries != null
@@ -141,20 +127,6 @@ export const Hero = ({ totalPosts, totalSeries, topSeries, topTags }: Partial<He
 					<p className="text-base md:text-lg text-neutral-600 dark:text-neutral-300 leading-relaxed [text-wrap:balance]">
 						{publication.descriptionSEO || publication.title}
 					</p>
-
-					<SearchBar />
-
-					<div className="flex flex-wrap gap-2 mt-1">
-						{quickLinks.map(({ label, slug }) => (
-							<Link
-								key={slug}
-								href={`/tag/${slug}`}
-								className="px-3 py-1 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
-							>
-								{label}
-							</Link>
-						))}
-					</div>
 				</div>
 
 				{/* ── Right: Terminal ─────────────────────────────────────── */}

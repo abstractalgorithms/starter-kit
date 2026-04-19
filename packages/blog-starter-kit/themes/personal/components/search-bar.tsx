@@ -15,7 +15,7 @@ const NO_OF_SEARCH_RESULTS = 5;
 
 type Post = SearchPostsOfPublicationQuery['searchPostsOfPublication']['edges'][0]['node'];
 
-export const SearchBar = () => {
+export const SearchBar = ({ onQueryChange }: { onQueryChange?: (q: string) => void } = {}) => {
 	const { publication } = useAppContext();
 
 	const searchInputRef = useRef<HTMLInputElement>(null);
@@ -40,8 +40,10 @@ export const SearchBar = () => {
 	};
 
 	const updateSearchQuery = () => {
-		setQuery(searchInputRef.current?.value || '');
+		const val = searchInputRef.current?.value || '';
+		setQuery(val);
 		setShowResults(true);
+		onQueryChange?.(val);
 	};
 
 	const search = useCallback(
