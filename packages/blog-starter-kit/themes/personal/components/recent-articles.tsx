@@ -121,10 +121,15 @@ const ClusterRow = ({
 				/>
 			) : null}
 			<div className="flex-1 min-w-0">
-				<h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug mb-1">
+				<h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 leading-snug mb-0.5">
 					{post.title}
 				</h4>
-				<div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+				{post.brief && (
+					<p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1 mb-1 leading-relaxed">
+						{post.brief}
+					</p>
+				)}
+				<div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-xs text-neutral-400 dark:text-neutral-500">
 					{meta}
 				</div>
 			</div>

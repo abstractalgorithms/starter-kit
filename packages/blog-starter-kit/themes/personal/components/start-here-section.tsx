@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useState } from 'react';
 import { PostFragment } from '../generated/graphql';
 
 export type StartHereSeries = {
@@ -42,7 +43,7 @@ Start Here
 New to {series.seriesName}?
 </h2>
 <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed mb-3">
-Read these foundational posts in order to build a strong mental model before diving into advanced topics.
+Follow this curated path — each post builds on the previous, helping you master {series.seriesName} step by step.
 </p>
 {/* Total reading time */}
 <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-semibold mb-5">
@@ -114,13 +115,14 @@ className="group relative flex items-start gap-4 p-4 rounded-lg bg-white/70 dark
 };
 
 const CompactSeriesCard = ({ series }: { series: StartHereSeries }) => {
-const posts = series.posts.slice(0, 3);
+const [expanded, setExpanded] = useState(false);
+const posts = series.posts.slice(0, 5);
 const totalReadTime = series.posts.reduce((sum, p) => sum + (p.readTimeInMinutes ?? 0), 0);
 return (
 <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 overflow-hidden">
 <div className="p-5">
-<div className="flex items-start justify-between gap-3 mb-4">
-<div>
+<div className="flex items-start justify-between gap-3 mb-0">
+<div className="flex-1 min-w-0">
 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold uppercase tracking-wide mb-2">
 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
 <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
@@ -130,9 +132,6 @@ Series
 <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-50 leading-snug">
 {series.seriesName}
 </h3>
-<p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-{series.posts.length} posts &middot; ~{totalReadTime} min total
-</p>
 </div>
 <Link
 href={`/series/${series.seriesSlug}`}
@@ -145,7 +144,28 @@ View all
 </Link>
 </div>
 
-<ol className="flex flex-col gap-2 relative">
+{/* Collapsible toggle row */}
+<button
+onClick={() => setExpanded((e) => !e)}
+className="mt-3 w-full flex items-center justify-between gap-2 py-2 text-left group"
+aria-expanded={expanded}
+>
+<span className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
+<svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+</svg>
+{series.posts.length} posts &middot; ~{totalReadTime} min total
+</span>
+<span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-700">
+{expanded ? 'Hide posts' : 'Show posts'}
+<svg className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+</svg>
+</span>
+</button>
+
+{expanded && (
+<ol className="flex flex-col gap-2 relative mt-2">
 <div className="absolute left-[10px] top-5 bottom-5 w-px bg-gradient-to-b from-emerald-400 to-transparent dark:from-emerald-600 opacity-60" />
 {posts.map((post, index) => {
 const badge = getStepBadge(post.readTimeInMinutes ?? 5, index);
@@ -169,6 +189,7 @@ className="group flex items-center gap-3 p-2.5 rounded-lg bg-white/70 dark:bg-ne
 );
 })}
 </ol>
+)}
 </div>
 </div>
 );

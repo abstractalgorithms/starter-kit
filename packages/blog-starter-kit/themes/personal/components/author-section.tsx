@@ -34,9 +34,6 @@ export const AuthorSection = () => {
 						</h2>
 						<p className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">
 							@{author.username}
-							{author.followersCount > 0 && (
-								<> · {author.followersCount.toLocaleString()} followers</>
-							)}
 						</p>
 						<p className="text-neutral-600 dark:text-neutral-300 text-sm leading-relaxed max-w-xl">
 							{publication.descriptionSEO ||
