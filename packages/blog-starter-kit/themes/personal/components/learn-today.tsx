@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { LearningPath, LearningPhase, LearnPost, PostComplexity } from '../pages/api/learning-path';
+import { PathCompletionQuiz } from './path-completion-quiz';
 
 // Re-export types for consumers
 export type { LearnPost };
@@ -468,6 +469,10 @@ export const LearnToday = ({ allPosts }: Props) => {
 						</div>
 					) : (
 						<PhaseViewer phases={result.phases} />
+					)}
+
+					{result.phases.length > 0 && (
+						<PathCompletionQuiz learningPath={result} />
 					)}
 				</div>
 			)}

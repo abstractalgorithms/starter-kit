@@ -5,7 +5,6 @@ import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
-import { FeaturedArticle } from '../components/featured-article';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { NewsletterSection } from '../components/newsletter-section';
@@ -14,7 +13,7 @@ import { Hero, HeroStats } from '../components/hero';
 import { AuthorSection } from '../components/author-section';
 import { StartHereSection, StartHereSeries } from '../components/start-here-section';
 import { TopicCluster, buildTopicClusters } from '../components/topic-clusters';
-import { RecentArticles } from '../components/recent-articles';
+import { PopularTopicsStrip } from '../components/popular-topics-strip';
 import { AiTechTicker } from '../components/ai-tech-ticker';
 import { LearnToday, LearnPost } from '../components/learn-today';
 import {
@@ -35,23 +34,13 @@ type Props = {
 	initialPosts: PostFragment[];
 	allPosts: LearnPost[];
 	featuredSeries: StartHereSeries[];
-	recentlyCreated: PostFragment[];
-	recentlyUpdated: PostFragment[];
-	topPosts: PostFragment[];
+	topicClusters: TopicCluster[];
 	heroStats: HeroStats;
 };
 
-export default function Index({ publication, initialPosts, allPosts, featuredSeries, recentlyCreated, recentlyUpdated, topPosts, heroStats }: Props) {
-	const posts = initialPosts;
-
-	// Pinned post is always first; fill up to 3 featured posts from recent posts
-	const pinnedPost = publication.pinnedPost;
-	const featuredPosts: PostFragment[] = pinnedPost
-		? [pinnedPost, ...posts.filter((p) => p.id !== pinnedPost.id).slice(0, 2)]
-		: posts.slice(0, 3);
-
+export default function Index({ publication, initialPosts, allPosts, featuredSeries, topicClusters, heroStats }: Props) {
 	return (
-		<AppProvider publication={publication} posts={posts}>
+		<AppProvider publication={publication} posts={initialPosts}>
 			<Layout>
 				<Head>
 					<title>{publication.title}</title>
@@ -61,7 +50,7 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 							publication.descriptionSEO || publication.title || `${publication.author.name}'s Blog`
 						}
 					/>
-					<meta property="twitter:card" content="summary_large_image"/>
+					<meta property="twitter:card" content="summary_large_image" />
 					<meta property="twitter:title" content={publication.displayTitle || publication.title || 'Hashnode Blog Starter Kit'} />
 					<meta property="twitter:description" content={publication.descriptionSEO || publication.title || `${publication.author.name}'s Blog`} />
 					<meta
@@ -82,21 +71,25 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
 					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0 divide-y divide-neutral-200 dark:divide-neutral-800">
+
+						{/* 1 ── Hero: strongest unique identifier, keep at top */}
 						<Hero {...heroStats} />
-					<LearnToday allPosts={allPosts} />
-					<AiTechTicker />
-					<NewsletterSection />
-					{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
-					{featuredPosts.length > 0 && (
-						<FeaturedArticle posts={featuredPosts} />
-					)}
-					{initialPosts.length > 0 && (
-						<RecentArticles
-							recentlyCreated={recentlyCreated}
-							recentlyUpdated={recentlyUpdated}
-							topPosts={topPosts}
-						/>
-					)}
+
+						{/* 2 ── Popular Topics strip: exploratory learners self-select immediately */}
+						<PopularTopicsStrip clusters={topicClusters} />
+
+						{/* 3 ── Curated Path: catch "Step 1" learners before anything else */}
+						{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
+
+						{/* 4 ── Learn Today: daily picks — secondary to structured paths */}
+						<LearnToday allPosts={allPosts} />
+
+						{/* 6 ── AI News ticker: snackable, intentionally lower priority */}
+						<AiTechTicker />
+
+						{/* 7 ── Newsletter */}
+						<NewsletterSection />
+
 						<AuthorSection />
 					</div>
 					<Footer />
@@ -124,7 +117,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 
 	const initialPosts = (publication.posts.edges ?? []).map((edge) => edge.node);
 
-	// ── 2. Paginate to collect all posts for cluster + series computation ────
+	// ── 2. Paginate to collect all posts ─────────────────────────────────────
 	const allPosts = [...initialPosts];
 	let cursor = publication.posts.pageInfo.endCursor;
 	let hasNextPage = !!publication.posts.pageInfo.hasNextPage;
@@ -141,12 +134,10 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		hasNextPage = !!next.publication.posts.pageInfo.hasNextPage;
 	}
 
-	// ── 3. Build topic clusters dynamically from top tags ────────────────────
+	// ── 3. Build topic clusters ───────────────────────────────────────────────
 	const topicClusters: TopicCluster[] = buildTopicClusters(allPosts);
 
 	// ── 4. Derive featured series ─────────────────────────────────────────────
-	// Pick the top 3 series by post count; their oldest posts form the curated
-	// reading lists shown on the home page.
 	const seriesCountMap = new Map<string, { name: string; slug: string; count: number }>();
 	for (const post of allPosts) {
 		if (!post.series) continue;
@@ -165,21 +156,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		return { seriesName: series.name, seriesSlug: series.slug, posts: seriesPosts };
 	});
 
-	// ── 5. Build 3 Recent Article clusters ──────────────────────────────────
-	// allPosts comes from the API sorted newest-first (publishedAt desc)
-	const recentlyCreated = allPosts.slice(0, 3);
-
-	const recentlyUpdated = allPosts
-		.filter((p) => p.updatedAt && p.updatedAt !== p.publishedAt)
-		.sort((a, b) => new Date(b.updatedAt!).getTime() - new Date(a.updatedAt!).getTime())
-		.slice(0, 3);
-
-	const topPosts = allPosts
-		.slice()
-		.sort((a, b) => b.views - a.views)
-		.slice(0, 3);
-
-	// ── 6. Compute hero stats for dynamic terminal + quick links ─────────────
+	// ── 5. Hero stats ─────────────────────────────────────────────────────────
 	const topSeries = topSeriesList[0] ?? null;
 	const heroStats: HeroStats = {
 		totalPosts: allPosts.length,
@@ -205,9 +182,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 				series: p.series ?? null,
 			})),
 			featuredSeries,
-			recentlyCreated,
-			recentlyUpdated,
-			topPosts,
+			topicClusters,
 			heroStats,
 		},
 		revalidate: 1,

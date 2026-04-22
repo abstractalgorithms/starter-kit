@@ -161,8 +161,12 @@ export function PostChatbot({ postTitle, postContent }: Props) {
 			<button
 				onClick={() => setIsOpen((o) => !o)}
 				aria-label={isOpen ? 'Close AI chat' : 'Ask AI about this post'}
-				className="fixed bottom-6 right-6 z-50 flex h-13 w-13 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all duration-200 hover:scale-105 active:scale-95"
-				style={{ width: '3.25rem', height: '3.25rem' }}
+				className="fixed right-6 z-50 flex h-13 w-13 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all duration-200 hover:scale-105 active:scale-95"
+				style={{
+					width: '3.25rem',
+					height: '3.25rem',
+					bottom: 'calc(var(--lp-nav-height, 0px) + 1.5rem)',
+				}}
 			>
 				{isOpen ? <CloseIcon /> : <ChatIcon />}
 				{!isOpen && (
@@ -175,7 +179,8 @@ export function PostChatbot({ postTitle, postContent }: Props) {
 			{/* ── Chat panel ── */}
 			{isOpen && (
 				<div
-					className="fixed bottom-24 right-6 z-50 flex flex-col w-[22rem] sm:w-96 max-h-[70vh] rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-2xl overflow-hidden"
+					className="fixed right-6 z-50 flex flex-col w-[22rem] sm:w-96 max-h-[70vh] rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-2xl overflow-hidden"
+					style={{ bottom: 'calc(var(--lp-nav-height, 0px) + 5.5rem)' }}
 					role="dialog"
 					aria-label="AI Post Assistant"
 				>

@@ -75,6 +75,19 @@ export const LearningPathNav = ({ slug }: Props) => {
 		} catch {}
 	}, [slug]);
 
+	// Expose nav height as a CSS variable so other fixed elements (e.g. chatbot
+	// button) can offset themselves above the bar without tight coupling.
+	useEffect(() => {
+		if (path && location) {
+			document.documentElement.style.setProperty('--lp-nav-height', '55px');
+		} else {
+			document.documentElement.style.removeProperty('--lp-nav-height');
+		}
+		return () => {
+			document.documentElement.style.removeProperty('--lp-nav-height');
+		};
+	}, [path, location]);
+
 	const handleExit = useCallback(() => {
 		clearLearningPath();
 		setPath(null);
