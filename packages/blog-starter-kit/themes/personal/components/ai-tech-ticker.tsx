@@ -236,15 +236,11 @@ export const AiTechTicker = () => {
 						</span>
 					</div>
 
-					<h3 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-50 leading-snug mb-2">
+					<h3 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-50 leading-snug mb-3">
 						{item.title}
 					</h3>
 
-					<p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
-						{item.summary}
-					</p>
-
-					<p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed border-l-2 border-neutral-200 dark:border-neutral-700 pl-3 mb-5">
+					<p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed mb-5">
 						{item.context}
 					</p>
 
@@ -268,11 +264,6 @@ export const AiTechTicker = () => {
 								</span>
 							</div>
 						</div>
-						{item.description && (
-							<p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed mb-3 border-t border-neutral-200 dark:border-neutral-700 pt-3">
-								{item.description}
-							</p>
-						)}
 						<a
 							href={item.source.url}
 							target="_blank"
