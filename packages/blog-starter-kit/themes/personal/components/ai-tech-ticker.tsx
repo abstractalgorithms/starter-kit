@@ -55,6 +55,14 @@ function formatTimeAgo(timestamp: string): string {
 	return `${Math.floor(hours / 24)}d ago`;
 }
 
+function formatPublishedDate(iso: string): string {
+	try {
+		return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+	} catch {
+		return iso;
+	}
+}
+
 export const AiTechTicker = () => {
 	const [items, setItems] = useState<TickerItem[]>([]);
 	const [index, setIndex] = useState(0);
@@ -240,42 +248,64 @@ export const AiTechTicker = () => {
 						{item.context}
 					</p>
 
-					{/* Source + Related Guides row */}
-					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-						{/* Source attribution */}
+					{/* Publication metadata */}
+					<div className="rounded-lg bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 p-4 mb-4">
+						<div className="flex flex-col gap-2 mb-3">
+							<div className="flex items-baseline gap-3">
+								<span className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 w-24 flex-shrink-0">
+									Published On
+								</span>
+								<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+									{formatPublishedDate(item.publishedAt || item.timestamp)}
+								</span>
+							</div>
+							<div className="flex items-baseline gap-3">
+								<span className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 w-24 flex-shrink-0">
+									Published By
+								</span>
+								<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+									{item.source.name}
+								</span>
+							</div>
+						</div>
+						{item.description && (
+							<p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed mb-3 border-t border-neutral-200 dark:border-neutral-700 pt-3">
+								{item.description}
+							</p>
+						)}
 						<a
 							href={item.source.url}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
+							className={`inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg ${cat.bg} ${cat.text} hover:opacity-80 transition-opacity`}
 						>
-							<svg className="w-3.5 h-3.5 flex-shrink-0 opacity-60 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							Read full article
+							<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
 							</svg>
-							{item.source.name}
 						</a>
-
-						{/* Related Guides */}
-						{(CATEGORY_RELATED[item.category] ?? []).length > 0 && (
-							<div className="flex items-center gap-2 flex-wrap">
-								<span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
-									Explore on this blog:
-								</span>
-								{(CATEGORY_RELATED[item.category] ?? []).map((tag) => (
-									<a
-										key={tag.slug}
-										href={`/tag/${tag.slug}`}
-										className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cat.bg} ${cat.text} hover:opacity-80 transition-opacity`}
-									>
-										{tag.label}
-										<svg className="w-2.5 h-2.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-										</svg>
-									</a>
-								))}
-							</div>
-						)}
 					</div>
+
+					{/* Related Guides */}
+					{(CATEGORY_RELATED[item.category] ?? []).length > 0 && (
+						<div className="flex items-center gap-2 flex-wrap">
+							<span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
+								Explore on this blog:
+							</span>
+							{(CATEGORY_RELATED[item.category] ?? []).map((tag) => (
+								<a
+									key={tag.slug}
+									href={`/tag/${tag.slug}`}
+									className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cat.bg} ${cat.text} hover:opacity-80 transition-opacity`}
+								>
+									{tag.label}
+									<svg className="w-2.5 h-2.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+									</svg>
+								</a>
+							))}
+						</div>
+					)}
 				</div>
 			</div>
 

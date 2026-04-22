@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { LearningPath, LearningPhase, LearnPost } from '../pages/api/learning-path';
+import type { LearningPath, LearningPhase, LearnPost, PostComplexity } from '../pages/api/learning-path';
 
 // Re-export types for consumers
 export type { LearnPost };
@@ -39,6 +39,14 @@ const EXAMPLES = [
 	'machine learning from scratch',
 	'microservices architecture',
 ];
+
+// ─── Complexity badge colors (independent of phase color) ──────────────────────
+const COMPLEXITY_BADGE: Record<PostComplexity, string> = {
+	Beginner: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
+	Intermediate: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+	Advanced: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300',
+	Expert: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
+};
 
 // ─── Phase color map ──────────────────────────────────────────────────────────
 const COLOR: Record<LearningPhase['color'], {
@@ -89,26 +97,40 @@ const COLOR: Record<LearningPhase['color'], {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const PhasePostRow = ({ post, color }: { post: LearnPost; color: LearningPhase['color'] }) => {
+const PhasePostRow = ({
+	post,
+	color,
+	stepNumber,
+}: {
+	post: LearnPost;
+	color: LearningPhase['color'];
+	stepNumber: number;
+}) => {
 	const c = COLOR[color];
 	return (
 		<Link
 			href={`/${post.slug}`}
 			className={`group flex items-center gap-3 p-3 rounded-xl border ${c.border} bg-white dark:bg-neutral-900 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5`}
 		>
+			{/* Step number indicator */}
+			<div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 border-2 ${c.border} bg-white dark:bg-neutral-900 group-hover:bg-neutral-50 dark:group-hover:bg-neutral-800 transition-colors`}>
+				<span className={`text-[11px] font-bold ${c.tabActive}`}>{stepNumber}</span>
+			</div>
+
 			{post.coverImage?.url ? (
 				<img
 					src={post.coverImage.url}
 					alt=""
-					className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+					className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
 				/>
 			) : (
-				<div className="w-12 h-12 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0">
-					<svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0">
+					<svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 					</svg>
 				</div>
 			)}
+
 			<div className="flex-1 min-w-0">
 				<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
 					{post.title}
@@ -117,15 +139,20 @@ const PhasePostRow = ({ post, color }: { post: LearnPost; color: LearningPhase['
 					{post.brief}
 				</p>
 			</div>
+
 			<div className="flex-shrink-0 flex flex-col items-end gap-1">
 				<span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${c.badge}`}>
 					{post.readTimeInMinutes} min
 				</span>
-				{post.series && (
+				{post.complexity ? (
+					<span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${COMPLEXITY_BADGE[post.complexity]}`}>
+						{post.complexity}
+					</span>
+				) : post.series ? (
 					<span className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate max-w-[90px]">
 						{post.series.name}
 					</span>
-				)}
+				) : null}
 			</div>
 		</Link>
 	);
@@ -186,8 +213,8 @@ const PhaseViewer = ({ phases }: { phases: LearningPhase[] }) => {
 
 			{/* ── Post list ── */}
 			<div className="p-4 flex flex-col gap-2.5 bg-white/50 dark:bg-neutral-900/50">
-				{phase.posts.map((post) => (
-					<PhasePostRow key={post.id} post={post} color={phase.color} />
+				{phase.posts.map((post, i) => (
+					<PhasePostRow key={post.id} post={post} color={phase.color} stepNumber={i + 1} />
 				))}
 			</div>
 
@@ -392,6 +419,14 @@ export const LearnToday = ({ allPosts }: Props) => {
 							<p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-xl">
 								{result.summary}
 							</p>
+							{result.aiPowered && (
+								<div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-100 dark:bg-violet-900/40 text-[11px] font-semibold text-violet-700 dark:text-violet-300">
+									<svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+										<path d="M12 2L9.09 9.26 2 10.27l5 4.87L5.82 22 12 18.77 18.18 22 17 15.14l5-4.87-7.09-1.01L12 2z" />
+									</svg>
+									AI-ranked by complexity
+								</div>
+							)}
 						</div>
 						<div className="flex-shrink-0 flex flex-col sm:items-end gap-1">
 							<div className="flex items-center gap-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300">
