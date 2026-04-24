@@ -106,8 +106,8 @@ export const Footer = () => {
 						</h4>
 						<ul className="space-y-2.5">
 							<li><Link href="/" className={linkClass}>Home</Link></li>
-							<li><Link href="/posts" className={linkClass}>All Posts</Link></li>
-							<li><Link href="/series" className={linkClass}>All Series</Link></li>
+							<li><Link href="/learning-paths" className={linkClass}>Learning Paths</Link></li>
+							<li><Link href="/interview-prep" className={linkClass}>Interview Preparation</Link></li>
 							<li><Link href="/about" className={linkClass}>About</Link></li>
 						</ul>
 					</div>

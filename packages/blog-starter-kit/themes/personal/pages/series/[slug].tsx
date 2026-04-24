@@ -12,6 +12,7 @@ import { Footer } from '../../components/footer';
 import { Layout } from '../../components/layout';
 import { MarkdownToHtml } from '../../components/markdown-to-html';
 import { PersonalHeader } from '../../components/personal-theme-header';
+import { SeriesAiLearningPath } from '../../components/series-ai-learning-path';
 import { getFooterPosts } from '../../lib/api/footerData';
 import {
 	PageByPublicationDocument,
@@ -254,6 +255,11 @@ export default function SeriesDetailPage({ publication, posts, series, roadmap, 
 
 						{/* ── Roadmap (static page) ── */}
 						{roadmap && <RoadmapSection title={roadmap.title} markdown={roadmap.markdown} />}
+
+						{/* ── AI Learning Path ── */}
+						{posts.length > 0 && (
+							<SeriesAiLearningPath seriesName={series.name} posts={posts} />
+						)}
 
 						{/* ── Posts List ── */}
 						{posts.length > 0 ? (

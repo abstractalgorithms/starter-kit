@@ -202,7 +202,7 @@ if (validSeries.length === 0) return null;
 const [primary, ...rest] = validSeries;
 
 return (
-<section className="w-full py-12">
+<section id="learning-paths" className="w-full py-12">
 <div className="flex flex-col gap-4">
 <ExpandedSeriesCard series={primary} />
 {rest.length > 0 && (
