@@ -342,6 +342,17 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 											<p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-2xl">
 												{path.summary}
 											</p>
+											{path.phases[0]?.posts[0]?.slug && (
+												<Link
+													href={`/${path.phases[0].posts[0].slug}`}
+													className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+												>
+													Start Preparation
+													<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+													</svg>
+												</Link>
+											)}
 										</div>
 										<div className="flex items-center gap-4 text-sm text-neutral-500 dark:text-neutral-400 flex-shrink-0">
 											<span className="font-mono">{path.totalPosts} posts</span>
@@ -419,7 +430,23 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 														</Link>
 													))}
 												</div>
-											</div>
+												{/* Phase start CTA */}
+												{phase.posts[0]?.slug && (
+													<div className="px-4 py-3 border-t border-neutral-200/70 dark:border-neutral-800/60 flex items-center justify-between gap-3">
+														<span className="text-xs text-neutral-400 dark:text-neutral-500">
+															{phase.posts.length} post{phase.posts.length !== 1 ? 's' : ''} · ~{phase.totalMinutes} min
+														</span>
+														<Link
+															href={`/${phase.posts[0].slug}`}
+															className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold transition-colors ${c.btn}`}
+														>
+															Start Phase {phase.number}
+															<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+															</svg>
+														</Link>
+													</div>
+												)}											</div>
 										);
 									})}
 								</div>
