@@ -10,6 +10,7 @@ import { Footer } from '../../components/footer';
 import { Layout } from '../../components/layout';
 import { MarkdownToHtml } from '../../components/markdown-to-html';
 import { PersonalHeader } from '../../components/personal-theme-header';
+import { PostQuiz } from '../../components/post-quiz';
 import { formatTagName } from '../../utils/format';
 import type {
 	DraftByIdQuery,
@@ -74,6 +75,7 @@ export default function Post({ publication, post }: Props) {
 							</div>
 						)}
 						<MarkdownToHtml contentMarkdown={post.content.markdown} />
+						<PostQuiz postTitle={post.title} postContent={post.content.markdown} />
 						{(post.tags ?? []).length > 0 && (
 							<div className="mx-auto w-full text-slate-600 dark:text-neutral-300 md:max-w-screen-md">
 								<ul className="flex flex-row flex-wrap items-center gap-2">{tagsList}</ul>
