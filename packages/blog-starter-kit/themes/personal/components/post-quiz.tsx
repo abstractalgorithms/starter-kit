@@ -223,7 +223,7 @@ export const PostQuiz = ({ postTitle, postContent }: Props) => {
 								Ready to test what you just learned?
 							</p>
 							<p className="text-xs text-neutral-500 dark:text-neutral-400">
-								AI will generate 4 questions based on this article's content.
+								AI will generate 4 questions based on this article&apos;s content.
 							</p>
 						</div>
 						<button

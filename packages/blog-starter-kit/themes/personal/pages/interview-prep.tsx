@@ -240,7 +240,7 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 								Interview Preparation
 							</h1>
 							<p className="text-lg text-neutral-500 dark:text-neutral-400 max-w-2xl">
-								Pick the interview you're preparing for — AI will build a personalised learning path from this blog's content, ordered from foundational to expert-level.
+								Pick the interview you&apos;re preparing for — AI will build a personalised learning path from this blog&apos;s content, ordered from foundational to expert-level.
 							</p>
 						</div>
 
