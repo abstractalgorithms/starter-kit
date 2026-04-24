@@ -10,6 +10,7 @@ import { AppProvider } from '../components/contexts/appContext';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { PersonalHeader } from '../components/personal-theme-header';
+import { ScenarioOfDayCard } from '../components/scenario-of-day';
 import {
 	MorePostsByPublicationDocument,
 	MorePostsByPublicationQuery,
@@ -242,6 +243,11 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 							<p className="text-lg text-neutral-500 dark:text-neutral-400 max-w-2xl">
 								Pick the interview you&apos;re preparing for — AI will build a personalised guided topic from this blog&apos;s content, ordered from foundational to expert-level.
 							</p>
+						</div>
+
+						{/* ── Daily scenario: warm-up before picking an interview type ── */}
+						<div className="mb-2 border-b border-neutral-200 dark:border-neutral-800">
+							<ScenarioOfDayCard posts={posts} />
 						</div>
 
 						{/* ── Interview type selector ───────────────────────────── */}
