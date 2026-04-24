@@ -182,7 +182,7 @@ export const LearningPathNav = ({ slug }: Props) => {
 						<button
 							onClick={handleExit}
 							className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-							title="Exit learning path"
+							title="Exit guided topic"
 						>
 							<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

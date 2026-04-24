@@ -146,49 +146,42 @@ export const AiTechTicker = () => {
 	const isPaused = speed === 0;
 
 	return (
-		<section className="w-full py-12">
-			{/* Section header */}
-			<div className="flex items-center justify-between mb-6">
-				<div>
-					<p className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400 mb-1">
+		<section className="w-full py-6">
+			{/* Compact header row */}
+			<div className="flex items-center justify-between mb-3">
+				<div className="flex items-center gap-2">
+					<span className="text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
 						What&apos;s happening
-					</p>
-					<h2 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-neutral-50">
+					</span>
+					<span className="text-neutral-300 dark:text-neutral-600">·</span>
+					<h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-50">
 						AI Tech Spotlight
 					</h2>
 				</div>
-				<div className="flex items-center gap-3">
+
+				<div className="flex items-center gap-2">
 					{/* Speed controls */}
-					<div className="flex items-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 p-1">
-						{/* Pause / Play toggle */}
+					<div className="flex items-center gap-0.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 p-0.5">
 						<button
 							onClick={() => setSpeed(isPaused ? 1 : 0)}
 							aria-label={isPaused ? 'Play' : 'Pause'}
-							className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
+							className={`flex items-center justify-center w-6 h-6 rounded transition-colors ${
 								isPaused
 									? 'bg-blue-600 text-white'
 									: 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
 							}`}
 						>
 							{isPaused ? (
-								/* Play icon */
-								<svg className="w-3.5 h-3.5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-									<path d="M8 5v14l11-7z" />
-								</svg>
+								<svg className="w-3 h-3 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
 							) : (
-								/* Pause icon */
-								<svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-									<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-								</svg>
+								<svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
 							)}
 						</button>
-
-						{/* Speed buttons */}
 						{SPEED_OPTIONS.map(({ label, value }) => (
 							<button
 								key={value}
 								onClick={() => setSpeed(value)}
-								className={`px-2.5 h-7 rounded-md text-xs font-semibold transition-colors ${
+								className={`px-2 h-6 rounded text-xs font-semibold transition-colors ${
 									speed === value && !isPaused
 										? 'bg-blue-600 text-white'
 										: 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
@@ -200,117 +193,96 @@ export const AiTechTicker = () => {
 					</div>
 
 					{/* Live indicator */}
-					<div className="flex items-center gap-1.5 select-none">
-						<span className="relative flex h-2 w-2">
+					<div className="flex items-center gap-1 select-none">
+						<span className="relative flex h-1.5 w-1.5">
 							<span className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 ${!isPaused ? 'animate-ping' : ''}`} />
-							<span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+							<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
 						</span>
-						<span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+						<span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
 							{isPaused ? 'Paused' : 'Live'}
 						</span>
 					</div>
 				</div>
 			</div>
 
-			{/* News card */}
+			{/* Compact news card */}
 			<div
-				className={`rounded-xl border border-l-4 border-neutral-200 dark:border-neutral-800 ${cat.border} bg-white dark:bg-neutral-900 overflow-hidden`}
+				className={`rounded-lg border border-l-4 border-neutral-200 dark:border-neutral-800 ${cat.border} bg-white dark:bg-neutral-900 overflow-hidden`}
 				style={{ opacity: visible ? 1 : 0, transition: `opacity ${FADE_DURATION_MS}ms ease` }}
 			>
 				{/* Progress bar */}
 				<div className="h-0.5 bg-neutral-100 dark:bg-neutral-800">
-					<div
-						className="h-full bg-blue-500 dark:bg-blue-400 transition-none"
-						style={{ width: isPaused ? `${progress * 100}%` : `${progress * 100}%` }}
-					/>
+					<div className="h-full bg-blue-500 dark:bg-blue-400 transition-none" style={{ width: `${progress * 100}%` }} />
 				</div>
 
-				<div className="p-6 md:p-8">
-					<div className="flex items-start justify-between gap-4 mb-4">
-						<span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${cat.bg} ${cat.text}`}>
-							<span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cat.dot}`} />
-							{item.category}
-						</span>
-						<span className="text-xs text-neutral-400 dark:text-neutral-500 whitespace-nowrap tabular-nums pt-1">
+				<div className="p-4">
+					{/* Top row: category badge + time + source link */}
+					<div className="flex items-center justify-between gap-3 mb-2">
+						<div className="flex items-center gap-2">
+							<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${cat.bg} ${cat.text}`}>
+								<span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cat.dot}`} />
+								{item.category}
+							</span>
+							<span className="text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums">
+								{item.source.name} · {formatPublishedDate(item.publishedAt || item.timestamp)}
+							</span>
+						</div>
+						<span className="text-[11px] text-neutral-400 dark:text-neutral-500 whitespace-nowrap tabular-nums">
 							{formatTimeAgo(item.timestamp)}
 						</span>
 					</div>
 
-					<h3 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-50 leading-snug mb-3">
+					<h3 className="text-base font-bold text-neutral-900 dark:text-neutral-50 leading-snug mb-1.5">
 						{item.title}
 					</h3>
 
-					<p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed mb-5">
+					<p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed line-clamp-2 mb-3">
 						{item.context}
 					</p>
 
-					{/* Publication metadata */}
-					<div className="rounded-lg bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 p-4 mb-4">
-						<div className="flex flex-col gap-2 mb-3">
-							<div className="flex items-baseline gap-3">
-								<span className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 w-24 flex-shrink-0">
-									Published On
-								</span>
-								<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
-									{formatPublishedDate(item.publishedAt || item.timestamp)}
-								</span>
-							</div>
-							<div className="flex items-baseline gap-3">
-								<span className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 w-24 flex-shrink-0">
-									Published By
-								</span>
-								<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
-									{item.source.name}
-								</span>
-							</div>
-						</div>
+					{/* Footer row: read link + blog tags */}
+					<div className="flex items-center gap-3 flex-wrap">
 						<a
 							href={item.source.url}
 							target="_blank"
 							rel="noopener noreferrer"
-							className={`inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg ${cat.bg} ${cat.text} hover:opacity-80 transition-opacity`}
+							className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md ${cat.bg} ${cat.text} hover:opacity-80 transition-opacity`}
 						>
 							Read full article
-							<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
 							</svg>
 						</a>
-					</div>
 
-					{/* Related Guides */}
-					{(CATEGORY_RELATED[item.category] ?? []).length > 0 && (
-						<div className="flex items-center gap-2 flex-wrap">
-							<span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
-								Explore on this blog:
-							</span>
-							{(CATEGORY_RELATED[item.category] ?? []).map((tag) => (
-								<a
-									key={tag.slug}
-									href={`/tag/${tag.slug}`}
-									className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cat.bg} ${cat.text} hover:opacity-80 transition-opacity`}
-								>
-									{tag.label}
-									<svg className="w-2.5 h-2.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-									</svg>
-								</a>
-							))}
-						</div>
-					)}
+						{(CATEGORY_RELATED[item.category] ?? []).length > 0 && (
+							<>
+								<span className="text-[10px] text-neutral-400 dark:text-neutral-500">Explore:</span>
+								{(CATEGORY_RELATED[item.category] ?? []).map((tag) => (
+									<a
+										key={tag.slug}
+										href={`/tag/${tag.slug}`}
+										className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${cat.bg} ${cat.text} hover:opacity-80 transition-opacity`}
+									>
+										{tag.label}
+									</a>
+								))}
+							</>
+						)}
+					</div>
 				</div>
 			</div>
 
-			{/* Dot navigation — click to jump to any item */}
-			<div className="flex items-center justify-center gap-2 mt-4">
+			{/* Dot navigation */}
+			<div className="flex items-center justify-center gap-1.5 mt-2">
 				{items.map((_, i) => (
 					<button
 						key={i}
 						aria-label={`Show news item ${i + 1}`}
 						onClick={() => advance(i)}
-						className={`h-1.5 rounded-full transition-all duration-300 ${
+						className={`h-1 rounded-full transition-all duration-300 ${
 							i === index
-								? 'w-6 bg-neutral-700 dark:bg-neutral-200'
-								: 'w-1.5 bg-neutral-300 dark:bg-neutral-600 hover:bg-neutral-400 dark:hover:bg-neutral-500'
+								? 'w-5 bg-neutral-700 dark:bg-neutral-200'
+								: 'w-1 bg-neutral-300 dark:bg-neutral-600 hover:bg-neutral-400 dark:hover:bg-neutral-500'
 						}`}
 					/>
 				))}

@@ -36,15 +36,15 @@ export default function LearningPathsPage({ publication, featuredSeries, postCou
 		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
 				<Head>
-					<title>Learning Paths — {publication.title}</title>
+					<title>Guided Topics — {publication.title}</title>
 					<meta
 						name="description"
-						content={`Structured learning paths on ${publication.title} — curated series and topic roadmaps to guide you from beginner to advanced.`}
+						content={`Guided topics on ${publication.title} — curated series and topic roadmaps to guide you from beginner to advanced.`}
 					/>
-					<meta property="og:title" content={`Learning Paths — ${publication.title}`} />
+					<meta property="og:title" content={`Guided Topics — ${publication.title}`} />
 					<meta
 						property="og:description"
-						content={`Structured learning paths on ${publication.title} — curated series and topic roadmaps.`}
+						content={`Guided topics on ${publication.title} — curated series and topic roadmaps.`}
 					/>
 					<meta
 						property="og:image"
@@ -79,7 +79,7 @@ export default function LearningPathsPage({ publication, featuredSeries, postCou
 								Curated Roadmaps
 							</p>
 							<h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3">
-								Learning Paths
+								Guided Topics
 							</h1>
 							<p className="text-lg text-neutral-500 dark:text-neutral-400 max-w-2xl">
 								Choose a path and follow it from start to finish — each post builds on the previous so you develop real, lasting understanding.

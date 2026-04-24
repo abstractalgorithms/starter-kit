@@ -10,11 +10,11 @@ import { Layout } from '../components/layout';
 import { NewsletterSection } from '../components/newsletter-section';
 import { PersonalHeader } from '../components/personal-theme-header';
 import { Hero, HeroStats } from '../components/hero';
-import { AuthorSection } from '../components/author-section';
 import { StartHereSection, StartHereSeries } from '../components/start-here-section';
 import { TopicCluster, buildTopicClusters } from '../components/topic-clusters';
 import { PopularTopicsStrip } from '../components/popular-topics-strip';
 import { AiTechTicker } from '../components/ai-tech-ticker';
+import { TriviaOfDayCard } from '../components/trivia-of-day';
 import { LearnToday, LearnPost } from '../components/learn-today';
 import {
 	MorePostsByPublicationDocument,
@@ -75,22 +75,23 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 						{/* 1 ── Hero: strongest unique identifier, keep at top */}
 						<Hero {...heroStats} />
 
-						{/* 2 ── Popular Topics strip: exploratory learners self-select immediately */}
-						<PopularTopicsStrip clusters={topicClusters} />
+						{/* 2 ── AI News ticker: fresh context right after the console hero */}
+						<AiTechTicker />
 
-						{/* 3 ── Curated Path: catch "Step 1" learners before anything else */}
-						{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
+						{/* 3 ── Daily trivia: single-question engagement before the learner section */}
+						<TriviaOfDayCard />
 
-						{/* 4 ── Learn Today: daily picks — secondary to structured paths */}
+						{/* 4 ── AI-Powered Discovery: search-first */}
 						<LearnToday allPosts={allPosts} />
 
-						{/* 6 ── AI News ticker: snackable, intentionally lower priority */}
-						<AiTechTicker />
+						{/* 5 ── Explore by Topic: chips for exploratory learners */}
+						<PopularTopicsStrip clusters={topicClusters} />
+
+						{/* 6 ── Curated Path: catch "Step 1" learners */}
+						{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
 
 						{/* 7 ── Newsletter */}
 						<NewsletterSection />
-
-						<AuthorSection />
 					</div>
 					<Footer />
 				</Container>

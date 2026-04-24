@@ -24,13 +24,6 @@ source: TickerSource;
 
 type ErrorResponse = { error: string };
 
-// Upstream Netlify function that aggregates live AI RSS feeds.
-// Set NEXT_PUBLIC_SERVER_URL in .env.local:
-//   NEXT_PUBLIC_SERVER_URL=https://splendid-sfogliatella-6bc915.netlify.app
-const UPSTREAM_URL =
-(process.env.NEXT_PUBLIC_SERVER_URL ?? '').replace(/\/$/, '') +
-'/.netlify/functions/ai-tech-ticker';
-
 export default async function handler(
 req: NextApiRequest,
 res: NextApiResponse<TickerItem[] | ErrorResponse>,
@@ -40,11 +33,18 @@ res.setHeader('Allow', 'GET');
 return res.status(405).json({ error: 'Method Not Allowed' });
 }
 
+const serverUrl = (process.env.NEXT_PUBLIC_SERVER_URL ?? '').replace(/\/$/, '');
+if (!serverUrl) {
+console.error('[ai-tech-ticker] NEXT_PUBLIC_SERVER_URL is not set');
+return res.status(503).json({ error: 'NEXT_PUBLIC_SERVER_URL env var not configured' });
+}
+
 try {
 const count = typeof req.query.count === 'string' ? req.query.count : '10';
-const upstream = await fetch(`${UPSTREAM_URL}?count=${encodeURIComponent(count)}`, {
-headers: { 'User-Agent': 'abstractalgorithms-personal-theme/1.0' },
-});
+const upstream = await fetch(
+`${serverUrl}/.netlify/functions/ai-tech-ticker?count=${encodeURIComponent(count)}`,
+{ headers: { 'User-Agent': 'abstractalgorithms-personal-theme/1.0' } },
+);
 
 if (!upstream.ok) {
 throw new Error(`Upstream responded ${upstream.status}`);

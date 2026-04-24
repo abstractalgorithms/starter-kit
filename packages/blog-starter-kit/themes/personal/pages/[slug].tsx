@@ -46,6 +46,7 @@ import { SocialShare, MobileShareBar } from '../components/social-share';
 import { TableOfContents } from '../components/table-of-contents';
 import { PostChatbot } from '../components/post-chatbot';
 import { PostQuiz } from '../components/post-quiz';
+import { ScrollButtons } from '../components/scroll-buttons';
 import { LearningPathNav } from '../components/learning-path-nav';
 // CalloutBlock and QuizCard are available for use inside article content:
 // import { CalloutBlock } from '../components/callout-block';
@@ -372,6 +373,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 
 			{/* Floating AI Chatbot */}
 			<PostChatbot postTitle={post.title} postContent={post.content.markdown} />
+			<ScrollButtons />
 			<LearningPathNav slug={post.slug} />
 		</>
 	);

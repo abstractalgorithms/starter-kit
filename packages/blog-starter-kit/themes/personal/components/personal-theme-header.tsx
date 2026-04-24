@@ -204,16 +204,6 @@ export const PersonalHeader = () => {
 				</Link>
 			</li>
 			<li>
-				<Link href="/posts" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-					All Posts
-				</Link>
-			</li>
-			<li>
-				<Link href="/series" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-					All Series
-				</Link>
-			</li>
-			<li>
 				<Link href="/about" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
 					About
 				</Link>

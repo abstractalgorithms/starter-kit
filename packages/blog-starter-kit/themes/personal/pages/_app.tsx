@@ -5,6 +5,16 @@ import { useEffect } from 'react';
 import 'katex/dist/katex.min.css';
 import '../styles/index.css';
 
+// Next.js 13 passes fetchPriority (camelCase) to <img> which React 18.3 warns about.
+// This is a framework-level issue, not our code. Suppress only this specific warning.
+if (typeof window !== 'undefined') {
+	const _consoleError = console.error.bind(console);
+	console.error = (...args: unknown[]) => {
+		if (typeof args[0] === 'string' && args[0].includes('fetchPriority')) return;
+		_consoleError(...args);
+	};
+}
+
 const plusJakartaSans = Plus_Jakarta_Sans({
 	subsets: ['latin'],
 	weight: ['400', '500', '600', '700', '800'],

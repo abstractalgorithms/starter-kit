@@ -88,7 +88,7 @@ export const LearningPaths = ({ postCounts }: Props) => {
 						Curated Roadmaps
 					</p>
 					<h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
-						Learning Paths
+						Guided Topics
 					</h2>
 				</div>
 			</div>
