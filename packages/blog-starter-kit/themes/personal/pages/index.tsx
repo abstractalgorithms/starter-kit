@@ -78,17 +78,17 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 						{/* 2 ── AI News ticker: fresh context right after the console hero */}
 						<AiTechTicker />
 
-						{/* 3 ── Daily trivia: single-question engagement before the learner section */}
-						<TriviaOfDayCard />
-
-						{/* 4 ── AI-Powered Discovery: search-first */}
+						{/* 3 ── AI-Powered Discovery: search-first */}
 						<LearnToday allPosts={allPosts} />
 
-						{/* 5 ── Explore by Topic: chips for exploratory learners */}
+						{/* 4 ── Explore by Topic: chips for exploratory learners */}
 						<PopularTopicsStrip clusters={topicClusters} />
 
-						{/* 6 ── Curated Path: catch "Step 1" learners */}
+						{/* 5 ── Curated Path: catch "Step 1" learners */}
 						{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
+
+						{/* 6 ── Daily trivia: fun engagement hook before the newsletter */}
+						<TriviaOfDayCard />
 
 						{/* 7 ── Newsletter */}
 						<NewsletterSection />
@@ -152,9 +152,8 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 	const featuredSeries: StartHereSeries[] = topSeriesList.map((series) => {
 		const seriesPosts = allPosts
 			.filter((p) => p.series?.slug === series.slug)
-			.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime())
-			.slice(0, 5);
-		return { seriesName: series.name, seriesSlug: series.slug, posts: seriesPosts };
+			.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
+		return { seriesName: series.name, seriesSlug: series.slug, posts: seriesPosts, totalPostCount: series.count };
 	});
 
 	// ── 5. Hero stats ─────────────────────────────────────────────────────────

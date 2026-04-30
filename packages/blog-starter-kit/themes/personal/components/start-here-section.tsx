@@ -6,6 +6,7 @@ export type StartHereSeries = {
 	seriesName: string;
 	seriesSlug: string;
 	posts: PostFragment[];
+	totalPostCount: number;
 };
 
 type Props = {
@@ -130,6 +131,7 @@ const ExpandedSeriesCard = ({ series }: { series: StartHereSeries }) => {
 	const displayPosts = (ranked ?? series.posts).slice(0, 5);
 	const totalReadTime = displayPosts.reduce((sum, p) => sum + (p.readTimeInMinutes ?? 0), 0);
 	const loading = ranked === null;
+	const totalPostCount = series.totalPostCount;
 
 	return (
 		<div className="relative rounded-xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 overflow-hidden">
@@ -158,14 +160,14 @@ const ExpandedSeriesCard = ({ series }: { series: StartHereSeries }) => {
 								<svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								{displayPosts.length} articles &middot; ~{totalReadTime} min total
+								{totalPostCount} articles total &middot; ~{totalReadTime} min for top 5
 							</div>
 							{aiPowered && (
 								<span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-600 dark:text-purple-400">
 									<svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
 										<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
 									</svg>
-									AI-ranked order
+									AI-curated top 5 from {totalPostCount} posts
 								</span>
 							)}
 						</div>
@@ -246,6 +248,7 @@ const CompactSeriesCard = ({ series }: { series: StartHereSeries }) => {
 	const displayPosts = (ranked ?? series.posts).slice(0, 5);
 	const totalReadTime = series.posts.reduce((sum, p) => sum + (p.readTimeInMinutes ?? 0), 0);
 	const loading = ranked === null;
+	const totalPostCount = series.totalPostCount;
 
 	return (
 		<div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 overflow-hidden">
@@ -283,13 +286,13 @@ const CompactSeriesCard = ({ series }: { series: StartHereSeries }) => {
 						<svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 						</svg>
-						{series.posts.length} posts &middot; ~{totalReadTime} min total
+						{totalPostCount} posts &middot; ~{totalReadTime} min (top 5)
 						{aiPowered && (
 							<span className="inline-flex items-center gap-1 text-[9px] font-bold text-purple-600 dark:text-purple-400 ml-1">
 								<svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
 									<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
 								</svg>
-								AI-ranked
+								AI-curated
 							</span>
 						)}
 					</span>

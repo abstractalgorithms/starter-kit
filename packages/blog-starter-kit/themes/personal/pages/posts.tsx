@@ -5,12 +5,13 @@ import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { DateFormatter } from '../components/date-formatter';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
+import { Pagination } from '../components/pagination';
 import { PersonalHeader } from '../components/personal-theme-header';
 import {
 	MorePostsByPublicationDocument,
@@ -38,6 +39,7 @@ import { formatTagName } from '../utils/format';
 import { LearningPaths } from '../components/learning-paths';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
+const PAGE_SIZE = 12;
 
 type Props = {
 	publication: PublicationFragment;
@@ -227,6 +229,22 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 	const activeFilterCount = [searchTerm, tagSlug, seriesSlug].filter(Boolean).length;
 	const activeView = POST_VIEW_META[view];
 	const activeSortField = getSortField(sort);
+
+	// ── Pagination ────────────────────────────────────────────────────────────
+	const [currentPage, setCurrentPage] = useState(1);
+
+	// Reset to page 1 whenever the result set changes
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [filteredPosts.length, view, sort, tagSlug, seriesSlug, searchTerm]);
+
+	const totalPages = Math.ceil(filteredPosts.length / PAGE_SIZE);
+	const pagedPosts = filteredPosts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+	const handlePageChange = (page: number) => {
+		setCurrentPage(page);
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+	};
 
 	const postCounts = useMemo(() => {
 		const counts: Record<string, number> = {};
@@ -492,8 +510,12 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 						</div>
 
 						{filteredPosts.length > 0 ? (
-							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-								{filteredPosts.map((post) => (
+							<>
+								<p className="text-xs text-neutral-400 dark:text-neutral-500">
+									Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredPosts.length)} of {filteredPosts.length}
+								</p>
+								<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+									{pagedPosts.map((post) => (
 									<article
 										key={post.id}
 										className="group flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700"
@@ -572,15 +594,44 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 										</div>
 									</article>
 								))}
-							</div>
+								</div>
+								<Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+							</>
 						) : (
-							<div className="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 px-6 py-16 text-center">
-								<h2 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-50">
+							<div className="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 px-6 py-14 text-center">
+								<h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50">
 									No posts match the current filters
 								</h2>
-								<p className="mt-3 text-neutral-600 dark:text-neutral-400">
-									Try clearing filters or switching the active view.
+								<p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+									{searchTerm
+										? <>No results for <strong className="text-neutral-700 dark:text-neutral-300">"{searchTerm}"</strong></>
+										: 'Try clearing filters or switching the active view.'}
 								</p>
+
+								{/* AI generation CTA — only shown for text searches */}
+								{searchTerm.trim().length > 2 && (
+									<div className="mt-8 rounded-xl border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-5 py-5">
+										<div className="flex items-center justify-center gap-2 mb-2">
+											<span className="text-base">🤖</span>
+											<p className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+												Generate an AI article about this topic
+											</p>
+										</div>
+										<p className="text-xs text-blue-600 dark:text-blue-400 mb-4">
+											No existing posts match your query. Let AI write a draft article about{' '}
+											<strong>"{searchTerm}"</strong> on the fly.
+										</p>
+										<Link
+											href={`/generated?topic=${encodeURIComponent(searchTerm.trim())}`}
+											className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+										>
+											<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+											</svg>
+											Generate article
+										</Link>
+									</div>
+								)}
 							</div>
 						)}
 					</div>

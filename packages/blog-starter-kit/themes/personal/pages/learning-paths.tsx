@@ -150,9 +150,8 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		const featuredSeries: StartHereSeries[] = topSeriesList.map((series) => {
 			const seriesPosts = allPosts
 				.filter((p) => p.series?.slug === series.slug)
-				.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime())
-				.slice(0, 5);
-			return { seriesName: series.name, seriesSlug: series.slug, posts: seriesPosts };
+				.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
+			return { seriesName: series.name, seriesSlug: series.slug, posts: seriesPosts, totalPostCount: series.count };
 		});
 
 		// ── Post counts per tag slug (for LearningPaths component) ────────────
