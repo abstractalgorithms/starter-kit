@@ -9,13 +9,6 @@ const SparkleIcon = () => (
 	</svg>
 );
 
-const Spinner = () => (
-	<svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-		<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-		<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-	</svg>
-);
-
 const RefreshIcon = () => (
 	<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -141,6 +134,37 @@ const ScoreBar = ({ correct, total }: { correct: number; total: number }) => {
 	);
 };
 
+// ─── Quiz skeleton loader ─────────────────────────────────────────────────────
+
+const QuizSkeleton = () => (
+	<div className="px-5 py-6 flex flex-col gap-7 animate-pulse">
+		{[0, 1, 2, 3].map((i) => (
+			<div key={i} className="flex flex-col gap-3">
+				{/* Question text */}
+				<div className="flex gap-2 items-start">
+					<div className="h-3.5 w-8 bg-neutral-200 dark:bg-neutral-700 rounded flex-shrink-0 mt-1" />
+					<div className="flex-1 space-y-1.5">
+						<div className="h-3.5 bg-neutral-200 dark:bg-neutral-700 rounded w-full" />
+						<div className="h-3.5 bg-neutral-200 dark:bg-neutral-700 rounded w-4/5" />
+					</div>
+				</div>
+				{/* Options */}
+				<div className="flex flex-col gap-2">
+					{[0, 1, 2, 3].map((j) => (
+						<div
+							key={j}
+							className="flex items-center gap-3 px-4 py-3 rounded-lg border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900"
+						>
+							<div className="w-5 h-5 rounded-full bg-neutral-200 dark:bg-neutral-700 flex-shrink-0" />
+							<div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded flex-1" style={{ width: `${60 + (j * 13) % 30}%` }} />
+						</div>
+					))}
+				</div>
+			</div>
+		))}
+	</div>
+);
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
@@ -236,15 +260,8 @@ export const PostQuiz = ({ postTitle, postContent }: Props) => {
 					</div>
 				)}
 
-				{/* Loading */}
-				{status === 'loading' && (
-					<div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-						<Spinner />
-						<p className="text-sm text-neutral-500 dark:text-neutral-400">
-							Crafting your quiz…
-						</p>
-					</div>
-				)}
+				{/* Loading: skeleton */}
+				{status === 'loading' && <QuizSkeleton />}
 
 				{/* Error */}
 				{status === 'error' && (

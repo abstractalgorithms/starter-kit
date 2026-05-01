@@ -60,9 +60,17 @@ const OptionBtn = ({
 
 const LABELS = ['A', 'B', 'C', 'D', 'E'];
 
-const QuestionBlock = ({ question, index }: { question: Question; index: number }) => {
+const QuestionBlock = ({
+	question,
+	index,
+	forceReveal,
+}: {
+	question: Question;
+	index: number;
+	forceReveal: boolean;
+}) => {
 	const [selected, setSelected] = useState<number | null>(null);
-	const revealed = selected !== null;
+	const revealed = selected !== null || forceReveal;
 
 	const getState = (i: number): 'idle' | 'selected' | 'correct' | 'wrong' => {
 		if (!revealed) return i === selected ? 'selected' : 'idle';
@@ -136,7 +144,7 @@ export const QuizCard = ({ title = 'Practice Quiz', questions }: Props) => {
 			{/* Questions */}
 			<div className="px-5 py-5 flex flex-col gap-6 bg-white dark:bg-neutral-950">
 				{questions.map((q, i) => (
-					<QuestionBlock key={i} question={q} index={i} />
+					<QuestionBlock key={i} question={q} index={i} forceReveal={allRevealed} />
 				))}
 			</div>
 

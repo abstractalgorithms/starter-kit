@@ -8,7 +8,7 @@ type Props = {
 	postContent: string;
 };
 
-type ChatMessage = Message & { id: number };
+type ChatMessage = Message & { id: number; streaming?: boolean };
 
 const CHAT_API = '/api/chat';
 
@@ -82,6 +82,56 @@ function renderAnswer(text: string) {
 	});
 }
 
+// ── Typewriter hook ───────────────────────────────────────────────────────────
+
+const CHARS_PER_TICK = 4; // characters revealed per frame
+const TICK_MS = 16;        // ~60 fps
+
+function useTypewriter(
+	messages: ChatMessage[],
+	setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>,
+) {
+	const queueRef = useRef<Map<number, { full: string; pos: number }>>(new Map());
+	const rafRef = useRef<number | null>(null);
+
+	const tick = () => {
+		let stillStreaming = false;
+		queueRef.current.forEach((entry, id) => {
+			if (entry.pos >= entry.full.length) return;
+			entry.pos = Math.min(entry.pos + CHARS_PER_TICK, entry.full.length);
+			const revealed = entry.full.slice(0, entry.pos);
+			const done = entry.pos >= entry.full.length;
+			setMessages((prev) =>
+				prev.map((m) =>
+					m.id === id
+						? { ...m, content: revealed, streaming: !done }
+						: m,
+				),
+			);
+			if (!done) stillStreaming = true;
+		});
+
+		if (stillStreaming) {
+			rafRef.current = window.setTimeout(tick, TICK_MS);
+		} else {
+			rafRef.current = null;
+		}
+	};
+
+	const startTyping = (id: number, full: string) => {
+		queueRef.current.set(id, { full, pos: 0 });
+		if (rafRef.current === null) {
+			rafRef.current = window.setTimeout(tick, TICK_MS);
+		}
+	};
+
+	useEffect(() => () => {
+		if (rafRef.current !== null) clearTimeout(rafRef.current);
+	}, []);
+
+	return startTyping;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 let _idCounter = 0;
@@ -95,6 +145,10 @@ export function PostChatbot({ postTitle, postContent }: Props) {
 	const [error, setError] = useState<string | null>(null);
 	const bottomRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
+	const startTyping = useTypewriter(messages, setMessages);
+
+	const isStreaming = messages.some((m) => m.streaming);
+	const isBusy = loading || isStreaming;
 
 	// Auto-scroll to bottom whenever messages change
 	useEffect(() => {
@@ -110,7 +164,7 @@ export function PostChatbot({ postTitle, postContent }: Props) {
 
 	const send = async () => {
 		const question = input.trim();
-		if (!question || loading) return;
+		if (!question || isBusy) return;
 
 		const userMsg: ChatMessage = { id: nextId(), role: 'user', content: question };
 		setMessages((prev) => [...prev, userMsg]);
@@ -133,8 +187,11 @@ export function PostChatbot({ postTitle, postContent }: Props) {
 				throw new Error((data as { error: string }).error ?? 'Unknown error');
 			}
 
-			const botMsg: ChatMessage = { id: nextId(), role: 'assistant', content: data.answer };
+			// Insert the bot message as empty+streaming, then type it out
+			const botId = nextId();
+			const botMsg: ChatMessage = { id: botId, role: 'assistant', content: '', streaming: true };
 			setMessages((prev) => [...prev, botMsg]);
+			startTyping(botId, data.answer);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
 		} finally {
@@ -215,7 +272,7 @@ export function PostChatbot({ postTitle, postContent }: Props) {
 
 					{/* Messages */}
 					<div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3 min-h-0">
-						{messages.length === 0 && !loading && (
+						{messages.length === 0 && !isBusy && (
 							<div className="flex flex-col items-center justify-center h-full gap-3 py-8 text-center">
 								<span className="text-3xl">💬</span>
 								<p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
@@ -239,12 +296,21 @@ export function PostChatbot({ postTitle, postContent }: Props) {
 											: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-bl-sm'
 									}`}
 								>
-									{msg.role === 'assistant' ? renderAnswer(msg.content) : msg.content}
+									{msg.role === 'assistant' ? (
+										<>
+											{renderAnswer(msg.content)}
+											{msg.streaming && (
+												<span className="inline-block w-[2px] h-[1em] bg-current ml-0.5 align-middle animate-pulse" />
+											)}
+										</>
+									) : (
+										msg.content
+									)}
 								</div>
 							</div>
 						))}
 
-						{loading && (
+					{loading && (
 							<div className="flex justify-start">
 								<div className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-800 rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm text-neutral-500 dark:text-neutral-400">
 									<Spinner />
@@ -272,13 +338,13 @@ export function PostChatbot({ postTitle, postContent }: Props) {
 								onKeyDown={handleKeyDown}
 								placeholder="Ask a question… (Enter to send)"
 								rows={1}
-								disabled={loading}
+								disabled={isBusy}
 								className="flex-1 resize-none bg-transparent text-sm text-neutral-900 dark:text-neutral-50 placeholder-neutral-400 focus:outline-none disabled:opacity-60 max-h-28 leading-relaxed"
 								style={{ fieldSizing: 'content' } as React.CSSProperties}
 							/>
 							<button
 								onClick={send}
-								disabled={!input.trim() || loading}
+								disabled={!input.trim() || isBusy}
 								aria-label="Send"
 								className="flex-shrink-0 p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
 							>
