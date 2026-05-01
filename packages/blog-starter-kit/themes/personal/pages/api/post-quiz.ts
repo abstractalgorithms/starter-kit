@@ -5,7 +5,7 @@ type RequestBody = { postTitle: string; postContent: string };
 type SuccessResponse = { questions: QuizQuestion[] };
 type ErrorResponse = { error: string };
 
-const CHAT_UPSTREAM = 'https://splendid-sfogliatella-6bc915.netlify.app/api/chat';
+const serverUrl = (process.env.NEXT_PUBLIC_SERVER_URL ?? '').replace(/\/$/, '');
 
 const SYSTEM_PROMPT = `You are a technical quiz generator. Given the content of a blog post, generate exactly 4 multiple-choice quiz questions that test genuine comprehension of the material. Return ONLY a valid JSON array — no markdown, no code fences, no commentary. Each element must have:
 - "q": the question string
@@ -30,6 +30,11 @@ export default async function handler(
 		return res.status(400).json({ error: 'postTitle and postContent are required' });
 	}
 
+	if (!serverUrl) {
+		console.error('[post-quiz] NEXT_PUBLIC_SERVER_URL is not set');
+		return res.status(503).json({ error: 'Server URL not configured' });
+	}
+
 	// Trim content to ~6 000 chars to stay within token budgets
 	const trimmedContent = postContent.slice(0, 6000);
 
@@ -41,7 +46,7 @@ Post content:
 ${trimmedContent}`;
 
 	try {
-		const upstream = await fetch(CHAT_UPSTREAM, {
+		const upstream = await fetch(`${serverUrl}/.netlify/functions/chat`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
