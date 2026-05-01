@@ -226,7 +226,7 @@ const ExplorePanel = ({
 				)}
 				{panelState === 'error' && (
 					<p className="text-sm text-neutral-500 dark:text-neutral-400">
-						Couldn't generate topic summary. Browse posts below.
+						Couldn&apos;t generate topic summary. Browse posts below.
 					</p>
 				)}
 				{panelState === 'ready' && result && (
