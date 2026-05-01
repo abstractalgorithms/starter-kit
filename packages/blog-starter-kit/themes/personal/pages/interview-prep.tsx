@@ -157,11 +157,11 @@ type AiLearningPath = {
 	aiPowered: boolean;
 };
 
-const PHASE_COLORS: Record<PhaseColor, { border: string; bg: string; badge: string; title: string; step: string }> = {
-	emerald: { border: 'border-emerald-200 dark:border-emerald-800', bg: 'bg-emerald-50 dark:bg-emerald-950/30', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300', title: 'text-emerald-700 dark:text-emerald-300', step: 'bg-emerald-600' },
-	blue:    { border: 'border-blue-200 dark:border-blue-800',       bg: 'bg-blue-50 dark:bg-blue-950/30',       badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',       title: 'text-blue-700 dark:text-blue-300',       step: 'bg-blue-600' },
-	purple:  { border: 'border-purple-200 dark:border-purple-800',   bg: 'bg-purple-50 dark:bg-purple-950/30',   badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300', title: 'text-purple-700 dark:text-purple-300',   step: 'bg-purple-600' },
-	rose:    { border: 'border-rose-200 dark:border-rose-800',       bg: 'bg-rose-50 dark:bg-rose-950/30',       badge: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',       title: 'text-rose-700 dark:text-rose-300',       step: 'bg-rose-600' },
+const PHASE_COLORS: Record<PhaseColor, { border: string; bg: string; badge: string; title: string; step: string; btn: string }> = {
+	emerald: { border: 'border-emerald-200 dark:border-emerald-800', bg: 'bg-emerald-50 dark:bg-emerald-950/30', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300', title: 'text-emerald-700 dark:text-emerald-300', step: 'bg-emerald-600', btn: 'bg-emerald-600 hover:bg-emerald-700' },
+	blue:    { border: 'border-blue-200 dark:border-blue-800',       bg: 'bg-blue-50 dark:bg-blue-950/30',       badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',       title: 'text-blue-700 dark:text-blue-300',       step: 'bg-blue-600',   btn: 'bg-blue-600 hover:bg-blue-700' },
+	purple:  { border: 'border-purple-200 dark:border-purple-800',   bg: 'bg-purple-50 dark:bg-purple-950/30',   badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300', title: 'text-purple-700 dark:text-purple-300',   step: 'bg-purple-600', btn: 'bg-purple-600 hover:bg-purple-700' },
+	rose:    { border: 'border-rose-200 dark:border-rose-800',       bg: 'bg-rose-50 dark:bg-rose-950/30',       badge: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',       title: 'text-rose-700 dark:text-rose-300',       step: 'bg-rose-600',   btn: 'bg-rose-600 hover:bg-rose-700' },
 };
 
 // ─── Lean post type for SSG props ─────────────────────────────────────────────

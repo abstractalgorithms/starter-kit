@@ -604,7 +604,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 								</h2>
 								<p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
 									{searchTerm
-										? <>No results for <strong className="text-neutral-700 dark:text-neutral-300">"{searchTerm}"</strong></>
+										? <>No results for <strong className="text-neutral-700 dark:text-neutral-300">&ldquo;{searchTerm}&rdquo;</strong></>
 										: 'Try clearing filters or switching the active view.'}
 								</p>
 
@@ -619,7 +619,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 										</div>
 										<p className="text-xs text-blue-600 dark:text-blue-400 mb-4">
 											No existing posts match your query. Let AI write a draft article about{' '}
-											<strong>"{searchTerm}"</strong> on the fly.
+											<strong>&ldquo;{searchTerm}&rdquo;</strong> on the fly.
 										</p>
 										<Link
 											href={`/generated?topic=${encodeURIComponent(searchTerm.trim())}`}

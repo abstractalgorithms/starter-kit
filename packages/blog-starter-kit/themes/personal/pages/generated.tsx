@@ -53,7 +53,7 @@ function Skeleton({ topic }: { topic: string }) {
 			</div>
 			<p className="text-center text-sm text-neutral-400 dark:text-neutral-500 pt-2">
 				Generating article about{' '}
-				<strong className="text-neutral-600 dark:text-neutral-300">"{topic}"</strong>…
+				<strong className="text-neutral-600 dark:text-neutral-300">&ldquo;{topic}&rdquo;</strong>…
 			</p>
 		</div>
 	);
@@ -243,7 +243,7 @@ export default function GeneratedPostPage({ publication }: Props) {
 											href={`/posts?search=${encodeURIComponent(topic)}`}
 											className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
 										>
-											Browse posts about "{topic}"
+											Browse posts about &ldquo;{topic}&rdquo;
 										</Link>
 										<Link
 											href="/learning-paths"
