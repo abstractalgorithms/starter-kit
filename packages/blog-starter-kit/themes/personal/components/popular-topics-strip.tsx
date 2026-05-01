@@ -5,6 +5,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { TopicCluster, ClusterColor } from './topic-clusters';
 import type { LearnPost } from '../components/learn-today';
 import type { TopicExplorerResult } from '../pages/api/topic-explorer';
+import type { SubtopicAnswerResult } from '../pages/api/subtopic-answer';
 
 // ─── Emoji map for common tech slugs ─────────────────────────────────────────
 const SLUG_EMOJI: Record<string, string> = {
@@ -106,25 +107,37 @@ const ArticleCard = ({ post, color }: { post: LearnPost; color: ClusterColor }) 
 	return (
 		<Link
 			href={`/${post.slug}`}
-			className="group flex flex-col gap-1.5 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-sm transition-all"
+			className="group flex flex-col overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-sm transition-all"
 		>
-			<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-snug group-hover:underline line-clamp-2">
-				{post.title}
-			</p>
-			{post.brief && (
-				<p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
-					{post.brief}
-				</p>
+			{post.coverImage?.url && (
+				<div className="w-full h-28 overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex-shrink-0">
+					{/* eslint-disable-next-line @next/next/no-img-element */}
+					<img
+						src={post.coverImage.url}
+						alt={post.title}
+						className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+					/>
+				</div>
 			)}
-			<div className="flex items-center gap-3 mt-auto pt-1">
-				<span className={`text-xs font-medium ${accent[color]}`}>
-					{post.readTimeInMinutes} min read
-				</span>
-				{post.tags?.[0] && (
-					<span className="text-xs text-neutral-400 dark:text-neutral-500">
-						{post.tags[0].name}
-					</span>
+			<div className="flex flex-col gap-1.5 p-4 flex-1">
+				<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-snug group-hover:underline line-clamp-2">
+					{post.title}
+				</p>
+				{post.brief && (
+					<p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+						{post.brief}
+					</p>
 				)}
+				<div className="flex items-center gap-3 mt-auto pt-1">
+					<span className={`text-xs font-medium ${accent[color]}`}>
+						{post.readTimeInMinutes} min read
+					</span>
+					{post.tags?.[0] && (
+						<span className="text-xs text-neutral-400 dark:text-neutral-500">
+							{post.tags[0].name}
+						</span>
+					)}
+				</div>
 			</div>
 		</Link>
 	);
@@ -145,7 +158,11 @@ const ExplorePanel = ({
 	const [panelState, setPanelState] = useState<PanelState>('loading');
 	const [result, setResult] = useState<TopicExplorerResult | null>(null);
 	const [activeSubTopic, setActiveSubTopic] = useState<string | null>(null);
+	const [customQuery, setCustomQuery] = useState('');
+	const [subAnswer, setSubAnswer] = useState<SubtopicAnswerResult | null>(null);
+	const [subAnswerLoading, setSubAnswerLoading] = useState(false);
 	const panelRef = useRef<HTMLDivElement>(null);
+	const inputRef = useRef<HTMLInputElement>(null);
 
 	// Posts belonging to this topic (by tag slug)
 	const topicPosts = allPosts.filter((p) =>
@@ -193,6 +210,46 @@ const ExplorePanel = ({
 			.map(({ post }) => post)
 		: [];
 
+	// Fetch AI answer whenever the active sub-topic changes
+	useEffect(() => {
+		if (!activeSubTopic) { setSubAnswer(null); return; }
+		let cancelled = false;
+		setSubAnswerLoading(true);
+		setSubAnswer(null);
+		(async () => {
+			try {
+				const res = await fetch('/api/subtopic-answer', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						topic: cluster.label,
+						subTopic: activeSubTopic,
+						posts: matchedPosts.slice(0, 6).map((p) => ({
+							title: p.title,
+							brief: p.brief,
+							tags: p.tags,
+							slug: p.slug,
+						})),
+					}),
+				});
+				if (!res.ok) throw new Error(`API ${res.status}`);
+				const data: SubtopicAnswerResult = await res.json();
+				if (!cancelled) setSubAnswer(data);
+			} catch {
+				// silently fail — related posts still show
+			} finally {
+				if (!cancelled) setSubAnswerLoading(false);
+			}
+		})();
+		return () => { cancelled = true; };
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [activeSubTopic]);
+
+	const handleCustomQuery = useCallback(() => {
+		const q = customQuery.trim();
+		if (q) setActiveSubTopic(q);
+	}, [customQuery]);
+
 	const c = cluster.color;
 
 	return (
@@ -236,24 +293,77 @@ const ExplorePanel = ({
 				)}
 
 				{/* Sub-topic question */}
-				{panelState === 'ready' && result && result.subTopics.length > 0 && (
+				{panelState === 'ready' && result && (
 					<div className="space-y-2.5">
 						<p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
 							What do you want to learn?
 						</p>
-						<div className="flex flex-wrap gap-2">
-							{result.subTopics.map((st) => (
-								<button
-									key={st}
-									onClick={() => setActiveSubTopic(activeSubTopic === st ? null : st)}
-									className={`text-sm px-3.5 py-2 rounded-full border font-medium transition-all duration-150 ${
-										activeSubTopic === st ? SUBTOPIC_ACTIVE[c] : SUBTOPIC_BTN[c]
-									}`}
-								>
-									{st}
-								</button>
-							))}
+						{result.subTopics.length > 0 && (
+							<div className="flex flex-wrap gap-2">
+								{result.subTopics.map((st) => (
+									<button
+										key={st}
+										onClick={() => {
+											setCustomQuery('');
+											setActiveSubTopic(activeSubTopic === st ? null : st);
+										}}
+										className={`text-sm px-3.5 py-2 rounded-full border font-medium transition-all duration-150 ${
+											activeSubTopic === st && !customQuery ? SUBTOPIC_ACTIVE[c] : SUBTOPIC_BTN[c]
+										}`}
+									>
+										{st}
+									</button>
+								))}
+							</div>
+						)}
+						{/* Custom query input */}
+						<div className="flex gap-2">
+							<input
+								ref={inputRef}
+								type="text"
+								value={customQuery}
+								onChange={(e) => setCustomQuery(e.target.value)}
+								onKeyDown={(e) => { if (e.key === 'Enter') handleCustomQuery(); }}
+								placeholder="Or describe what you want to learn…"
+							className="flex-1 text-sm px-3.5 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-500 focus:border-transparent transition-all"
+							/>
+							<button
+								onClick={handleCustomQuery}
+								disabled={!customQuery.trim()}
+								className="px-4 py-2 text-sm font-medium rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+							>
+								Search
+							</button>
 						</div>
+					</div>
+				)}
+
+				{/* AI Answer */}
+				{activeSubTopic && (
+					<div className="rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60 px-4 py-3.5 space-y-1.5">
+						<p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+							<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+							</svg>
+							AI Answer
+						</p>
+						{subAnswerLoading && (
+							<div className="space-y-1.5 animate-pulse">
+								<div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-full" />
+								<div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-5/6" />
+								<div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-4/6" />
+							</div>
+						)}
+						{!subAnswerLoading && subAnswer && (
+							<p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
+								{subAnswer.answer}
+							</p>
+						)}
+						{!subAnswerLoading && !subAnswer && (
+							<p className="text-xs text-neutral-400 dark:text-neutral-500 italic">
+								Could not generate an answer. Browse related posts below.
+							</p>
+						)}
 					</div>
 				)}
 
@@ -261,7 +371,7 @@ const ExplorePanel = ({
 				{activeSubTopic && matchedPosts.length > 0 && (
 					<div className="space-y-2.5">
 						<p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
-							Related articles
+							Read more in detail
 						</p>
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 							{matchedPosts.map((post) => (
@@ -270,7 +380,7 @@ const ExplorePanel = ({
 						</div>
 					</div>
 				)}
-				{activeSubTopic && matchedPosts.length === 0 && (
+				{activeSubTopic && matchedPosts.length === 0 && !subAnswerLoading && (
 					<p className="text-sm text-neutral-500 dark:text-neutral-400">
 						No exact matches found.{' '}
 						<Link href={`/tag/${cluster.slug}`} className="underline hover:text-neutral-700 dark:hover:text-neutral-200">
