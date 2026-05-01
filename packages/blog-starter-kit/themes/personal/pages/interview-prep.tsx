@@ -36,6 +36,8 @@ type InterviewType = {
 	query: string;
 	icon: string;
 	color: 'blue' | 'purple' | 'emerald' | 'orange' | 'rose' | 'cyan';
+	/** Only posts whose series.name is in this list are sent to the learning-path API */
+	seriesFilter: string[];
 };
 
 const INTERVIEW_TYPES: InterviewType[] = [
@@ -44,6 +46,7 @@ const INTERVIEW_TYPES: InterviewType[] = [
 		label: 'System Design',
 		sublabel: 'Scalability, architecture, trade-offs',
 		query: 'system design interview scalability architecture',
+		seriesFilter: ['System Design Interview Prep', 'Architecture Patterns for Production Systems'],
 		icon: '🏗️',
 		color: 'blue',
 	},
@@ -52,6 +55,7 @@ const INTERVIEW_TYPES: InterviewType[] = [
 		label: 'Distributed Systems',
 		sublabel: 'Consensus, replication, fault tolerance',
 		query: 'distributed systems consensus replication fault tolerance',
+		seriesFilter: ['System Design Interview Prep', 'Architecture Patterns for Production Systems', 'How It Works: Internals Explained'],
 		icon: '🌐',
 		color: 'purple',
 	},
@@ -60,6 +64,7 @@ const INTERVIEW_TYPES: InterviewType[] = [
 		label: 'ML & AI Engineering',
 		sublabel: 'Models, training, LLMs, deployment',
 		query: 'machine learning ai engineering llm model training',
+		seriesFilter: ['Machine Learning Fundamentals', 'LLM Engineering', 'Agentic AI: LangChain and LangGraph'],
 		icon: '🤖',
 		color: 'orange',
 	},
@@ -67,7 +72,8 @@ const INTERVIEW_TYPES: InterviewType[] = [
 		id: 'python',
 		label: 'Python Engineering',
 		sublabel: 'Async, performance, testing, patterns',
-		query: 'python engineering async performance testing',
+		query: 'python async asyncio concurrency testing patterns',
+		seriesFilter: ['Python Programming'],
 		icon: '🐍',
 		color: 'emerald',
 	},
@@ -76,6 +82,7 @@ const INTERVIEW_TYPES: InterviewType[] = [
 		label: 'Data Engineering',
 		sublabel: 'Pipelines, Spark, Kafka, warehousing',
 		query: 'data engineering spark kafka pipeline warehouse',
+		seriesFilter: ['Apache Spark Engineering', 'Big Data Engineering'],
 		icon: '📊',
 		color: 'cyan',
 	},
@@ -84,6 +91,7 @@ const INTERVIEW_TYPES: InterviewType[] = [
 		label: 'LLM & RAG Systems',
 		sublabel: 'Retrieval, embeddings, fine-tuning',
 		query: 'llm rag retrieval augmented generation embeddings',
+		seriesFilter: ['LLM Engineering', 'Agentic AI: LangChain and LangGraph', 'Machine Learning Fundamentals'],
 		icon: '🧠',
 		color: 'rose',
 	},
@@ -202,10 +210,13 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 		setShowKnowledgeTest(false);
 
 		try {
+			const seriesSet = new Set(type.seriesFilter);
+			const filteredPosts = posts.filter((p) => p.series && seriesSet.has(p.series.name));
+
 			const res = await fetch('/api/learning-path', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ query: type.query, posts }),
+				body: JSON.stringify({ query: type.query, posts: filteredPosts }),
 			});
 		if (!res.ok) throw new Error(`API ${res.status}`);
 			const data: AiLearningPath = await res.json();

@@ -76,7 +76,7 @@ const SYNONYMS: Record<string, string[]> = {
 'llm': ['large language model', 'gpt', 'transformer', 'fine-tuning', 'rag', 'embedding'],
 'ml': ['machine learning', 'neural network', 'model', 'training', 'inference'],
 'ai': ['artificial intelligence', 'machine learning', 'deep learning', 'llm', 'neural'],
-'python': ['django', 'fastapi', 'async', 'asyncio', 'pandas', 'numpy'],
+'python': ['asyncio', 'fastapi', 'django', 'pydantic', 'pytest', 'gil', 'cpython', 'decorator', 'generator', 'coroutine'],
 'kubernetes': ['k8s', 'container', 'docker', 'pod', 'deployment', 'orchestration'],
 'kafka': ['streaming', 'event', 'message queue', 'pub sub', 'consumer'],
 'caching': ['redis', 'memcached', 'cdn', 'cache invalidation', 'ttl'],

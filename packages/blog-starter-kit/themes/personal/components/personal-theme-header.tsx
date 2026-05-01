@@ -208,6 +208,11 @@ export const PersonalHeader = () => {
 					About
 				</Link>
 			</li>
+			<li>
+				<Link href="/interview-prep" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+					Interview Prep
+				</Link>
+			</li>
 		</ul>
 	);
 
@@ -216,7 +221,7 @@ export const PersonalHeader = () => {
 			<div className="max-w-6xl mx-auto px-5 py-2.5 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
 				<h1>
 					<Link
-						className="flex flex-row items-center gap-3 text-lg font-bold leading-tight tracking-tight text-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+						className="flex flex-row items-center gap-3 hover:opacity-90 transition-opacity"
 						href="/"
 						aria-label={`${publication.author.name}'s blog home page`}
 					>
@@ -231,7 +236,14 @@ export const PersonalHeader = () => {
 								})}
 							/>
 						)}
-						<span>{publication.title}</span>
+						<div className="flex flex-col leading-tight">
+							<span className="text-lg font-bold tracking-tight text-black dark:text-white">
+								{publication.title}
+							</span>
+							<span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 tracking-wide">
+								An AI Powered Learning Platform
+							</span>
+						</div>
 					</Link>
 				</h1>
 				<div className="flex items-center gap-4">
