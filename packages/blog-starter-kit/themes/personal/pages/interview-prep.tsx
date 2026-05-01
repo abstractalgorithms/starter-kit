@@ -5,6 +5,9 @@ import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useState } from 'react';
+import { InterviewKnowledgeTest } from '../components/interview-knowledge-test';
+import { saveLearningPath } from '../components/learn-today';
+import type { LearningPath, LearningPhase, LearnPost } from './api/learning-path';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { Footer } from '../components/footer';
@@ -190,11 +193,13 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 	const [selected, setSelected] = useState<InterviewType | null>(null);
 	const [loadState, setLoadState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	const [path, setPath] = useState<AiLearningPath | null>(null);
+	const [showKnowledgeTest, setShowKnowledgeTest] = useState(false);
 
 	const selectInterview = async (type: InterviewType) => {
 		setSelected(type);
 		setPath(null);
 		setLoadState('loading');
+		setShowKnowledgeTest(false);
 
 		try {
 			const res = await fetch('/api/learning-path', {
@@ -202,10 +207,43 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ query: type.query, posts }),
 			});
-			if (!res.ok) throw new Error(`API ${res.status}`);
+		if (!res.ok) throw new Error(`API ${res.status}`);
 			const data: AiLearningPath = await res.json();
 			setPath(data);
 			setLoadState('ready');
+
+			// Save to localStorage so LearningPathNav activates when reading posts
+			const lpPath: LearningPath = {
+				query: type.query,
+				headline: data.headline,
+				summary: data.summary,
+				totalPosts: data.totalPosts,
+				totalMinutes: data.totalMinutes,
+				aiPowered: data.aiPowered,
+				phases: data.phases.map((ph): LearningPhase => ({
+					number: ph.number,
+					label: ph.label,
+					emoji: ph.emoji,
+					description: ph.description,
+					color: ph.color,
+					totalMinutes: ph.totalMinutes,
+					posts: ph.posts.map((p): LearnPost => ({
+						id: p.id,
+						title: p.title,
+						slug: p.slug,
+						brief: p.brief,
+						readTimeInMinutes: p.readTimeInMinutes,
+						complexity: p.complexity as LearnPost['complexity'],
+						views: 0,
+						publishedAt: '',
+					})),
+				})),
+			};
+			saveLearningPath(lpPath, {
+				source: 'interview-prep',
+				interviewLabel: type.label,
+				interviewIcon: type.icon,
+			});
 		} catch {
 			setLoadState('error');
 		}
@@ -246,23 +284,26 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 						</div>
 
 						{/* ── Daily scenario: warm-up before picking an interview type ── */}
-						<div className="mb-2 border-b border-neutral-200 dark:border-neutral-800">
-							<ScenarioOfDayCard posts={posts} />
-						</div>
+						{!selected && (
+							<div className="mb-2 border-b border-neutral-200 dark:border-neutral-800">
+								<ScenarioOfDayCard posts={posts} />
+							</div>
+						)}
 
 						{/* ── Interview type selector ───────────────────────────── */}
-						<div className="mb-10">
-							<p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-4">
-								What interview are you preparing for?
-							</p>
-							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-								{INTERVIEW_TYPES.map((type) => {
-									const c = COLOR_MAP[type.color];
-									const isActive = selected?.id === type.id;
-									return (
-										<button
-											key={type.id}
-											onClick={() => selectInterview(type)}
+						{!selected ? (
+							<div className="mb-10">
+								<p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-4">
+									What interview are you preparing for?
+								</p>
+								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+									{INTERVIEW_TYPES.map((type) => {
+										const c = COLOR_MAP[type.color];
+										const isActive = false; // selector only renders when !selected
+										return (
+											<button
+												key={type.id}
+												onClick={() => selectInterview(type)}
 											className={`group text-left flex items-center gap-4 p-4 rounded-xl border-2 bg-white dark:bg-neutral-900 transition-all duration-200 ${
 												isActive
 													? `${c.card.split(' ')[0]} ${c.card.split(' ')[1]} ring-2 ring-offset-1 shadow-md`
@@ -290,6 +331,24 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 								})}
 							</div>
 						</div>
+					) : (
+						/* Compact selected-topic bar when a topic is chosen */
+						<div className="mb-6 flex items-center gap-3 p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60">
+							<div className={`w-9 h-9 flex-shrink-0 rounded-lg flex items-center justify-center text-xl ${COLOR_MAP[selected.color].icon}`}>
+								{selected.icon}
+							</div>
+							<div className="flex-1 min-w-0">
+								<p className="text-sm font-bold text-neutral-900 dark:text-neutral-50 leading-snug">{selected.label}</p>
+								<p className="text-xs text-neutral-500 dark:text-neutral-400">{selected.sublabel}</p>
+							</div>
+							<button
+								onClick={() => { setSelected(null); setPath(null); setLoadState('idle'); setShowKnowledgeTest(false); }}
+								className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex-shrink-0"
+							>
+								Change
+							</button>
+						</div>
+					)}
 
 						{/* ── Results ───────────────────────────────────────────── */}
 						{loadState === 'loading' && (
@@ -342,17 +401,28 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 											<p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-2xl">
 												{path.summary}
 											</p>
-											{path.phases[0]?.posts[0]?.slug && (
-												<Link
-													href={`/${path.phases[0].posts[0].slug}`}
-													className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
-												>
-													Start Preparation
-													<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-													</svg>
-												</Link>
-											)}
+											<div className="mt-4 flex flex-wrap gap-3">
+												{path.phases[0]?.posts[0]?.slug && (
+													<Link
+														href={`/${path.phases[0].posts[0].slug}`}
+														className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+													>
+														Start Preparation
+														<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+														</svg>
+													</Link>
+												)}
+												{!showKnowledgeTest && (
+													<button
+														onClick={() => setShowKnowledgeTest(true)}
+														className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-neutral-900 border border-violet-300 dark:border-violet-700 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/30 text-sm font-semibold rounded-xl transition-colors shadow-sm"
+													>
+														<span>🧠</span>
+														Test Your Knowledge
+													</button>
+												)}
+											</div>
 										</div>
 										<div className="flex items-center gap-4 text-sm text-neutral-500 dark:text-neutral-400 flex-shrink-0">
 											<span className="font-mono">{path.totalPosts} posts</span>
@@ -372,6 +442,19 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 										</div>
 									</div>
 								</div>
+
+								{/* Test Your Knowledge panel — shown when button is clicked */}
+								{showKnowledgeTest && (
+									<div className="mb-8">
+										<InterviewKnowledgeTest
+											path={path}
+											sourcePosts={posts}
+											query={selected.query}
+											interviewLabel={selected.label}
+											onDismiss={() => setShowKnowledgeTest(false)}
+										/>
+									</div>
+								)}
 
 								{/* Phases */}
 								<div className="flex flex-col gap-8">
@@ -455,7 +538,7 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 								<div className="mt-10 text-center">
 									<p className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">Preparing for a different role?</p>
 									<button
-										onClick={() => { setSelected(null); setPath(null); setLoadState('idle'); }}
+										onClick={() => { setSelected(null); setPath(null); setLoadState('idle'); setShowKnowledgeTest(false); }}
 										className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
 									>
 										← Change interview type

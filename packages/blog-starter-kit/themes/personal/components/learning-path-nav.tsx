@@ -118,22 +118,52 @@ export const LearningPathNav = ({ slug }: Props) => {
 				<div className="bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
 					<div className="max-w-5xl mx-auto px-3 sm:px-4 h-12 flex items-center gap-2 sm:gap-3">
 
-						{/* Phase badge — hidden on very small screens */}
-						<span className={`hidden xs:inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${c.activePill}`}>
-							<span>{location.phase.emoji}</span>
-							<span>Ph.{location.phase.number}</span>
-						</span>
+						{/* Path context — interview-prep shows icon + label as back link; learn-today shows phase badge */}
+						{path.source === 'interview-prep' ? (
+							<Link
+								href="/interview-prep"
+								className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+								title="Back to Interview Prep"
+							>
+								{path.interviewIcon && <span>{path.interviewIcon}</span>}
+								<span className="hidden xs:inline">{path.interviewLabel ?? 'Interview Prep'}</span>
+								<span className="xs:hidden">↩</span>
+							</Link>
+						) : (
+							<span className={`hidden xs:inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${c.activePill}`}>
+								<span>{location.phase.emoji}</span>
+								<span>Ph.{location.phase.number}</span>
+							</span>
+						)}
 
 						{/* Context label — grows to fill space */}
 						<div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden">
-							<span className={`shrink-0 text-[10px] font-bold uppercase tracking-wide ${c.text} hidden sm:block`}>
-								{location.phase.label}
-							</span>
-							<span className="hidden sm:block text-neutral-300 dark:text-neutral-700 text-xs">·</span>
-							<span className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
-								{globalIdx + 1}/{totalPosts}
-								<span className="hidden sm:inline"> · {location.postIndex + 1} of {location.totalInPhase} in phase</span>
-							</span>
+							{path.source === 'interview-prep' ? (
+								<>
+									<span className={`shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${c.activePill} hidden sm:inline-flex`}>
+										<span>{location.phase.emoji}</span>
+										<span>Ph.{location.phase.number}</span>
+									</span>
+									<span className={`shrink-0 text-[10px] font-bold uppercase tracking-wide ${c.text} hidden sm:block`}>
+										{location.phase.label}
+									</span>
+									<span className="hidden sm:block text-neutral-300 dark:text-neutral-700 text-xs">·</span>
+									<span className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
+										{globalIdx + 1}/{totalPosts}
+									</span>
+								</>
+							) : (
+								<>
+									<span className={`shrink-0 text-[10px] font-bold uppercase tracking-wide ${c.text} hidden sm:block`}>
+										{location.phase.label}
+									</span>
+									<span className="hidden sm:block text-neutral-300 dark:text-neutral-700 text-xs">·</span>
+									<span className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
+										{globalIdx + 1}/{totalPosts}
+										<span className="hidden sm:inline"> · {location.postIndex + 1} of {location.totalInPhase} in phase</span>
+									</span>
+								</>
+							)}
 						</div>
 
 						{/* ← Prev */}

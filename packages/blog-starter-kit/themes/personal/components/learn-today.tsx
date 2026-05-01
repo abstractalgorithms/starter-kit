@@ -10,11 +10,34 @@ export type { LearnPost };
 
 // localStorage key and persisted type
 export const LP_STORAGE_KEY = 'lp:active';
-export type StoredLearningPath = LearningPath & { readSlugs: string[]; activatedAt: number };
 
-export function saveLearningPath(path: LearningPath): void {
+export type PathSource = 'learn-today' | 'interview-prep';
+
+export type StoredLearningPath = LearningPath & {
+	readSlugs: string[];
+	activatedAt: number;
+	/** Where the path was started from */
+	source?: PathSource;
+	/** Human label for the interview type, e.g. "System Design" */
+	interviewLabel?: string;
+	/** Emoji icon for the interview type, e.g. "🏗️" */
+	interviewIcon?: string;
+};
+
+type SaveMeta = {
+	source?: PathSource;
+	interviewLabel?: string;
+	interviewIcon?: string;
+};
+
+export function saveLearningPath(path: LearningPath, meta?: SaveMeta): void {
 	try {
-		const stored: StoredLearningPath = { ...path, readSlugs: [], activatedAt: Date.now() };
+		const stored: StoredLearningPath = {
+			...path,
+			readSlugs: [],
+			activatedAt: Date.now(),
+			...meta,
+		};
 		localStorage.setItem(LP_STORAGE_KEY, JSON.stringify(stored));
 	} catch {}
 }

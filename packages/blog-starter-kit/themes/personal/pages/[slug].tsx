@@ -48,6 +48,7 @@ import { PostChatbot } from '../components/post-chatbot';
 import { PostQuiz } from '../components/post-quiz';
 import { ScrollButtons } from '../components/scroll-buttons';
 import { LearningPathNav } from '../components/learning-path-nav';
+import { loadLearningPath } from '../components/learn-today';
 // CalloutBlock and QuizCard are available for use inside article content:
 // import { CalloutBlock } from '../components/callout-block';
 // import { QuizCard } from '../components/quiz-card';
@@ -102,6 +103,8 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 		'.hljs{display:block;overflow-x:auto;padding:.5em;background:#23241f}.hljs,.hljs-subst,.hljs-tag{color:#f8f8f2}.hljs-emphasis,.hljs-strong{color:#a8a8a2}.hljs-bullet,.hljs-link,.hljs-literal,.hljs-number,.hljs-quote,.hljs-regexp{color:#ae81ff}.hljs-code,.hljs-section,.hljs-selector-class,.hljs-title{color:#a6e22e}.hljs-strong{font-weight:700}.hljs-emphasis{font-style:italic}.hljs-attr,.hljs-keyword,.hljs-name,.hljs-selector-tag{color:#f92672}.hljs-attribute,.hljs-symbol{color:#66d9ef}.hljs-class .hljs-title,.hljs-params{color:#f8f8f2}.hljs-addition,.hljs-built_in,.hljs-builtin-name,.hljs-selector-attr,.hljs-selector-id,.hljs-selector-pseudo,.hljs-string,.hljs-template-variable,.hljs-type,.hljs-variable{color:#e6db74}.hljs-comment,.hljs-deletion,.hljs-meta{color:#75715e}';
 	const [, setMobMount] = useState(false);
 	const [canLoadEmbeds, setCanLoadEmbeds] = useState(false);
+	// Detect if we're inside an interview-prep path (client-side only)
+	const [activePath, setActivePath] = useState<{ source?: string; interviewLabel?: string; interviewIcon?: string } | null>(null);
 	useEmbeds({ enabled: canLoadEmbeds });
 
 	if (post.hasLatexInPost) {
@@ -116,6 +119,9 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			triggerCustomWidgetEmbed(post.publication?.id.toString());
 			setCanLoadEmbeds(true);
 		})();
+		// Read active learning path for back-link context
+		const lp = loadLearningPath();
+		if (lp) setActivePath({ source: lp.source, interviewLabel: lp.interviewLabel, interviewIcon: lp.interviewIcon });
 	}, []);
 
 	const coverImageSrc = !!post.coverImage?.url
@@ -172,7 +178,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 
 			{/* ── Back Navigation ── */}
 			<Link
-				href="/"
+				href={activePath?.source === 'interview-prep' ? '/interview-prep' : '/'}
 				className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-4 md:mb-8 group"
 			>
 				<svg
@@ -187,7 +193,9 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						clipRule="evenodd"
 					/>
 				</svg>
-				All Posts
+				{activePath?.source === 'interview-prep'
+					? `${activePath.interviewIcon ?? ''} ${activePath.interviewLabel ?? 'Interview Prep'} Path`.trim()
+					: 'All Posts'}
 			</Link>
 
 			{/* ── Post Hero: header + cover image side-by-side ── */}
