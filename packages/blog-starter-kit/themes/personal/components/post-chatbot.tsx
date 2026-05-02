@@ -8,19 +8,8 @@ type Props = {
 	postContent?: string;
 };
 
-type ChatMode = 'post' | 'wiki';
+type ChatMessage = Message & { id: number; streaming?: boolean; suggestions?: string[] };
 
-type ChatCitation = {
-	title: string;
-	path: string;
-	slug?: string;
-	score?: number;
-	snippet?: string;
-};
-
-type ChatMessage = Message & { id: number; streaming?: boolean; citations?: ChatCitation[] };
-
-const POST_CHAT_API = '/api/chat';
 const WIKI_CHAT_API = '/api/wiki-chat';
 const PRIMARY_SITE_ORIGIN = 'https://abstractalgorithms.dev';
 const HASHNODE_HOST_MATCH = /(^|\.)hashnode\.(dev|com)$/i;
@@ -53,40 +42,6 @@ function normalizeToPrimaryDomain(href: string): string {
 	}
 }
 
-function wikiPathToHref(pathOrSlug?: string): string | null {
-	if (!pathOrSlug) return null;
-	const normalized = pathOrSlug.trim().replace(/\\/g, '/').replace(/^\.\//, '');
-	if (!normalized) return null;
-
-	const safeDirect = sanitizeHref(normalized);
-	if (safeDirect && (safeDirect.startsWith('http://') || safeDirect.startsWith('https://') || safeDirect.startsWith('/'))) {
-		return normalizeToPrimaryDomain(safeDirect);
-	}
-
-	const clean = normalized.replace(/\.md$/i, '');
-	const segments = clean.split('/').filter(Boolean);
-	const tail = segments[segments.length - 1];
-	if (!tail) return null;
-
-	if (segments.includes('tags') || segments[0] === 'tags' || clean.startsWith('tag/')) {
-		return `/tag/${tail}`;
-	}
-
-	if (segments.includes('series') || segments[0] === 'series') {
-		return `/series/${tail}`;
-	}
-
-	if (clean.startsWith('wiki/')) {
-		return `/${tail}`;
-	}
-
-	if (/^[a-z0-9][a-z0-9-]*$/i.test(clean)) {
-		return `/${clean}`;
-	}
-
-	return null;
-}
-
 function resolveInlineLinkHref(rawHref: string): string | null {
 	const safe = sanitizeHref(rawHref);
 	if (!safe) return null;
@@ -109,10 +64,6 @@ function resolveInlineLinkHref(rawHref: string): string | null {
 	}
 
 	return null;
-}
-
-function resolveCitationHref(citation: ChatCitation): string | null {
-	return wikiPathToHref(citation.path) || wikiPathToHref(citation.slug);
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -264,7 +215,6 @@ const nextId = () => ++_idCounter;
 
 export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postContent = '' }: Props) {
 	const [isOpen, setIsOpen] = useState(false);
-	const [mode, setMode] = useState<ChatMode>('post');
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [input, setInput] = useState('');
 	const [loading, setLoading] = useState(false);
@@ -288,8 +238,8 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 		}
 	}, [isOpen]);
 
-	const send = async () => {
-		const question = input.trim();
+	const send = async (overrideQuestion?: string) => {
+		const question = (overrideQuestion ?? input).trim();
 		if (!question || isBusy) return;
 
 		const userMsg: ChatMessage = { id: nextId(), role: 'user', content: question };
@@ -300,28 +250,26 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 
 		try {
 			const history: Message[] = messages.map(({ role, content }) => ({ role, content }));
-			const targetApi = mode === 'wiki' ? WIKI_CHAT_API : POST_CHAT_API;
 
-			const res = await fetch(targetApi, {
+			const res = await fetch(WIKI_CHAT_API, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ question, history, postTitle, postContent, mode }),
+				body: JSON.stringify({ question, history, postTitle, postContent }),
 			});
 
-			const data = await res.json() as { answer?: string; error?: string; citations?: ChatCitation[] };
+			const data = await res.json() as { answer?: string; error?: string; suggestions?: string[] };
 
 			if (!res.ok || 'error' in data) {
 				throw new Error((data as { error: string }).error ?? 'Unknown error');
 			}
 
-			// Insert the bot message as empty+streaming, then type it out
 			const botId = nextId();
 			const botMsg: ChatMessage = {
 				id: botId,
 				role: 'assistant',
 				content: '',
 				streaming: true,
-				citations: data.citations ?? [],
+				suggestions: data.suggestions ?? [],
 			};
 			setMessages((prev) => [...prev, botMsg]);
 			startTyping(botId, data.answer ?? '');
@@ -344,10 +292,6 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 		setError(null);
 		inputRef.current?.focus();
 	};
-
-	const modeHelpText = mode === 'wiki'
-		? 'Wiki mode uses your compiled llm-wiki knowledge base with citations.'
-		: 'Post mode answers from the current article context.';
 
 	return (
 		<>
@@ -407,32 +351,6 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 						</div>
 					</div>
 
-					<div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/60">
-						<div className="inline-flex items-center rounded-lg border border-neutral-200 dark:border-neutral-700 p-0.5">
-							<button
-								onClick={() => setMode('post')}
-								className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-									mode === 'post'
-										? 'bg-blue-600 text-white'
-										: 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-								}`}
-							>
-								This post
-							</button>
-							<button
-								onClick={() => setMode('wiki')}
-								className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-									mode === 'wiki'
-										? 'bg-blue-600 text-white'
-										: 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-								}`}
-							>
-								Wiki
-							</button>
-						</div>
-						<p className="mt-1.5 text-[10px] text-neutral-500 dark:text-neutral-400">{modeHelpText}</p>
-					</div>
-
 					{/* Messages */}
 					<div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3 min-h-0">
 						{messages.length === 0 && !isBusy && (
@@ -472,37 +390,17 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 										)}
 									</div>
 
-									{msg.role === 'assistant' && !!msg.citations?.length && (
-										<div className="mt-1.5 flex flex-wrap gap-1.5">
-											{msg.citations.slice(0, 4).map((c, idx) => (
-												(() => {
-													const href = resolveCitationHref(c);
-													if (!href) {
-														return (
-															<span
-																key={`${c.path}-${idx}`}
-																className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-900/25 px-2 py-0.5 text-[10px] text-blue-700 dark:text-blue-300"
-																title={c.snippet || c.path}
-															>
-																{c.title}
-															</span>
-														);
-													}
-
-													const isExternal = href.startsWith('http://') || href.startsWith('https://');
-													return (
-														<a
-															key={`${c.path}-${idx}`}
-															href={href}
-															title={c.snippet || c.path}
-															className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-900/25 px-2 py-0.5 text-[10px] text-blue-700 dark:text-blue-300 underline underline-offset-2 hover:bg-blue-100 dark:hover:bg-blue-900/40"
-															target={isExternal ? '_blank' : undefined}
-															rel={isExternal ? 'noopener noreferrer' : undefined}
-														>
-															{c.title}
-														</a>
-													);
-												})()
+									{msg.role === 'assistant' && !!msg.suggestions?.length && !msg.streaming && (
+										<div className="mt-2 flex flex-col gap-1">
+											{msg.suggestions.map((q, idx) => (
+												<button
+													key={idx}
+													onClick={() => send(q)}
+													disabled={isBusy}
+													className="text-left text-[11px] leading-snug text-blue-600 dark:text-blue-300 bg-blue-50/60 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-2.5 py-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+												>
+													→ {q}
+												</button>
 											))}
 										</div>
 									)}
@@ -552,7 +450,7 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 							</button>
 						</div>
 						<p className="mt-1.5 text-[10px] text-neutral-400 dark:text-neutral-600 text-center">
-							AI · may contain errors · Shift+Enter for new line · {mode === 'wiki' ? 'Wiki mode' : 'Post mode'}
+							AI · may contain errors · Shift+Enter for new line
 						</p>
 					</div>
 				</div>
