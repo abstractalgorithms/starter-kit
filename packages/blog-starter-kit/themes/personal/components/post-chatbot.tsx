@@ -217,9 +217,38 @@ function useTypewriter(
 let _idCounter = 0;
 const nextId = () => ++_idCounter;
 
+const CHAT_STORAGE_KEY = 'aa_chat_messages';
+
+function loadMessagesFromSession(key: string): ChatMessage[] {
+	if (typeof window === 'undefined') return [];
+	try {
+		const raw = sessionStorage.getItem(key);
+		if (!raw) return [];
+		const parsed = JSON.parse(raw) as ChatMessage[];
+		// strip streaming flag on restore so bubbles render fully
+		return parsed.map((m) => ({ ...m, streaming: false }));
+	} catch {
+		return [];
+	}
+}
+
+function saveMessagesToSession(key: string, messages: ChatMessage[]): void {
+	if (typeof window === 'undefined') return;
+	try {
+		// only persist completed messages (not ones mid-stream)
+		const toSave = messages.filter((m) => !m.streaming);
+		sessionStorage.setItem(key, JSON.stringify(toSave));
+	} catch {
+		// storage quota or private mode — silently ignore
+	}
+}
+
 export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postContent = '' }: Props) {
+	// Use a slug-scoped key so each post has independent chat history
+	const storageKey = `${CHAT_STORAGE_KEY}:${typeof window !== 'undefined' ? window.location.pathname : ''}`;
+
 	const [isOpen, setIsOpen] = useState(false);
-	const [messages, setMessages] = useState<ChatMessage[]>([]);
+	const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessagesFromSession(storageKey));
 	const [input, setInput] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -229,6 +258,11 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 
 	const isStreaming = messages.some((m) => m.streaming);
 	const isBusy = loading || isStreaming;
+
+	// Persist messages to sessionStorage whenever they change
+	useEffect(() => {
+		saveMessagesToSession(storageKey, messages);
+	}, [messages, storageKey]);
 
 	// Auto-scroll to bottom whenever messages change
 	useEffect(() => {
@@ -294,6 +328,7 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 	const clearChat = () => {
 		setMessages([]);
 		setError(null);
+		try { sessionStorage.removeItem(storageKey); } catch { /* ignore */ }
 		inputRef.current?.focus();
 	};
 
