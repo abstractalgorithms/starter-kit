@@ -29,7 +29,6 @@ import { Layout } from '../components/layout';
 import { MarkdownToHtml } from '../components/markdown-to-html';
 import { PersonalHeader } from '../components/personal-theme-header';
 import {
-	MorePostsByPublicationDocument,
 	PageByPublicationDocument,
 	PostFragment,
 	PostFullFragment,
@@ -439,19 +438,45 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 	const postData = await request(endpoint, SinglePostByPublicationDocument, { host, slug });
 
 	if (postData.publication?.post) {
-		const [footerPosts, morePostsData] = await Promise.all([
-			getFooterPosts(),
-			request(endpoint, MorePostsByPublicationDocument, { first: 4, host }),
-		]);
+		const footerPosts = await getFooterPosts();
+		const currentPost = postData.publication.post;
+
+		// ── Compute related posts from footerPosts by tag overlap + title similarity ──
+		const currentTagSlugs = new Set((currentPost.tags ?? []).map((t) => t.slug));
+		const currentKeywords = currentPost.title
+			.toLowerCase()
+			.replace(/[^\w\s]/g, ' ')
+			.split(/\s+/)
+			.filter((w) => w.length > 3);
+
+		const scored = footerPosts
+			.filter((p) => p.slug !== slug)
+			.map((p) => {
+				const tagScore = (p.tags ?? []).filter((t) => currentTagSlugs.has(t.slug)).length * 10;
+				const titleWords = p.title.toLowerCase();
+				const briefWords = (p.brief ?? '').toLowerCase();
+				const kwScore = currentKeywords.reduce((s, w) => {
+					return s + (titleWords.includes(w) ? 3 : 0) + (briefWords.includes(w) ? 1 : 0);
+				}, 0);
+				return { post: p, score: tagScore + kwScore };
+			})
+			.filter(({ score }) => score > 0)
+			.sort((a, b) => b.score - a.score);
+
+		// Require at least a tag match (>=10) or strong keyword overlap (>=6)
+		const threshold = scored[0]?.score >= 10 ? 10 : 6;
+		const morePosts = scored
+			.filter(({ score }) => score >= threshold)
+			.slice(0, 4)
+			.map(({ post }) => post);
+
 		return {
 			props: {
 				type: 'post',
-				post: postData.publication.post,
+				post: currentPost,
 				publication: postData.publication,
 				footerPosts,
-				morePosts: (morePostsData.publication?.posts.edges ?? [])
-					.map((e) => e.node)
-					.filter((p) => p.slug !== slug),
+				morePosts,
 			},
 			revalidate: 1,
 		};
