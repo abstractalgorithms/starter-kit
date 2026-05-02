@@ -221,6 +221,7 @@ const CHAT_STORAGE_KEY = 'aa_chat_messages';
 const MAX_HISTORY_MESSAGES_FOR_API = 8;
 const MAX_HISTORY_CONTENT_CHARS = 360;
 const MAX_SUMMARY_ITEMS = 4;
+const MAX_STARTER_QUESTIONS = 3;
 
 function loadMessagesFromSession(key: string): ChatMessage[] {
 	if (typeof window === 'undefined') return [];
@@ -287,6 +288,47 @@ function compactHistoryForApi(messages: ChatMessage[]): Message[] {
 	];
 }
 
+function extractTopicFromPost(postTitle: string, postContent: string): string | null {
+	const headingMatch = postContent.match(/^#{1,3}\s+(.+)$/m);
+	if (headingMatch?.[1]) {
+		return headingMatch[1].replace(/[`*_#]/g, '').trim().slice(0, 70);
+	}
+
+	if (postTitle.trim()) {
+		return postTitle.trim().replace(/[`*_#]/g, '').slice(0, 70);
+	}
+
+	return null;
+}
+
+function buildStarterQuestions(postTitle: string, postContent: string): string[] {
+	const topic = extractTopicFromPost(postTitle, postContent);
+
+	const contextual = topic
+		? [
+			`Can you summarize ${topic} in simple terms?`,
+			`What are the key trade-offs in ${topic}?`,
+			`How would I apply ${topic} in production?`,
+		]
+		: [
+			'Can you summarize this post in simple terms?',
+			'What are the key trade-offs discussed here?',
+			'How would I apply this in production?',
+		];
+
+	return contextual.slice(0, MAX_STARTER_QUESTIONS);
+}
+
+function buildWelcomeAssistantMessage(postTitle: string, postContent: string): ChatMessage {
+	const postName = postTitle.trim() || 'this post';
+	return {
+		id: nextId(),
+		role: 'assistant',
+		content: `Hi! I can help with ${postName}. Pick a starter question or ask anything about this page.`,
+		suggestions: buildStarterQuestions(postTitle, postContent),
+	};
+}
+
 export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postContent = '' }: Props) {
 	// Use a slug-scoped key so each post has independent chat history
 	const storageKey = `${CHAT_STORAGE_KEY}:${typeof window !== 'undefined' ? window.location.pathname : ''}`;
@@ -319,6 +361,12 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 			setTimeout(() => inputRef.current?.focus(), 50);
 		}
 	}, [isOpen]);
+
+	// Seed a contextual greeting when opening chat without prior history.
+	useEffect(() => {
+		if (!isOpen || messages.length > 0) return;
+		setMessages([buildWelcomeAssistantMessage(postTitle, postContent)]);
+	}, [isOpen, messages.length, postTitle, postContent]);
 
 	const send = async (overrideQuestion?: string) => {
 		const question = (overrideQuestion ?? input).trim();
@@ -370,7 +418,7 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 	};
 
 	const clearChat = () => {
-		setMessages([]);
+		setMessages([buildWelcomeAssistantMessage(postTitle, postContent)]);
 		setError(null);
 		try { sessionStorage.removeItem(storageKey); } catch { /* ignore */ }
 		inputRef.current?.focus();
