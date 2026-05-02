@@ -362,9 +362,9 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 		}
 	}, [isOpen]);
 
-	// Seed a contextual greeting when opening chat without prior history.
+	// Seed a contextual greeting when opening chat without prior history — only on post pages.
 	useEffect(() => {
-		if (!isOpen || messages.length > 0) return;
+		if (!isOpen || messages.length > 0 || !postContent.trim()) return;
 		setMessages([buildWelcomeAssistantMessage(postTitle, postContent)]);
 	}, [isOpen, messages.length, postTitle, postContent]);
 
@@ -418,7 +418,7 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 	};
 
 	const clearChat = () => {
-		setMessages([buildWelcomeAssistantMessage(postTitle, postContent)]);
+		setMessages(postContent.trim() ? [buildWelcomeAssistantMessage(postTitle, postContent)] : []);
 		setError(null);
 		try { sessionStorage.removeItem(storageKey); } catch { /* ignore */ }
 		inputRef.current?.focus();
