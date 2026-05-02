@@ -22,6 +22,98 @@ type ChatMessage = Message & { id: number; streaming?: boolean; citations?: Chat
 
 const POST_CHAT_API = '/api/chat';
 const WIKI_CHAT_API = '/api/wiki-chat';
+const PRIMARY_SITE_ORIGIN = 'https://abstractalgorithms.dev';
+const HASHNODE_HOST_MATCH = /(^|\.)hashnode\.(dev|com)$/i;
+
+const DANGEROUS_PROTOCOLS = ['javascript:', 'data:', 'vbscript:'];
+
+function sanitizeHref(rawHref: string): string | null {
+	const href = rawHref.trim().replace(/^<|>$/g, '');
+	if (!href) return null;
+	const lowered = href.toLowerCase();
+	if (DANGEROUS_PROTOCOLS.some((p) => lowered.startsWith(p))) return null;
+	return href;
+}
+
+function normalizeToPrimaryDomain(href: string): string {
+	if (href.startsWith('/') || href.startsWith('#')) return href;
+
+	try {
+		const parsed = new URL(href);
+		const isHashnode = HASHNODE_HOST_MATCH.test(parsed.hostname);
+		if (!isHashnode) return href;
+
+		const target = new URL(PRIMARY_SITE_ORIGIN);
+		target.pathname = parsed.pathname;
+		target.search = parsed.search;
+		target.hash = parsed.hash;
+		return target.toString();
+	} catch {
+		return href;
+	}
+}
+
+function wikiPathToHref(pathOrSlug?: string): string | null {
+	if (!pathOrSlug) return null;
+	const normalized = pathOrSlug.trim().replace(/\\/g, '/').replace(/^\.\//, '');
+	if (!normalized) return null;
+
+	const safeDirect = sanitizeHref(normalized);
+	if (safeDirect && (safeDirect.startsWith('http://') || safeDirect.startsWith('https://') || safeDirect.startsWith('/'))) {
+		return normalizeToPrimaryDomain(safeDirect);
+	}
+
+	const clean = normalized.replace(/\.md$/i, '');
+	const segments = clean.split('/').filter(Boolean);
+	const tail = segments[segments.length - 1];
+	if (!tail) return null;
+
+	if (segments.includes('tags') || segments[0] === 'tags' || clean.startsWith('tag/')) {
+		return `/tag/${tail}`;
+	}
+
+	if (segments.includes('series') || segments[0] === 'series') {
+		return `/series/${tail}`;
+	}
+
+	if (clean.startsWith('wiki/')) {
+		return `/${tail}`;
+	}
+
+	if (/^[a-z0-9][a-z0-9-]*$/i.test(clean)) {
+		return `/${clean}`;
+	}
+
+	return null;
+}
+
+function resolveInlineLinkHref(rawHref: string): string | null {
+	const safe = sanitizeHref(rawHref);
+	if (!safe) return null;
+
+	if (
+		safe.startsWith('/') ||
+		safe.startsWith('#') ||
+		safe.startsWith('http://') ||
+		safe.startsWith('https://')
+	) {
+		return normalizeToPrimaryDomain(safe);
+	}
+
+	if (safe.startsWith('wiki/') || safe.startsWith('tags/') || safe.startsWith('series/') || safe.startsWith('tag/')) {
+		return wikiPathToHref(safe);
+	}
+
+	if (/^[a-z0-9][a-z0-9-]*$/i.test(safe)) {
+		return `/${safe}`;
+	}
+
+	return null;
+}
+
+function resolveCitationHref(citation: ChatCitation): string | null {
+	return wikiPathToHref(citation.path) || wikiPathToHref(citation.slug);
+}
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -61,14 +153,36 @@ const Spinner = () => (
 	</svg>
 );
 
-// ── Simple inline markdown renderer (bold, code, line breaks) ─────────────────
+// ── Simple inline markdown renderer (links, bold, code, line breaks) ───────────
 
 function renderAnswer(text: string) {
 	const lines = text.split('\n');
 	return lines.map((line, li) => {
-		// inline bold + code
-		const parts = line.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
+		// inline markdown: links + code + bold
+		const parts = line.split(/(\[[^\]]+\]\([^\)]+\)|`[^`]+`|\*\*[^*]+\*\*)/g);
 		const rendered = parts.map((part, pi) => {
+			const markdownLink = part.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
+			if (markdownLink) {
+				const label = markdownLink[1];
+				const rawHref = markdownLink[2].trim();
+				const href = resolveInlineLinkHref(rawHref);
+				if (href) {
+					const isExternal = href.startsWith('http://') || href.startsWith('https://');
+					return (
+						<a
+							key={pi}
+							href={href}
+							className="underline underline-offset-2 text-blue-600 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-200"
+							target={isExternal ? '_blank' : undefined}
+							rel={isExternal ? 'noopener noreferrer' : undefined}
+						>
+							{label}
+						</a>
+					);
+				}
+				return label;
+			}
+
 			if (part.startsWith('`') && part.endsWith('`')) {
 				return (
 					<code
@@ -361,13 +475,34 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 									{msg.role === 'assistant' && !!msg.citations?.length && (
 										<div className="mt-1.5 flex flex-wrap gap-1.5">
 											{msg.citations.slice(0, 4).map((c, idx) => (
-												<span
-													key={`${c.path}-${idx}`}
-													className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-900/25 px-2 py-0.5 text-[10px] text-blue-700 dark:text-blue-300"
-													title={c.snippet || c.path}
-												>
-													{c.title}
-												</span>
+												(() => {
+													const href = resolveCitationHref(c);
+													if (!href) {
+														return (
+															<span
+																key={`${c.path}-${idx}`}
+																className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-900/25 px-2 py-0.5 text-[10px] text-blue-700 dark:text-blue-300"
+																title={c.snippet || c.path}
+															>
+																{c.title}
+															</span>
+														);
+													}
+
+													const isExternal = href.startsWith('http://') || href.startsWith('https://');
+													return (
+														<a
+															key={`${c.path}-${idx}`}
+															href={href}
+															title={c.snippet || c.path}
+															className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-900/25 px-2 py-0.5 text-[10px] text-blue-700 dark:text-blue-300 underline underline-offset-2 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+															target={isExternal ? '_blank' : undefined}
+															rel={isExternal ? 'noopener noreferrer' : undefined}
+														>
+															{c.title}
+														</a>
+													);
+												})()
 											))}
 										</div>
 									)}
