@@ -370,45 +370,46 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 						)}
 
 						{messages.map((msg) => (
-							<div
-								key={msg.id}
-								className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-							>
-								<div className="max-w-[85%]">
-									<div
-										className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-										msg.role === 'user'
-											? 'bg-blue-600 text-white rounded-br-sm'
-											: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-bl-sm'
-										}`}
-									>
-										{msg.role === 'assistant' ? (
-											<>
-												{renderAnswer(msg.content)}
-												{msg.streaming && (
-													<span className="inline-block w-[2px] h-[1em] bg-current ml-0.5 align-middle animate-pulse" />
-												)}
-											</>
-										) : (
-											msg.content
-										)}
-									</div>
-
-									{msg.role === 'assistant' && !!msg.suggestions?.length && !msg.streaming && (
-										<div className="mt-2 flex flex-col gap-1">
-											{msg.suggestions.map((q, idx) => (
-												<button
-													key={idx}
-													onClick={() => send(q)}
-													disabled={isBusy}
-													className="text-left text-[11px] leading-snug text-blue-600 dark:text-blue-300 bg-blue-50/60 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-2.5 py-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-												>
-													→ {q}
-												</button>
-											))}
+							<div key={msg.id} className="flex flex-col gap-2">
+								<div
+									className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+								>
+									<div className="max-w-[85%]">
+										<div
+											className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+											msg.role === 'user'
+												? 'bg-blue-600 text-white rounded-br-sm'
+												: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-bl-sm'
+											}`}
+										>
+											{msg.role === 'assistant' ? (
+												<>
+													{renderAnswer(msg.content)}
+													{msg.streaming && (
+														<span className="inline-block w-[2px] h-[1em] bg-current ml-0.5 align-middle animate-pulse" />
+													)}
+												</>
+											) : (
+												msg.content
+											)}
 										</div>
-									)}
+									</div>
 								</div>
+
+								{msg.role === 'assistant' && !!msg.suggestions?.length && !msg.streaming && (
+									<div className="flex flex-wrap gap-1.5 px-1">
+										{msg.suggestions.map((q, idx) => (
+											<button
+												key={idx}
+												onClick={() => send(q)}
+												disabled={isBusy}
+												className="text-left text-[11px] leading-snug text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/25 border border-blue-200 dark:border-blue-700 rounded-full px-3 py-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-400 dark:hover:border-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+											>
+												{q}
+											</button>
+										))}
+									</div>
+								)}
 							</div>
 						))}
 
