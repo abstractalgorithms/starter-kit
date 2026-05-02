@@ -209,7 +209,11 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 				if (mermaidElements && mermaidElements.length > 0) {
 					mermaidElements.forEach((element, index) => {
 						const id = `mermaid-${Date.now()}-${index}`;
-						const graphDefinition = element.textContent || '';
+						// Decode HTML entities that the markdown pipeline may have encoded
+						// (e.g. &quot; → ", &lt; → <) before passing to Mermaid
+						const ta = document.createElement('textarea');
+						ta.innerHTML = element.textContent || '';
+						const graphDefinition = ta.value;
 						mermaid.render(id, graphDefinition).then(({ svg }) => {
 							element.innerHTML = svg;								// Remove the fixed dimensions Mermaid injects so the SVG
 								// scales to fill its container instead of staying tiny

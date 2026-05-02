@@ -13,6 +13,7 @@ import { Hero, HeroStats } from '../components/hero';
 import { StartHereSection, StartHereSeries } from '../components/start-here-section';
 import { TopicCluster, buildTopicClusters } from '../components/topic-clusters';
 import { PopularTopicsStrip } from '../components/popular-topics-strip';
+import { PostChatbot } from '../components/post-chatbot';
 import { AiTechTicker } from '../components/ai-tech-ticker';
 import { TriviaOfDayCard } from '../components/trivia-of-day';
 import { LearnToday, LearnPost } from '../components/learn-today';
@@ -94,6 +95,8 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 						<NewsletterSection />
 					</div>
 					<Footer />
+					{/* Floating AI Chatbot */}
+					<PostChatbot />
 				</Container>
 			</Layout>
 		</AppProvider>

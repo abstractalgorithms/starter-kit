@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { Message } from '../pages/api/chat';
 
 type Props = {
-	postTitle: string;
-	postContent: string;
+	postTitle?: string;
+	postContent?: string;
 };
 
 type ChatMessage = Message & { id: number; streaming?: boolean };
@@ -137,7 +137,7 @@ function useTypewriter(
 let _idCounter = 0;
 const nextId = () => ++_idCounter;
 
-export function PostChatbot({ postTitle, postContent }: Props) {
+export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postContent = '' }: Props) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [input, setInput] = useState('');
