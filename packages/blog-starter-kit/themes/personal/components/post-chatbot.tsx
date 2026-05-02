@@ -361,7 +361,7 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 							<div className="flex flex-col items-center justify-center h-full gap-3 py-8 text-center">
 								<span className="text-3xl">💬</span>
 								<p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-									Hi! Ask me anything about this post.
+									Hi! Ask me anything.
 								</p>
 								<p className="text-xs text-neutral-400 dark:text-neutral-500">
 									I&apos;m powered by AI and know the full article content.
