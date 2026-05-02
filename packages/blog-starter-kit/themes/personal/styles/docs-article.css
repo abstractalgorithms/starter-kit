@@ -198,8 +198,8 @@
   margin-bottom:  0.75rem;
 }
 
-/* Accent left border on fenced blocks */
-.article-doc pre {
+/* Accent left border on fenced blocks (exclude mermaid diagrams) */
+.article-doc pre:not(.mermaid) {
   border-left: 3px solid var(--doc-accent) !important;
 }
 

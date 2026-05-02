@@ -10,7 +10,6 @@ import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { LearningPaths } from '../components/learning-paths';
 import { PersonalHeader } from '../components/personal-theme-header';
-import { StartHereSection, StartHereSeries } from '../components/start-here-section';
 import {
 	MorePostsByPublicationDocument,
 	MorePostsByPublicationQuery,
@@ -26,12 +25,11 @@ const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 
 type Props = {
 	publication: PublicationFragment;
-	featuredSeries: StartHereSeries[];
 	postCounts: Record<string, number>;
 	footerPosts: PostFragment[];
 };
 
-export default function LearningPathsPage({ publication, featuredSeries, postCounts, footerPosts }: Props) {
+export default function LearningPathsPage({ publication, postCounts, footerPosts }: Props) {
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
@@ -86,17 +84,6 @@ export default function LearningPathsPage({ publication, featuredSeries, postCou
 							</p>
 						</div>
 
-						{/* ── Curated series roadmaps ──────────────────────────────── */}
-						{featuredSeries.length > 0 ? (
-							<div className="mb-16">
-								<StartHereSection series={featuredSeries} />
-							</div>
-						) : (
-							<div className="mb-16 flex flex-col items-center justify-center py-16 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
-								<p className="text-neutral-400 dark:text-neutral-500 text-sm">No series available yet — check back soon.</p>
-							</div>
-						)}
-
 						{/* ── Topic-based paths ────────────────────────────────────── */}
 						<LearningPaths postCounts={postCounts} />
 
@@ -136,24 +123,6 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 			hasNextPage = !!next.publication.posts.pageInfo.hasNextPage;
 		}
 
-		// ── Build featured series (top 3 by post count) ───────────────────────
-		const seriesCountMap = new Map<string, { name: string; slug: string; count: number }>();
-		for (const post of allPosts) {
-			if (!post.series) continue;
-			const { id, name, slug } = post.series;
-			const prev = seriesCountMap.get(id);
-			seriesCountMap.set(id, { name, slug, count: (prev?.count ?? 0) + 1 });
-		}
-
-		const topSeriesList = [...seriesCountMap.values()].sort((a, b) => b.count - a.count).slice(0, 3);
-
-		const featuredSeries: StartHereSeries[] = topSeriesList.map((series) => {
-			const seriesPosts = allPosts
-				.filter((p) => p.series?.slug === series.slug)
-				.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
-			return { seriesName: series.name, seriesSlug: series.slug, posts: seriesPosts, totalPostCount: series.count };
-		});
-
 		// ── Post counts per tag slug (for LearningPaths component) ────────────
 		const tagCountMap: Record<string, number> = {};
 		for (const post of allPosts) {
@@ -165,7 +134,6 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		return {
 			props: {
 				publication,
-				featuredSeries,
 				postCounts: tagCountMap,
 				footerPosts: allPosts,
 			},

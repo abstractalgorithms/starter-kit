@@ -84,10 +84,8 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 
 						{/* 4 ── Explore by Topic: chips for exploratory learners */}
 						<PopularTopicsStrip clusters={topicClusters} allPosts={allPosts} />
-
-						{/* 5 ── Curated Path: catch "Step 1" learners */}
-						{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
-
+							{/* 5 ── Curated Path: catch "Step 1" learners */}
+							{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
 						{/* 6 ── Daily trivia: fun engagement hook before the newsletter */}
 						<TriviaOfDayCard />
 
