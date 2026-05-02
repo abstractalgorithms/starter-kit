@@ -445,7 +445,7 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 								style={{ fieldSizing: 'content' } as React.CSSProperties}
 							/>
 							<button
-								onClick={send}
+								onClick={() => send()}
 								disabled={!input.trim() || isBusy}
 								aria-label="Send"
 								className="flex-shrink-0 p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
