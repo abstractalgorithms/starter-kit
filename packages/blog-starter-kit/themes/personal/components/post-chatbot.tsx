@@ -218,6 +218,9 @@ let _idCounter = 0;
 const nextId = () => ++_idCounter;
 
 const CHAT_STORAGE_KEY = 'aa_chat_messages';
+const MAX_HISTORY_MESSAGES_FOR_API = 8;
+const MAX_HISTORY_CONTENT_CHARS = 360;
+const MAX_SUMMARY_ITEMS = 4;
 
 function loadMessagesFromSession(key: string): ChatMessage[] {
 	if (typeof window === 'undefined') return [];
@@ -241,6 +244,47 @@ function saveMessagesToSession(key: string, messages: ChatMessage[]): void {
 	} catch {
 		// storage quota or private mode — silently ignore
 	}
+}
+
+function compactHistoryForApi(messages: ChatMessage[]): Message[] {
+	const normalize = (text: string, maxLen = MAX_HISTORY_CONTENT_CHARS): string => {
+		const cleaned = text.replace(/\s+/g, ' ').trim();
+		if (cleaned.length <= maxLen) return cleaned;
+		return `${cleaned.slice(0, maxLen - 3)}...`;
+	};
+
+	const cleaned = messages
+		.filter((m) => !m.streaming && (m.role === 'user' || m.role === 'assistant'))
+		.map(({ role, content }) => ({ role, content: normalize(content) }))
+		.filter((m) => m.content.length > 0);
+
+	if (cleaned.length <= MAX_HISTORY_MESSAGES_FOR_API) {
+		return cleaned;
+	}
+
+	const recent = cleaned.slice(-MAX_HISTORY_MESSAGES_FOR_API);
+	const older = cleaned.slice(0, -MAX_HISTORY_MESSAGES_FOR_API);
+
+	const olderUser = older
+		.filter((m) => m.role === 'user')
+		.slice(-MAX_SUMMARY_ITEMS)
+		.map((m) => `Q: ${normalize(m.content, 90)}`);
+
+	const olderAssistant = older
+		.filter((m) => m.role === 'assistant')
+		.slice(-MAX_SUMMARY_ITEMS)
+		.map((m) => `A: ${normalize(m.content, 90)}`);
+
+	const summaryLines = [...olderUser, ...olderAssistant].slice(-MAX_SUMMARY_ITEMS * 2);
+	if (summaryLines.length === 0) return recent;
+
+	return [
+		{
+			role: 'assistant',
+			content: `Earlier conversation summary:\n${summaryLines.join('\n')}`,
+		},
+		...recent,
+	];
 }
 
 export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postContent = '' }: Props) {
@@ -287,7 +331,7 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 		setLoading(true);
 
 		try {
-			const history: Message[] = messages.map(({ role, content }) => ({ role, content }));
+			const history = compactHistoryForApi(messages);
 
 			const res = await fetch(WIKI_CHAT_API, {
 				method: 'POST',
