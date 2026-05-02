@@ -353,7 +353,20 @@ export const StartHereSection = ({ series }: Props) => {
 	const [primary, ...rest] = validSeries;
 
 	return (
-		<section id="learning-paths" className="w-full py-12">
+		<section id="learning-paths" className="w-full pt-6 pb-12">
+			{/* Section header */}
+			<div className="flex flex-col gap-1 mb-6">
+				<div className="flex items-center gap-3">
+					<p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
+						Not sure where to begin?
+					</p>
+					<div className="flex-1 h-px bg-neutral-100 dark:bg-neutral-800" />
+				</div>
+				<p className="text-sm text-neutral-500 dark:text-neutral-400">
+					Follow these recommended series — each one takes you from zero to confident, step by step.
+				</p>
+			</div>
+
 			<div className="flex flex-col gap-4">
 				<ExpandedSeriesCard series={primary} />
 				{rest.length > 0 && (
