@@ -42,6 +42,10 @@ function normalizeToPrimaryDomain(href: string): string {
 	}
 }
 
+function wikiPathToHref(path: string): string {
+	return `${PRIMARY_SITE_ORIGIN}/${path}`;
+}
+
 function resolveInlineLinkHref(rawHref: string): string | null {
 	const safe = sanitizeHref(rawHref);
 	if (!safe) return null;
