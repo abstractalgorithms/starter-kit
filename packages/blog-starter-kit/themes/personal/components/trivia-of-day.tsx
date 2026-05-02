@@ -181,21 +181,35 @@ export function TriviaOfDayCard() {
 
 						{/* Fun fact toggle */}
 						{trivia.funFact && (
-							<div>
-								{!showFunFact ? (
-									<button
-										onClick={() => setShowFunFact(true)}
-										className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline focus:outline-none"
-									>
-										<span>✨</span> Show fun fact
-									</button>
-								) : (
+						<div className="space-y-2">
+							{!showFunFact ? (
+								<button
+									onClick={() => setShowFunFact(true)}
+									className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline focus:outline-none"
+								>
+									<span>✨</span> Show fun fact
+								</button>
+							) : (
+								<>
 									<div className="flex gap-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 px-3 py-2">
 										<span className="text-sm" aria-hidden="true">✨</span>
 										<p className="text-xs text-indigo-800 dark:text-indigo-200 leading-relaxed">
 											{trivia.funFact}
 										</p>
 									</div>
+									<button
+										onClick={() => {
+											window.dispatchEvent(
+												new CustomEvent('open-chatbot', {
+													detail: { question: `Tell me more about: ${trivia.funFact}` },
+												})
+											);
+										}}
+										className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none transition-colors"
+									>
+										<span aria-hidden="true">💬</span> Want to know more? Ask AI →
+									</button>
+								</>
 								)}
 							</div>
 						)}

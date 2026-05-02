@@ -246,7 +246,7 @@ export default function GeneratedPostPage({ publication }: Props) {
 											Browse posts about &ldquo;{topic}&rdquo;
 										</Link>
 										<Link
-											href="/learning-paths"
+											href="/guided-topics"
 											className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-neutral-700 px-5 py-2.5 text-sm font-semibold text-neutral-700 dark:text-neutral-300 transition-colors hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
 										>
 											Explore guided topics

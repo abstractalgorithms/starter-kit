@@ -345,6 +345,21 @@ export function PostChatbot({ postTitle = 'Abstract Algorithms Blog', postConten
 	const isStreaming = messages.some((m) => m.streaming);
 	const isBusy = loading || isStreaming;
 
+	// Listen for external open-chatbot events (e.g. from Trivia card)
+	useEffect(() => {
+		const handler = (e: Event) => {
+			const question = (e as CustomEvent<{ question?: string }>).detail?.question ?? '';
+			setIsOpen(true);
+			if (question) {
+				// Small delay so the chat panel has mounted before we send
+				setTimeout(() => send(question), 300);
+			}
+		};
+		window.addEventListener('open-chatbot', handler);
+		return () => window.removeEventListener('open-chatbot', handler);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
 	// Persist messages to sessionStorage whenever they change
 	useEffect(() => {
 		saveMessagesToSession(storageKey, messages);

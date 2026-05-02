@@ -140,7 +140,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 			revalidate: 3600,
 		};
 	} catch (err) {
-		console.error('[learning-paths] getStaticProps error:', err);
+		console.error('[guided-topics] getStaticProps error:', err);
 		return { notFound: true };
 	}
 };
