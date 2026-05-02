@@ -202,12 +202,17 @@ const ExplorePanel = ({
 	}, []);
 
 	const matchedPosts = activeSubTopic
-		? [...topicPosts]
-			.map((p) => ({ post: p, score: scorePost(p, activeSubTopic) }))
-			.filter(({ score }) => score > 0)
-			.sort((a, b) => b.score - a.score)
-			.slice(0, 6)
-			.map(({ post }) => post)
+		? (() => {
+			// Score all posts in the blog (not just this topic cluster) against the subtopic
+			const scored = [...allPosts]
+				.map((p) => ({ post: p, score: scorePost(p, activeSubTopic) }))
+				.filter(({ score }) => score >= 4) // require at least a title match (4pts) or strong tag+brief overlap
+				.sort((a, b) => b.score - a.score);
+			// Drop posts whose score is less than 30% of the top score (eliminates noise)
+			const topScore = scored[0]?.score ?? 0;
+			const minScore = Math.max(4, topScore * 0.3);
+			return scored.filter(({ score }) => score >= minScore).slice(0, 6).map(({ post }) => post);
+		})()
 		: [];
 
 	// Fetch AI answer whenever the active sub-topic changes
