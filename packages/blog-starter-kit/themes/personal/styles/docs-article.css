@@ -96,23 +96,19 @@
 
 /* ============================================================
    2. TYPOGRAPHY
-   Apply `.article-doc` to the outermost <article> or <div>
-   wrapping post body content.
+   Apply `.article-doc` to the div wrapping post body content.
+   NOTE: font-family, font-size, line-height, color, background
+   are omitted — Tailwind prose in .hashnode-content-style handles
+   these. Only rendering hints and truly additive props live here.
    ============================================================ */
 
 .article-doc {
-  font-family:  var(--doc-font-body);
-  font-size:    var(--doc-font-size-base);
-  line-height:  var(--doc-line-height);
-  color:        var(--doc-text-body);
-  background:   var(--doc-bg);
   -webkit-font-smoothing:  antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering:          optimizeLegibility;
 }
 
 .article-doc p {
-  margin-block: 0 1rem;
   max-width: 70ch;
 }
 
@@ -151,49 +147,19 @@
 
 /* ============================================================
    4. VISUAL HIERARCHY — Headings & Dividers
-   h2 ≈ 28 px (1.75 rem) · h3 ≈ 22 px (1.375 rem)
-   These selectors scope to .article-doc so they don't override
-   the global .prose heading rules outside post content.
+   NOTE: font-size, font-weight, line-height, margin, and color are
+   intentionally omitted here — they are set by the Tailwind prose
+   utilities in .hashnode-content-style (index.css) which co-exist
+   on the same element. Only truly ADDITIVE properties live here.
    ============================================================ */
 
-.article-doc h1 {
-  font-size:      2rem;
-  font-weight:    800;
-  line-height:    1.2;
-  letter-spacing: -0.025em;
-  margin-block:   0 1.5rem;
-  color: var(--doc-text-body);
-}
-
-/* h2 ≈ 28 px */
+/* h2 visual separator — not set by prose */
 .article-doc h2 {
-  font-size:      1.75rem;
-  font-weight:    700;
-  line-height:    1.3;
-  letter-spacing: -0.015em;
-  margin-block:   2.75rem 0.75rem;
   padding-bottom: 0.45rem;
   border-bottom:  2px solid var(--doc-border);
-  color: var(--doc-text-body);
 }
 
-/* h3 ≈ 22 px */
-.article-doc h3 {
-  font-size:    1.375rem;
-  font-weight:  600;
-  line-height:  1.4;
-  margin-block: 2rem 0.5rem;
-  color: var(--doc-text-body);
-}
-
-.article-doc h4 {
-  font-size:    1.125rem;
-  font-weight:  600;
-  line-height:  1.5;
-  margin-block: 1.5rem 0.4rem;
-}
-
-/* Anchor links inside headings */
+/* Anchor links inside headings (legacy inline anchor style) */
 .article-doc h2 > a,
 .article-doc h3 > a,
 .article-doc h4 > a {
@@ -209,13 +175,7 @@
   font-size: 0.875em;
 }
 
-/* Horizontal rule */
-.article-doc hr {
-  border: none;
-  height: 1px;
-  background: linear-gradient(to right, transparent, var(--doc-border), transparent);
-  margin-block: var(--doc-section-gap);
-}
+/* hr is already styled by .prose hr in index.css */
 
 
 /* ============================================================

@@ -287,8 +287,8 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 				{/* Left: Social share (sticky, hidden below lg) */}
 				<SocialShare url={post.url} title={post.title} excerpt={post.brief ?? ''} tags={(post.tags ?? []).map((t) => t.name)} />
 
-				{/* Center: article content */}
-				<div className="flex-1 min-w-0">
+				{/* Center: article content — max-w-3xl caps reading width on lg (no ToC) */}
+				<div className="flex-1 min-w-0 max-w-3xl">
 					{/* AI Disclaimer — compact on mobile, full on sm+ */}
 					<div className="mb-6 flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 dark:border-amber-800/60 dark:bg-amber-950/40">
 						<svg
@@ -310,8 +310,8 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</p>
 					</div>
 
-					{/* Article body */}
-					<div className="w-full min-w-0 overflow-x-hidden">
+					{/* Article body — article-doc activates docs-article.css scoped styles (h2 borders, p max-width); overflow-x handled by outer container */}
+					<div className="article-doc w-full min-w-0">
 						<MarkdownToHtml contentMarkdown={post.content.markdown} />
 					</div>
 
