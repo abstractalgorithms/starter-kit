@@ -67,16 +67,17 @@ export const TableOfContents = ({ items }: Props) => {
 						return (
 							<li
 								key={item.id}
-								style={{ paddingLeft: `${(item.level - 1) * 0.75 + 0.75}rem` }}
+								style={{ paddingLeft: `${(item.level - 1) * 0.5 + 0.5}rem` }}
 								className="m-0 -ml-px"
 							>
 								<a
 									href={`#${headingId}`}
-									className={`block py-1 pr-2 text-xs leading-snug no-underline transition-colors border-l-2 pl-3 ${
+									className={`block py-1 pr-2 text-xs leading-tight no-underline transition-colors border-l-2 pl-2 truncate ${
 										isActive
 											? 'border-blue-500 text-blue-600 dark:text-blue-400 font-medium'
 											: 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600'
 									}`}
+									title={decodeHtml(item.title)}
 								>
 									{decodeHtml(item.title)}
 								</a>
