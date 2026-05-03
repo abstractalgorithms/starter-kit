@@ -140,7 +140,7 @@ export const AiTechTicker = () => {
 	const isPaused = speed === 0;
 
 	return (
-		<section className="w-full py-6">
+		<section className="w-full py-6 flex flex-col h-full">
 			{/* Compact header row */}
 			<div className="flex items-center justify-between mb-3 gap-2">
 				<div className="flex items-center gap-2 min-w-0">
@@ -186,7 +186,7 @@ export const AiTechTicker = () => {
 
 			{/* Compact news card */}
 			<div
-				className={`rounded-lg border border-l-4 border-neutral-200 dark:border-neutral-800 ${cat.border} bg-white dark:bg-neutral-900 overflow-hidden`}
+				className={`flex flex-col rounded-lg border border-l-4 border-neutral-200 dark:border-neutral-800 ${cat.border} bg-white dark:bg-neutral-900 overflow-hidden flex-1`}
 				style={{ opacity: visible ? 1 : 0, transition: `opacity ${FADE_DURATION_MS}ms ease` }}
 			>
 				{/* Progress bar */}
@@ -194,7 +194,7 @@ export const AiTechTicker = () => {
 					<div className="h-full bg-blue-500 dark:bg-blue-400 transition-none" style={{ width: `${progress * 100}%` }} />
 				</div>
 
-				<div className="p-4">
+				<div className="p-4 flex flex-col flex-1">
 					{/* Top row: category badge + time + source link */}
 					<div className="flex items-center justify-between gap-3 mb-2">
 						<div className="flex items-center gap-2">

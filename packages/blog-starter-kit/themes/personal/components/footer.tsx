@@ -12,12 +12,12 @@ export const Footer = () => {
 
 	return (
 		<footer className="w-full bg-white dark:bg-neutral-950">
-			<div className="max-w-7xl mx-auto px-5 pt-8 pb-5 border-t border-neutral-200 dark:border-neutral-800">
-				<div className="grid grid-cols-1 md:grid-cols-4 gap-x-8 gap-y-8 mb-8">
+			<div className="max-w-7xl mx-auto px-5 pt-6 md:pt-8 pb-4 md:pb-5 border-t border-neutral-200 dark:border-neutral-800">
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-6 md:gap-y-8 mb-6 md:mb-8">
 
 					{/* ── Brand ───────────────────────────────────────────── */}
 					<div className="md:col-span-2">
-						<h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-50 mb-1.5">
+						<h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-50 mb-1 md:mb-1.5">
 							{publication.title}
 						</h3>
 						{publication.descriptionSEO && (
@@ -27,7 +27,7 @@ export const Footer = () => {
 						)}
 
 						{hasAnySocial && (
-							<div className="flex gap-3 mt-4">
+							<div className="flex gap-2 md:gap-3 mt-3 md:mt-4">
 								{github && (
 									<a href={github} target="_blank" rel="noopener noreferrer"
 										className="text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -70,11 +70,11 @@ export const Footer = () => {
 					</div>
 
 					{/* ── Navigation ────────────────────────────────────────── */}
-					<div>
-						<h4 className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
+					<div className="hidden md:block">
+						<h4 className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2 md:mb-3">
 							Navigate
 						</h4>
-						<ul className="space-y-2">
+						<ul className="space-y-1.5 md:space-y-2">
 							<li><Link href="/" className={linkClass}>Home</Link></li>
 							<li><Link href="/guided-topics" className={linkClass}>Guided Topics</Link></li>
 							<li><Link href="/interview-prep" className={linkClass}>Interview Prep</Link></li>
@@ -82,34 +82,10 @@ export const Footer = () => {
 						</ul>
 					</div>
 
-					{/* ── Author ────────────────────────────────────────────── */}
-					<div>
-						<h4 className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
-							Author
-						</h4>
-						<div className="flex items-center gap-2.5">
-							{publication.author.profilePicture && (
-								<img
-									src={publication.author.profilePicture}
-									alt={publication.author.name}
-									className="w-8 h-8 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-800"
-								/>
-							)}
-							<div>
-								<p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 leading-tight">
-									{publication.author.name}
-								</p>
-								<p className="text-xs text-neutral-400 font-mono">
-									@{publication.author.username}
-								</p>
-							</div>
-						</div>
-					</div>
-
 				</div>
 
 				{/* ── Bottom bar ──────────────────────────────────────────── */}
-				<div className="border-t border-neutral-100 dark:border-neutral-800 pt-4 flex flex-col md:flex-row justify-between items-center gap-2 text-neutral-400 dark:text-neutral-500 text-xs">
+				<div className="border-t border-neutral-100 dark:border-neutral-800 pt-3 md:pt-4 flex flex-col md:flex-row justify-between items-center gap-1.5 md:gap-2 text-neutral-400 dark:text-neutral-500 text-xs">
 					<p>© {new Date().getFullYear()} {publication.title}. All rights reserved.</p>
 					<a
 						href="https://hashnode.com"

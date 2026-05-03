@@ -60,26 +60,29 @@ export const TableOfContents = ({ items }: Props) => {
 				On this page
 			</p>
 			<nav aria-label="Table of contents">
-				<ol className="flex flex-col gap-0.5 list-none m-0 p-0 border-l border-neutral-200 dark:border-neutral-800">
+				<ol className="flex flex-col gap-0.5 list-none m-0 p-0 border-l border-neutral-200 dark:border-neutral-800 text-xs">
 					{items.map((item) => {
 						const headingId = toHeadingId(item.slug);
 						const isActive = activeId === headingId;
+						const indentLevel = item.level - 1;
 						return (
 							<li
 								key={item.id}
-								style={{ paddingLeft: `${(item.level - 1) * 0.5 + 0.5}rem` }}
 								className="m-0 -ml-px"
+								style={{ paddingLeft: `${indentLevel * 0.75 + 0.5}rem` }}
 							>
 								<a
 									href={`#${headingId}`}
-									className={`block py-1 pr-2 text-xs leading-tight no-underline transition-colors border-l-2 pl-2 truncate ${
+									className={`flex py-1.5 pr-2 leading-snug no-underline transition-colors border-l-2 pl-2 ${
 										isActive
 											? 'border-blue-500 text-blue-600 dark:text-blue-400 font-medium'
 											: 'border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600'
 									}`}
 									title={decodeHtml(item.title)}
 								>
-									{decodeHtml(item.title)}
+									<span className="break-words whitespace-normal">
+										{decodeHtml(item.title)}
+									</span>
 								</a>
 							</li>
 						);

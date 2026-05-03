@@ -112,7 +112,7 @@ export function TriviaOfDayCard() {
 	const isCorrect = selectedIdx === trivia.answer;
 
 	return (
-		<section className="py-4 w-full">
+		<section className="py-4 w-full flex flex-col h-full">
 			{/* Section header */}
 			<div className="flex items-center justify-between mb-3 gap-2">
 				<div className="flex items-center gap-2 min-w-0">
@@ -132,7 +132,7 @@ export function TriviaOfDayCard() {
 			</div>
 
 			{/* Card */}
-			<div className={`rounded-xl border border-l-4 ${diffStyle.glow} border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm overflow-hidden`}>
+			<div className={`flex flex-col rounded-xl border border-l-4 ${diffStyle.glow} border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm overflow-hidden flex-1`}>
 
 				{/* Question */}
 				<div className="px-5 pt-4 pb-3">
@@ -142,7 +142,7 @@ export function TriviaOfDayCard() {
 				</div>
 
 				{/* Options grid - single column for sidebar */}
-				<div className="px-5 pb-4 flex flex-col gap-2">
+				<div className="px-5 pb-4 flex flex-col gap-2 flex-1">
 					{trivia.options.map((opt, idx) => {
 						let state: 'idle' | 'correct' | 'wrong' | 'disabled' = 'idle';
 						if (phase === 'revealed') {

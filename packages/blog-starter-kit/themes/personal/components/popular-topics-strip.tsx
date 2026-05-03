@@ -430,7 +430,7 @@ export const PopularTopicsStrip = ({ clusters, allPosts }: Props) => {
 	const activeCluster = visible.find((c) => c.slug === activeSlug) ?? null;
 
 	return (
-		<div className="w-full py-6">
+		<div className="w-full py-6 pt-0">
 			<div className="flex items-center gap-3 mb-4">
 				<p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
 					Explore by topic

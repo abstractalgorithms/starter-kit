@@ -16,7 +16,6 @@ import { PopularTopicsStrip } from '../components/popular-topics-strip';
 import { PostChatbot } from '../components/post-chatbot';
 import { AiTechTicker } from '../components/ai-tech-ticker';
 import { TriviaOfDayCard } from '../components/trivia-of-day';
-import { EngagementSidebar } from '../components/engagement-sidebar';
 import { LearnToday, LearnPost } from '../components/learn-today';
 import {
 	MorePostsByPublicationDocument,
@@ -76,34 +75,44 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 						{/* Hero: strongest unique identifier, keep at top */}
 						<Hero {...heroStats} />
 
-						{/* Main content area with sidebar layout */}
-						<div className="flex gap-8 w-full overflow-hidden">
+						{/* Main content area */}
+						<div className="w-full">
 							{/* Primary content column */}
-							<div className="flex-1 min-w-0 flex flex-col gap-0 divide-y divide-neutral-200 dark:divide-neutral-800">
-								{/* AI-Powered Discovery: prioritize search-first access */}
-								<LearnToday allPosts={allPosts} />
-
-								{/* Explore by Topic: chips for exploratory learners */}
-								<PopularTopicsStrip clusters={topicClusters} allPosts={allPosts} />
+							<div className="flex flex-col gap-0 divide-y divide-neutral-200 dark:divide-neutral-800">
+								{/* AI-Powered Discovery & Explore by Topic: combined UX block */}
+								<div className="flex flex-col gap-0">
+									<LearnToday allPosts={allPosts} />
+									<PopularTopicsStrip clusters={topicClusters} allPosts={allPosts} />
+								</div>
 
 								{/* Curated Path: structured learning for step-by-step learners */}
 								{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
 
+								{/* Trivia & AI News Section - Two Column Layout */}
+								<section className="w-full pt-6 pb-12">
+									<div className="flex flex-col gap-1 mb-6">
+										<div className="flex items-center gap-3">
+											<p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
+												Stay Updated
+											</p>
+											<div className="flex-1 h-px bg-neutral-100 dark:bg-neutral-800" />
+										</div>
+										<p className="text-sm text-neutral-500 dark:text-neutral-400">
+											Daily insights and trending topics in tech and AI.
+										</p>
+									</div>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-fr">
+										<div className="flex flex-col h-full">
+											<AiTechTicker />
+										</div>
+										<div className="flex flex-col h-full">
+											<TriviaOfDayCard />
+										</div>
+									</div>
+								</section>
+
 								{/* Newsletter */}
 								<NewsletterSection />
-							</div>
-
-							{/* Engagement Sidebar (desktop only) with sticky ticker & trivia */}
-							<EngagementSidebar />
-						</div>
-
-						{/* Mobile engagement section - shown only on small screens */}
-						<div className="lg:hidden flex flex-col gap-6 divide-y divide-neutral-200 dark:divide-neutral-800 mt-8">
-							<div className="pt-6">
-								<AiTechTicker />
-							</div>
-							<div className="pt-6">
-								<TriviaOfDayCard />
 							</div>
 						</div>
 					</div>

@@ -33,7 +33,7 @@ export function buildTopicClusters(
 		}
 	}
 
-	return [...tagMap.entries()]
+	const clusters = [...tagMap.entries()]
 		.sort((a, b) => b[1].posts.length - a[1].posts.length)
 		.slice(0, maxClusters)
 		.map(([slug, { label, posts }], i) => ({
@@ -43,8 +43,24 @@ export function buildTopicClusters(
 			postCount: posts.length,
 			posts: posts.slice(0, postsPerCluster),
 		}));
-}
 
+	// Add Interview Prep as a special cluster if not already present
+	const hasInterviewPrep = clusters.some(c => c.slug === 'interview-prep');
+	if (!hasInterviewPrep) {
+		const interviewPosts = allPosts.filter(p => 
+			(p.tags ?? []).some(t => t?.slug?.toLowerCase().includes('interview'))
+		);
+		clusters.push({
+			label: 'Interview Prep',
+			slug: 'interview-prep',
+			color: 'purple' as const,
+			postCount: interviewPosts.length,
+			posts: interviewPosts.slice(0, postsPerCluster),
+		});
+	}
+
+	return clusters;
+}
 
 // ─── Color palette ────────────────────────────────────────────────────────────
 const COLORS: Record<

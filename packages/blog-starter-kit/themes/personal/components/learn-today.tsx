@@ -568,7 +568,7 @@ export const LearnToday = ({ allPosts }: Props) => {
 	const hrs = result ? Math.round(result.totalMinutes / 60 * 10) / 10 : 0;
 
 	return (
-		<section className="w-full py-12">
+		<section className="w-full py-12 border-t border-neutral-200 dark:border-neutral-800">
 			{/* Header */}
 			<div className="mb-8">
 				<p className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-2">
