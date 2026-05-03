@@ -112,20 +112,20 @@ export function TriviaOfDayCard() {
 	const isCorrect = selectedIdx === trivia.answer;
 
 	return (
-		<section className="py-4">
+		<section className="py-4 w-full">
 			{/* Section header */}
-			<div className="flex items-center justify-between mb-3">
-				<div className="flex items-center gap-2">
+			<div className="flex items-center justify-between mb-3 gap-2">
+				<div className="flex items-center gap-2 min-w-0">
 					<span className="text-base" aria-hidden="true">🧠</span>
-					<span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 tracking-widest uppercase">
+					<span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 tracking-widest uppercase whitespace-nowrap">
 						Trivia of the Day
 					</span>
 				</div>
-				<div className="flex items-center gap-2">
-					<span className="hidden sm:inline-block rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
+				<div className="flex items-center gap-2 flex-shrink-0">
+					<span className="hidden sm:inline-block rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 whitespace-nowrap">
 						{trivia.topic}
 					</span>
-					<span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${diffStyle.badge}`}>
+					<span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${diffStyle.badge}`}>
 						{trivia.difficulty}
 					</span>
 				</div>
@@ -141,8 +141,8 @@ export function TriviaOfDayCard() {
 					</p>
 				</div>
 
-				{/* Options grid */}
-				<div className="px-5 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+				{/* Options grid - single column for sidebar */}
+				<div className="px-5 pb-4 flex flex-col gap-2">
 					{trivia.options.map((opt, idx) => {
 						let state: 'idle' | 'correct' | 'wrong' | 'disabled' = 'idle';
 						if (phase === 'revealed') {

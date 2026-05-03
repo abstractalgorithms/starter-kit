@@ -16,6 +16,7 @@ import { PopularTopicsStrip } from '../components/popular-topics-strip';
 import { PostChatbot } from '../components/post-chatbot';
 import { AiTechTicker } from '../components/ai-tech-ticker';
 import { TriviaOfDayCard } from '../components/trivia-of-day';
+import { EngagementSidebar } from '../components/engagement-sidebar';
 import { LearnToday, LearnPost } from '../components/learn-today';
 import {
 	MorePostsByPublicationDocument,
@@ -71,26 +72,40 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-6xl mx-auto w-full px-5 flex flex-col gap-0 divide-y divide-neutral-200 dark:divide-neutral-800">
-
-						{/* 1 ── Hero: strongest unique identifier, keep at top */}
+					<div className="max-w-7xl mx-auto w-full px-5">
+						{/* Hero: strongest unique identifier, keep at top */}
 						<Hero {...heroStats} />
 
-						{/* 2 ── AI News ticker: fresh context right after the console hero */}
-						<AiTechTicker />
+						{/* Main content area with sidebar layout */}
+						<div className="flex gap-8 w-full overflow-hidden">
+							{/* Primary content column */}
+							<div className="flex-1 min-w-0 flex flex-col gap-0 divide-y divide-neutral-200 dark:divide-neutral-800">
+								{/* AI-Powered Discovery: prioritize search-first access */}
+								<LearnToday allPosts={allPosts} />
 
-						{/* 3 ── AI-Powered Discovery: search-first */}
-						<LearnToday allPosts={allPosts} />
+								{/* Explore by Topic: chips for exploratory learners */}
+								<PopularTopicsStrip clusters={topicClusters} allPosts={allPosts} />
 
-						{/* 4 ── Explore by Topic: chips for exploratory learners */}
-						<PopularTopicsStrip clusters={topicClusters} allPosts={allPosts} />
-							{/* 5 ── Curated Path: catch "Step 1" learners */}
-							{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
-						{/* 6 ── Daily trivia: fun engagement hook before the newsletter */}
-						<TriviaOfDayCard />
+								{/* Curated Path: structured learning for step-by-step learners */}
+								{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
 
-						{/* 7 ── Newsletter */}
-						<NewsletterSection />
+								{/* Newsletter */}
+								<NewsletterSection />
+							</div>
+
+							{/* Engagement Sidebar (desktop only) with sticky ticker & trivia */}
+							<EngagementSidebar />
+						</div>
+
+						{/* Mobile engagement section - shown only on small screens */}
+						<div className="lg:hidden flex flex-col gap-6 divide-y divide-neutral-200 dark:divide-neutral-800 mt-8">
+							<div className="pt-6">
+								<AiTechTicker />
+							</div>
+							<div className="pt-6">
+								<TriviaOfDayCard />
+							</div>
+						</div>
 					</div>
 					<Footer />
 					{/* Floating AI Chatbot */}

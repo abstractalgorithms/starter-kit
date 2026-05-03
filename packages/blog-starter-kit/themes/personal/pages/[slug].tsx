@@ -23,6 +23,7 @@ import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { CoverImage } from '../components/cover-image';
 import { DateFormatter } from '../components/date-formatter';
+import { ReadingLevelIndicator } from '../components/reading-level-indicator';
 import { formatTagName } from '../utils/format';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
@@ -286,8 +287,17 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 				{/* Left: Social share (sticky, hidden below lg) */}
 				<SocialShare url={post.url} title={post.title} excerpt={post.brief ?? ''} tags={(post.tags ?? []).map((t) => t.name)} />
 
-				{/* Center: article content — max-w-3xl caps reading width on lg (no ToC) */}
-				<div className="flex-1 min-w-0 max-w-3xl">
+				{/* Center: article content — responsive max-width based on ToC visibility */}
+				<div className="flex-1 min-w-0 lg:max-w-3xl xl:max-w-4xl">
+					{/* Reading Level Indicator */}
+					<div className="mb-6">
+						<ReadingLevelIndicator 
+							tags={tags} 
+							readTimeInMinutes={post.readTimeInMinutes}
+							showDescription={true}
+							variant="full"
+						/>
+					</div>
 					{/* AI Disclaimer — compact on mobile, full on sm+ */}
 					<div className="mb-6 flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 dark:border-amber-800/60 dark:bg-amber-950/40">
 						<svg
@@ -409,7 +419,7 @@ export default function PostOrPage(props: Props) {
 				{props.type === 'post' && <ReadingProgressBar />}
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-6xl mx-auto w-full px-4 sm:px-5 pt-10 pb-20 overflow-x-hidden">
+					<div className="max-w-7xl mx-auto w-full px-4 sm:px-5 pt-10 pb-20 overflow-x-hidden">
 						<article className="w-full min-w-0">
 							{props.type === 'post' && <Post {...props} />}
 							{props.type === 'page' && <Page {...props} />}

@@ -273,7 +273,7 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-6xl mx-auto w-full px-5 pt-10 pb-20">
+					<div className="max-w-7xl mx-auto w-full px-5 pt-10 pb-20">
 
 						{/* Back */}
 						<Link href="/" className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-10 group">

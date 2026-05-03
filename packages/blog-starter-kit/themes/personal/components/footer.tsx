@@ -12,7 +12,7 @@ export const Footer = () => {
 
 	return (
 		<footer className="w-full bg-white dark:bg-neutral-950">
-			<div className="max-w-6xl mx-auto px-5 pt-8 pb-5 border-t border-neutral-200 dark:border-neutral-800">
+			<div className="max-w-7xl mx-auto px-5 pt-8 pb-5 border-t border-neutral-200 dark:border-neutral-800">
 				<div className="grid grid-cols-1 md:grid-cols-4 gap-x-8 gap-y-8 mb-8">
 
 					{/* ── Brand ───────────────────────────────────────────── */}

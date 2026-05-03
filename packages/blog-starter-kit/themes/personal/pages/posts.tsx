@@ -284,7 +284,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-6xl mx-auto w-full px-4 sm:px-5 py-12 flex flex-col gap-8">
+					<div className="max-w-7xl mx-auto w-full px-4 sm:px-5 py-12 flex flex-col gap-8">
 						<div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
 							<div>
 								<p className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400 mb-2">

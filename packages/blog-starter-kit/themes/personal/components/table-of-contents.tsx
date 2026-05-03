@@ -55,7 +55,7 @@ export const TableOfContents = ({ items }: Props) => {
 	if (items.length === 0) return null;
 
 	return (
-		<aside className="hidden xl:block sticky top-24 self-start w-56 flex-shrink-0">
+		<aside className="hidden xl:block sticky top-20 self-start w-56 flex-shrink-0">
 			<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
 				On this page
 			</p>

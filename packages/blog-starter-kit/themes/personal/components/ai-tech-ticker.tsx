@@ -5,7 +5,7 @@ import type { TickerItem } from '../pages/api/ai-tech-ticker';
 const BASE_INTERVAL_MS = 12_000;
 const FADE_DURATION_MS = 300;
 
-type Speed = 0 | 1 | 2 | 5;
+type Speed = 0 | 1;
 
 type CategoryStyle = { bg: string; text: string; border: string; dot: string };
 
@@ -26,12 +26,6 @@ const DEFAULT_STYLE: CategoryStyle = {
 	border: 'border-l-neutral-400',
 	dot: 'bg-neutral-400',
 };
-
-const SPEED_OPTIONS: { label: string; value: Speed }[] = [
-	{ label: '1×', value: 1 },
-	{ label: '2×', value: 2 },
-	{ label: '5×', value: 5 },
-];
 
 // Maps each category to relevant blog tag slugs for the "Explore on this blog" section
 const CATEGORY_RELATED: Record<string, { label: string; slug: string }[]> = {
@@ -116,7 +110,7 @@ export const AiTechTicker = () => {
 		}
 	}, []);
 
-	// Auto-rotate based on current speed
+	// Auto-rotate based on current play state
 	useEffect(() => {
 		if (items.length < 2 || speed === 0) {
 			stopProgressAnimation();
@@ -124,7 +118,7 @@ export const AiTechTicker = () => {
 			return;
 		}
 
-		const intervalMs = BASE_INTERVAL_MS / speed;
+		const intervalMs = BASE_INTERVAL_MS;
 		startProgressAnimation(intervalMs);
 
 		const id = setInterval(() => {
@@ -148,57 +142,42 @@ export const AiTechTicker = () => {
 	return (
 		<section className="w-full py-6">
 			{/* Compact header row */}
-			<div className="flex items-center justify-between mb-3">
-				<div className="flex items-center gap-2">
-					<span className="text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+			<div className="flex items-center justify-between mb-3 gap-2">
+				<div className="flex items-center gap-2 min-w-0">
+					<span className="text-xs font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
 						What&apos;s happening
 					</span>
-					<span className="text-neutral-300 dark:text-neutral-600">·</span>
-					<h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-50">
+					<span className="text-neutral-300 dark:text-neutral-600 flex-shrink-0">·</span>
+					<h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-50 truncate">
 						AI Tech Spotlight
 					</h2>
 				</div>
 
-				<div className="flex items-center gap-2">
-					{/* Speed controls */}
-					<div className="flex items-center gap-0.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 p-0.5">
-						<button
-							onClick={() => setSpeed(isPaused ? 1 : 0)}
-							aria-label={isPaused ? 'Play' : 'Pause'}
-							className={`flex items-center justify-center w-6 h-6 rounded transition-colors ${
-								isPaused
-									? 'bg-blue-600 text-white'
-									: 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-							}`}
-						>
-							{isPaused ? (
-								<svg className="w-3 h-3 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-							) : (
-								<svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
-							)}
-						</button>
-						{SPEED_OPTIONS.map(({ label, value }) => (
-							<button
-								key={value}
-								onClick={() => setSpeed(value)}
-								className={`px-2 h-6 rounded text-xs font-semibold transition-colors ${
-									speed === value && !isPaused
-										? 'bg-blue-600 text-white'
-										: 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-								}`}
-							>
-								{label}
-							</button>
-						))}
-					</div>
+				<div className="flex items-center gap-2 flex-shrink-0">
+					{/* Play/Pause button */}
+					<button
+						onClick={() => setSpeed(isPaused ? 1 : 0)}
+						aria-label={isPaused ? 'Play' : 'Pause'}
+						className={`flex items-center justify-center w-6 h-6 rounded transition-colors flex-shrink-0 ${
+							isPaused
+								? 'bg-blue-600 text-white'
+								: 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+						}`}
+					>
+						{isPaused ? (
+							<svg className="w-3 h-3 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+						) : (
+							<svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+						)}
+					</button>
 
 					{/* Live indicator */}
-					<div className="flex items-center gap-1 select-none">
+					<div className="flex items-center gap-1 select-none flex-shrink-0">
 						<span className="relative flex h-1.5 w-1.5">
 							<span className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 ${!isPaused ? 'animate-ping' : ''}`} />
 							<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
 						</span>
-						<span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+						<span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide whitespace-nowrap">
 							{isPaused ? 'Paused' : 'Live'}
 						</span>
 					</div>

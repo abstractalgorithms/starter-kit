@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import { useEffect } from 'react';
 import 'katex/dist/katex.min.css';
 import '../styles/index.css';
+import '../styles/diagram-enhancements.css';
 
 // Next.js 13 passes fetchPriority (camelCase) to <img> which React 18.3 warns about.
 // This is a framework-level issue, not our code. Suppress only this specific warning.

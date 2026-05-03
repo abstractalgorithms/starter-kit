@@ -3,6 +3,7 @@
 import { useEmbeds } from '@starter-kit/utils/renderer/hooks/useEmbeds';
 import { useQuizHandler } from '@starter-kit/utils/renderer/hooks/useQuizHandler';
 import { markdownToHtml } from '@starter-kit/utils/renderer/markdownToHtml';
+import { initDiagramEnhancements } from '../utils/diagram-enhancements';
 import renderMathInElement from 'katex/contrib/auto-render';
 import { memo, useEffect, useRef } from 'react';
 
@@ -238,6 +239,12 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 		if (containerRef.current?.querySelector('.mermaid')) {
 			initMermaid();
 		}
+	}, [content]);
+
+	// Initialize diagram enhancements (zoom, pan, copy)
+	useEffect(() => {
+		const cleanup = initDiagramEnhancements();
+		return cleanup;
 	}, [content]);
 
 	return (

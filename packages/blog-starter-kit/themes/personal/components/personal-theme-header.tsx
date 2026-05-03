@@ -212,8 +212,8 @@ export const PersonalHeader = () => {
 	);
 
 	return (
-		<header className="w-full bg-white dark:bg-neutral-950">
-			<div className="max-w-6xl mx-auto px-5 py-2.5 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
+		<header className="w-full bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800">
+			<div className="max-w-7xl mx-auto px-5 py-2.5 flex items-center justify-between">
 				<h1>
 					<Link
 						className="flex flex-row items-center gap-3 hover:opacity-90 transition-opacity"

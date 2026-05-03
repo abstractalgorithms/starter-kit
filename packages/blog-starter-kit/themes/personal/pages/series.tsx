@@ -166,7 +166,7 @@ export default function SeriesPage({ publication, series, footerPosts }: Props) 
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-6xl mx-auto w-full px-5 pt-10 pb-20">
+					<div className="max-w-7xl mx-auto w-full px-5 pt-10 pb-20">
 						{/* Back nav */}
 						<Link
 							href="/"

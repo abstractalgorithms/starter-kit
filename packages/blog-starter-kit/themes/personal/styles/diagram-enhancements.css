@@ -1,0 +1,216 @@
+/* Enhanced Diagram Interaction Styles */
+
+/* Mermaid diagram container with improved UX */
+.mermaid-container {
+	position: relative;
+	display: inline-block;
+	width: 100%;
+	margin: 1.5rem 0;
+}
+
+.diagram-wrapper {
+	position: relative;
+	overflow-x: auto;
+	overflow-y: auto;
+	scroll-behavior: smooth;
+	touch-action: pan-x pan-y;
+}
+
+.diagram-wrapper svg {
+	transform-origin: center;
+	transition: transform 200ms ease-out;
+	cursor: grab;
+}
+
+.diagram-wrapper svg:active {
+	cursor: grabbing;
+}
+
+/* Diagram controls - visible on hover */
+.diagram-controls {
+	pointer-events: auto;
+	display: flex;
+	gap: 0.5rem;
+	padding: 0.5rem;
+	background: white;
+	border: 1px solid #e5e7eb;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dark .diagram-controls {
+	background: #1f2937;
+	border-color: #374151;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.diagram-controls button {
+	padding: 0.25rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 0.375rem;
+	border: none;
+	background: transparent;
+	color: #6b7280;
+	cursor: pointer;
+	transition: background-color 150ms ease;
+}
+
+.diagram-controls button:hover {
+	background-color: #f3f4f6;
+	color: #374151;
+}
+
+.dark .diagram-controls button:hover {
+	background-color: #374151;
+	color: #e5e7eb;
+}
+
+/* Language badge for code blocks - enterprise language highlighting */
+.lang-badge {
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+/* Enhanced code block with language badge */
+.code-block-outer {
+	position: relative;
+	margin: 1rem 0;
+}
+
+.code-block-outer .lang-badge {
+	pointer-events: none;
+}
+
+/* KaTeX math rendering - ensures proper display */
+.katex-display {
+	margin: 1.5rem 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+}
+
+.katex {
+	font-size: 1em;
+}
+
+/* Inline math */
+.katex-inline {
+	margin: 0 0.125em;
+}
+
+/* Improved table styling for data presentations */
+.hashnode-content-style table {
+	border-collapse: collapse;
+	width: 100%;
+	margin: 1.5rem 0;
+}
+
+.hashnode-content-style th,
+.hashnode-content-style td {
+	padding: 0.75rem;
+	border: 1px solid #e5e7eb;
+	text-align: left;
+}
+
+.dark .hashnode-content-style th,
+.dark .hashnode-content-style td {
+	border-color: #374151;
+}
+
+.hashnode-content-style th {
+	background-color: #f9fafb;
+	font-weight: 600;
+}
+
+.dark .hashnode-content-style th {
+	background-color: #111827;
+}
+
+/* Code block improvements */
+.hashnode-content-style pre {
+	position: relative;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	margin: 1.5rem 0;
+	padding: 1rem;
+	border-radius: 0.5rem;
+	background-color: #282c34;
+	border: 1px solid #3c4147;
+}
+
+.dark .hashnode-content-style pre {
+	background-color: #1f2937;
+	border-color: #374151;
+}
+
+.hashnode-content-style code {
+	font-family: 'Courier New', monospace;
+	font-size: 0.875em;
+	line-height: 1.5;
+}
+
+/* Syntax highlighting for different enterprise languages */
+.lang-terraform,
+.lang-hcl,
+.lang-dockerfile,
+.lang-yaml,
+.lang-ansible,
+.lang-puppet {
+	/* Enterprise infrastructure-as-code highlighting */
+}
+
+.lang-protobuf,
+.lang-avro,
+.lang-graphql {
+	/* Schema definition language highlighting */
+}
+
+.lang-solidity,
+.lang-vyper {
+	/* Blockchain/smart contract highlighting */
+}
+
+.lang-plsql,
+.lang-tsql,
+.lang-oracle {
+	/* Database-specific SQL highlighting */
+}
+
+/* Responsive diagram adjustments */
+@media (max-width: 768px) {
+	.diagram-wrapper {
+		max-height: 400px;
+	}
+
+	.diagram-controls {
+		opacity: 1 !important;
+	}
+
+	.katex-display {
+		font-size: 0.9em;
+	}
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+	.diagram-controls {
+		border-width: 2px;
+	}
+
+	.lang-badge {
+		border-width: 1px;
+	}
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+	.diagram-wrapper svg,
+	.diagram-controls button,
+	.code-block-outer {
+		transition: none !important;
+	}
+}
