@@ -1,23 +1,24 @@
 import { useEffect } from 'react';
-import { useAppContext } from './contexts/appContext';
+import { useSafeAppContext } from '../hooks/useSafeAppContext';
 
 export function Integrations() {
-	const { publication } = useAppContext();
-	const {
-		gaTrackingID,
-		fbPixelID,
-		hotjarSiteID,
-		matomoURL,
-		matomoSiteID,
-		fathomSiteID,
-		fathomCustomDomain,
-		fathomCustomDomainEnabled,
-		plausibleAnalyticsEnabled,
-		gTagManagerID,
-		koalaPublicKey,
-		msClarityID,
-	} = publication.integrations ?? {};
-	const domainURL = new URL(publication.url).hostname;
+	const appContext = useSafeAppContext();
+	const publication = appContext?.publication;
+
+	const integrations = publication?.integrations ?? {};
+	const gaTrackingID = integrations.gaTrackingID;
+	const fbPixelID = integrations.fbPixelID;
+	const hotjarSiteID = integrations.hotjarSiteID;
+	const matomoURL = integrations.matomoURL;
+	const matomoSiteID = integrations.matomoSiteID;
+	const fathomSiteID = integrations.fathomSiteID;
+	const fathomCustomDomain = integrations.fathomCustomDomain;
+	const fathomCustomDomainEnabled = integrations.fathomCustomDomainEnabled;
+	const plausibleAnalyticsEnabled = integrations.plausibleAnalyticsEnabled;
+	const gTagManagerID = integrations.gTagManagerID;
+	const koalaPublicKey = integrations.koalaPublicKey;
+	const msClarityID = integrations.msClarityID;
+	const domainURL = publication ? new URL(publication.url).hostname : '';
 
 	let fbPixel = `
     !function(f,b,e,v,n,t,s)
@@ -87,12 +88,17 @@ export function Integrations() {
     })(window, document, "clarity", "script", '${msClarityID}');`;
 
 	useEffect(() => {
+		if (!appContext) return;
 		// @ts-ignore
 		window.gtag('config', gaTrackingID, {
 			transport_url: 'https://ping.hashnode.com',
 			first_party_collection: true,
 		});
-	}, []);
+	}, [gaTrackingID, appContext]);
+
+	if (!appContext) {
+		return null;
+	}
 
 	return (
 		<>

@@ -7,18 +7,20 @@ import {
 	SubscribeToNewsletterMutationVariables,
 } from '../generated/graphql';
 import { isNewsletterSubscribeEnabled } from '../lib/features';
-import { useAppContext } from './contexts/appContext';
+import { useSafeAppContext } from '../hooks/useSafeAppContext';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 
 export const NewsletterSection = () => {
-	const { publication } = useAppContext();
+	const appContext = useSafeAppContext();
+	const publication = appContext?.publication;
+
 	const [email, setEmail] = useState('');
 	const [submitted, setSubmitted] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-	if (!isNewsletterSubscribeEnabled) {
+	if (!appContext || !publication || !isNewsletterSubscribeEnabled) {
 		return null;
 	}
 

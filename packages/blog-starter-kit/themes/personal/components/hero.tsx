@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useAppContext } from './contexts/appContext';
+import { useSafeAppContext } from '../hooks/useSafeAppContext';
 
 const DEFAULT_TOPICS = [
 	'LLM Engineering',
@@ -66,7 +66,9 @@ export type HeroStats = {
 };
 
 export const Hero = ({ totalPosts, totalSeries, topSeries, topTags }: Partial<HeroStats>) => {
-	const { publication } = useAppContext();
+	const appContext = useSafeAppContext();
+	const publication = appContext?.publication;
+
 	const [topicIndex, setTopicIndex] = useState(0);
 	const [isVisible, setIsVisible] = useState(true);
 
@@ -102,6 +104,10 @@ export const Hero = ({ totalPosts, totalSeries, topSeries, topTags }: Partial<He
 		}, 4000);
 		return () => clearInterval(interval);
 	}, [rotatingTopics]);
+
+	if (!appContext || !publication) {
+		return null;
+	}
 
 	return (
 		<section className="w-full py-10 md:py-14">

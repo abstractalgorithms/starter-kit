@@ -29,6 +29,7 @@ import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { MarkdownToHtml } from '../components/markdown-to-html';
 import { PersonalHeader } from '../components/personal-theme-header';
+import { ProgressBadge } from '../components/progress-badge';
 import {
 	PageByPublicationDocument,
 	PostFragment,
@@ -270,8 +271,12 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 							</>
 						)}
 					</div>
+
+					{/* Progress Badge */}
+					<div className="mt-4 flex items-center gap-2">
+						<ProgressBadge postId={post.id} postTitle={post.title} />
+					</div>
 				</div>
-				{/* Right: cover image */}
 				{!!coverImageSrc && (
 					<div className="w-full md:w-2/5 shrink-0 mt-6 md:mt-0 h-40 sm:h-52 md:h-64 rounded-xl overflow-hidden ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-sm">
 						<img

@@ -1,11 +1,25 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { useAppContext } from './contexts/appContext';
+import { useSafeAppContext } from '../hooks/useSafeAppContext';
 
 export const AuthorSection = () => {
-	const { publication } = useAppContext();
-	const { author, links } = publication;
-	const { twitter, github, linkedin, hashnode: hashnodeLink } = links ?? {};
+	const appContext = useSafeAppContext();
+	const publication = appContext?.publication;
+
+	if (!appContext || !publication) {
+		return null;
+	}
+
+	const author = publication?.author;
+	const links = publication?.links ?? {};
+	const twitter = links.twitter;
+	const github = links.github;
+	const linkedin = links.linkedin;
+	const hashnodeLink = links.hashnode;
+
+	if (!author) {
+		return null;
+	}
 
 	return (
 		<section className="w-full py-12">

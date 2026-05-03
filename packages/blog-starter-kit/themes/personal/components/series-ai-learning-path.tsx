@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import type { PostFragment } from '../generated/graphql';
+import { ProgressBadge } from './progress-badge';
 
 // ─── Inline types (mirrors pages/api/learning-path.ts without server imports) ─
 
@@ -268,9 +269,12 @@ export const SeriesAiLearningPath = ({ seriesName, posts }: Props) => {
 																{ap.complexity}
 															</span>
 														)}
-														<span className="text-[10px] text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
-															{ap.readTimeInMinutes} min
-														</span>
+														<div className="flex items-center gap-2">
+															<span className="text-[10px] text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
+																{ap.readTimeInMinutes} min
+															</span>
+															<ProgressBadge postId={slug} postTitle={ap.title} size="sm" />
+														</div>
 													</div>
 												</Link>
 											);

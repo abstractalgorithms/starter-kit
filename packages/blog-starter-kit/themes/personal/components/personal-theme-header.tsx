@@ -1,3 +1,5 @@
+'use client';
+
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { resizeImage } from '@starter-kit/utils/image';
 import Image from 'next/image';
@@ -12,6 +14,8 @@ import {
 } from '../generated/graphql';
 import { useAppContext } from './contexts/appContext';
 import { ToggleTheme } from './toggle-theme';
+import { UserProfile } from './user-profile';
+import { AuthModal } from './auth-modal';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const NO_OF_SEARCH_RESULTS = 5;
@@ -195,6 +199,7 @@ const HeaderSearch = () => {
 
 export const PersonalHeader = () => {
 	const { publication } = useAppContext();
+	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
 	const navList = (
 		<ul className="flex list-none flex-row items-center gap-6 text-sm font-semibold tracking-tight text-neutral-600 dark:text-neutral-300">
@@ -245,6 +250,7 @@ export const PersonalHeader = () => {
 				<div className="flex items-center gap-4">
 					<HeaderSearch />
 					<ToggleTheme />
+					<UserProfile onLoginClick={() => setIsAuthModalOpen(true)} />
 				</div>
 			</div>
 
@@ -252,6 +258,8 @@ export const PersonalHeader = () => {
 			<div className="max-w-7xl mx-auto px-5 py-3 hidden md:block border-b border-neutral-200 dark:border-neutral-800">
 				<nav>{navList}</nav>
 			</div>
+
+			<AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 		</header>
 	);
 };

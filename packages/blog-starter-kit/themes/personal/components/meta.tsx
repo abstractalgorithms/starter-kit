@@ -1,10 +1,12 @@
 import parse from 'html-react-parser';
 import Head from 'next/head';
-import { useAppContext } from './contexts/appContext';
+import { useSafeAppContext } from '../hooks/useSafeAppContext';
 
 export const Meta = () => {
-	const { publication } = useAppContext();
-	const { metaTags, favicon } = publication;
+	const appContext = useSafeAppContext();
+	const { publication } = appContext || {};
+	const { metaTags, favicon } = (publication || {}) as any;
+
 	const defaultFavicons = (
 		<>
 			<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />

@@ -63,7 +63,8 @@ function Skeleton({ topic }: { topic: string }) {
 
 export default function GeneratedPostPage({ publication }: Props) {
 	const router = useRouter();
-	const topic = typeof router.query.topic === 'string' ? router.query.topic.trim() : '';
+	const isReady = router.isReady;
+	const topic = isReady && typeof router.query.topic === 'string' ? router.query.topic.trim() : '';
 
 	const [status, setStatus] = useState<Status>('idle');
 	const [post, setPost] = useState<GeneratedPost | null>(null);
@@ -71,7 +72,7 @@ export default function GeneratedPostPage({ publication }: Props) {
 	const [retryKey, setRetryKey] = useState(0);
 
 	useEffect(() => {
-		if (!topic) return;
+		if (!isReady || !topic) return;
 
 		let cancelled = false;
 		setStatus('loading');
@@ -101,7 +102,7 @@ export default function GeneratedPostPage({ publication }: Props) {
 			});
 
 		return () => { cancelled = true; };
-	}, [topic, retryKey]);
+	}, [topic, retryKey, isReady]);
 
 	const pageTitle = post
 		? `${post.title} · AI-Generated — ${publication.title}`

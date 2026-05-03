@@ -8,7 +8,7 @@ import {
 	SearchPostsOfPublicationQuery,
 	SearchPostsOfPublicationQueryVariables,
 } from '../generated/graphql';
-import { useAppContext } from './contexts/appContext';
+import { useSafeAppContext } from '../hooks/useSafeAppContext';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const NO_OF_SEARCH_RESULTS = 5;
@@ -16,7 +16,8 @@ const NO_OF_SEARCH_RESULTS = 5;
 type Post = SearchPostsOfPublicationQuery['searchPostsOfPublication']['edges'][0]['node'];
 
 export const SearchBar = ({ onQueryChange }: { onQueryChange?: (q: string) => void } = {}) => {
-	const { publication } = useAppContext();
+	const appContext = useSafeAppContext();
+	const publication = appContext?.publication;
 
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -50,7 +51,7 @@ export const SearchBar = ({ onQueryChange }: { onQueryChange?: (q: string) => vo
 		async (searchQuery: string) => {
 			if (timerRef.current) clearTimeout(timerRef.current);
 
-			if (!searchQuery) {
+			if (!searchQuery || !publication?.id) {
 				setSearchResults([]);
 				setShowResults(false);
 				return;
@@ -76,12 +77,16 @@ export const SearchBar = ({ onQueryChange }: { onQueryChange?: (q: string) => vo
 				setIsSearching(false);
 			}, 500);
 		},
-		[publication.id],
+		[publication?.id],
 	);
 
 	useEffect(() => {
 		search(query);
 	}, [query, search]);
+
+	if (!appContext) {
+		return null;
+	}
 
 	const searchResultsList = searchResults.map((post, index) => {
 		const postURL = `/${post.slug}`;
