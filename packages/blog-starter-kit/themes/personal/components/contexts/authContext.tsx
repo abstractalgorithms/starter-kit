@@ -1,7 +1,19 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import {
+	User,
+	onAuthStateChanged,
+	signOut,
+	setPersistence,
+	browserLocalPersistence,
+	signInWithEmailAndPassword,
+	createUserWithEmailAndPassword,
+	signInWithPopup,
+	GoogleAuthProvider,
+	GithubAuthProvider,
+	FacebookAuthProvider,
+} from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 
 type AuthContextType = {
@@ -9,6 +21,9 @@ type AuthContextType = {
 	loading: boolean;
 	signUp: (email: string, password: string) => Promise<void>;
 	login: (email: string, password: string) => Promise<void>;
+	loginWithGoogle: () => Promise<void>;
+	loginWithGitHub: () => Promise<void>;
+	loginWithFacebook: () => Promise<void>;
 	logout: () => Promise<void>;
 };
 
@@ -62,6 +77,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 		}
 	};
 
+	const loginWithGoogle = async () => {
+		setLoading(true);
+		try {
+			const provider = new GoogleAuthProvider();
+			await signInWithPopup(auth, provider);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const loginWithGitHub = async () => {
+		setLoading(true);
+		try {
+			const provider = new GithubAuthProvider();
+			await signInWithPopup(auth, provider);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const loginWithFacebook = async () => {
+		setLoading(true);
+		try {
+			const provider = new FacebookAuthProvider();
+			await signInWithPopup(auth, provider);
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	const logout = async () => {
 		setLoading(true);
 		try {
@@ -77,7 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 	};
 
 	return (
-		<AuthContext.Provider value={{ user, loading, signUp, login, logout }}>
+		<AuthContext.Provider value={{ user, loading, signUp, login, loginWithGoogle, loginWithGitHub, loginWithFacebook, logout }}>
 			{children}
 		</AuthContext.Provider>
 	);

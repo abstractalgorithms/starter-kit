@@ -88,9 +88,9 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 								{/* Curated Path: structured learning for step-by-step learners */}
 								{featuredSeries.length > 0 && <StartHereSection series={featuredSeries} />}
 
-								{/* Trivia & AI News Section - Two Column Layout */}
-								<section className="w-full pt-6 pb-12">
-									<div className="flex flex-col gap-1 mb-6">
+								{/* Trivia & AI News Section - Stacked Rows Layout */}
+								<section className="w-full pt-4 pb-8">
+									<div className="flex flex-col gap-1 mb-4">
 										<div className="flex items-center gap-3">
 											<p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
 												Stay Updated
@@ -101,11 +101,11 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 											Daily insights and trending topics in tech and AI.
 										</p>
 									</div>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-fr">
-										<div className="flex flex-col h-full">
+									<div className="flex flex-col gap-4">
+										<div className="flex flex-col">
 											<AiTechTicker />
 										</div>
-										<div className="flex flex-col h-full">
+										<div className="flex flex-col">
 											<TriviaOfDayCard />
 										</div>
 									</div>
