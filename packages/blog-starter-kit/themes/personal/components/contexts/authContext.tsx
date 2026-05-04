@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { User, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 
 type AuthContextType = {
@@ -34,18 +34,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 	const signUp = async (email: string, password: string) => {
 		setLoading(true);
 		try {
+			// Use Firebase client SDK directly for signup
+			const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+			// Initialize Firestore collections for new user
 			const response = await fetch('/api/auth/signup', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ email, password }),
+				body: JSON.stringify({ email, uid: userCredential.user.uid }),
 			});
 
 			if (!response.ok) {
 				const error = await response.json();
 				throw new Error(error.error || 'Signup failed');
 			}
-
-			// The Firebase client SDK will pick up the new user automatically via onAuthStateChanged
 		} finally {
 			setLoading(false);
 		}
@@ -54,18 +55,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 	const login = async (email: string, password: string) => {
 		setLoading(true);
 		try {
-			const response = await fetch('/api/auth/login', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ email, password }),
-			});
-
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || 'Login failed');
-			}
-
-			// The Firebase client SDK will pick up the logged in user automatically via onAuthStateChanged
+			// Use Firebase client SDK directly for login
+			await signInWithEmailAndPassword(auth, email, password);
 		} finally {
 			setLoading(false);
 		}
