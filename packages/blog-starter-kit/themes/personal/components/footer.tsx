@@ -70,8 +70,8 @@ export const Footer = () => {
 					</div>
 
 					{/* ── Navigation ────────────────────────────────────────── */}
-					<div className="hidden md:block">
-						<h4 className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2 md:mb-3">
+					<div>
+					<h4 className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2 md:mb-3">
 							Navigate
 						</h4>
 						<ul className="space-y-1.5 md:space-y-2">

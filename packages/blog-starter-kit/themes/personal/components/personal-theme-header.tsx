@@ -116,7 +116,7 @@ const HeaderSearch = () => {
 			</button>
 
 			{isOpen && (
-				<div className="absolute right-0 top-full mt-2 w-80 md:w-96 z-50">
+				<div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1.25rem)] md:w-96 md:max-w-none z-50">
 					<div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl overflow-hidden">
 						<input
 							ref={inputRef}
@@ -197,28 +197,31 @@ const HeaderSearch = () => {
 	);
 };
 
+const NAV_LINKS = [
+	{ href: '/', label: 'Home' },
+	{ href: '/interview-prep', label: 'Interview Prep' },
+];
+
 export const PersonalHeader = () => {
 	const { publication } = useAppContext();
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const navList = (
 		<ul className="flex list-none flex-row items-center gap-6 text-sm font-semibold tracking-tight text-neutral-600 dark:text-neutral-300">
-			<li>
-				<Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-					Home
-				</Link>
-			</li>
-			<li>
-				<Link href="/interview-prep" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-					Interview Prep
-				</Link>
-			</li>
+			{NAV_LINKS.map(({ href, label }) => (
+				<li key={href}>
+					<Link href={href} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+						{label}
+					</Link>
+				</li>
+			))}
 		</ul>
 	);
 
 	return (
 		<header className="w-full bg-white dark:bg-neutral-950">
-			{/* Top line: Logo + Search + Theme */}
+			{/* Top line: Logo + Actions */}
 			<div className="max-w-7xl mx-auto px-5 py-2.5 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
 				<h1>
 					<Link
@@ -241,20 +244,58 @@ export const PersonalHeader = () => {
 							<span className="text-lg font-bold tracking-tight text-black dark:text-white">
 								{publication.title}
 							</span>
-							<span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 tracking-wide">
+							<span className="hidden sm:block text-xs font-medium text-neutral-500 dark:text-neutral-400 tracking-wide">
 								An AI Powered Learning Platform
 							</span>
 						</div>
 					</Link>
 				</h1>
-				<div className="flex items-center gap-4">
+				<div className="flex items-center gap-3">
 					<HeaderSearch />
 					<ToggleTheme />
 					<UserProfile onLoginClick={() => setIsAuthModalOpen(true)} />
+					{/* Hamburger — mobile only */}
+					<button
+						className="md:hidden flex items-center justify-center p-1 rounded-lg text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+						onClick={() => setIsMobileMenuOpen((o) => !o)}
+						aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+						aria-expanded={isMobileMenuOpen}
+					>
+						{isMobileMenuOpen ? (
+							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						) : (
+							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+							</svg>
+						)}
+					</button>
 				</div>
 			</div>
 
-			{/* Bottom line: Navigation */}
+			{/* Mobile navigation drawer */}
+			{isMobileMenuOpen && (
+				<div className="md:hidden border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
+					<nav className="max-w-7xl mx-auto px-5 py-2">
+						<ul className="flex flex-col divide-y divide-neutral-100 dark:divide-neutral-800 text-sm font-semibold tracking-tight text-neutral-600 dark:text-neutral-300">
+							{NAV_LINKS.map(({ href, label }) => (
+								<li key={href}>
+									<Link
+										href={href}
+										onClick={() => setIsMobileMenuOpen(false)}
+										className="block py-3 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+									>
+										{label}
+									</Link>
+								</li>
+							))}
+						</ul>
+					</nav>
+				</div>
+			)}
+
+			{/* Bottom line: Desktop navigation */}
 			<div className="max-w-7xl mx-auto px-5 py-3 hidden md:block border-b border-neutral-200 dark:border-neutral-800">
 				<nav>{navList}</nav>
 			</div>
