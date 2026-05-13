@@ -36,7 +36,6 @@ import {
 	PostFullFragment,
 	PublicationFragment,
 	SinglePostByPublicationDocument,
-	SinglePostByPublicationQuery,
 	SlugPostsByPublicationDocument,
 	StaticPageFragment,
 } from '../generated/graphql';
@@ -451,13 +450,7 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 	const host = process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST;
 	const slug = params.slug;
 
-	let postData: SinglePostByPublicationQuery | undefined;
-	try {
-		postData = await request(endpoint, SinglePostByPublicationDocument, { host, slug });
-	} catch (e) {
-		console.warn('[getStaticProps] Hashnode API unavailable for slug:', slug, (e as Error).message);
-		return { notFound: true, revalidate: 60 };
-	}
+	const postData = await request(endpoint, SinglePostByPublicationDocument, { host, slug });
 
 	if (postData.publication?.post) {
 		const footerPosts = await getFooterPosts();
@@ -504,22 +497,19 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 		};
 	}
 
-	try {
-		const pageData = await request(endpoint, PageByPublicationDocument, { host, slug });
-		if (pageData.publication?.staticPage) {
-			const footerPosts = await getFooterPosts();
-			return {
-				props: {
-					type: 'page',
-					page: pageData.publication.staticPage,
-					publication: pageData.publication,
-					footerPosts,
-				},
-				revalidate: 1,
-			};
-		}
-	} catch (e) {
-		console.warn('[getStaticProps] Page lookup failed for slug:', slug, (e as Error).message);
+	const pageData = await request(endpoint, PageByPublicationDocument, { host, slug });
+
+	if (pageData.publication?.staticPage) {
+		const footerPosts = await getFooterPosts();
+		return {
+			props: {
+				type: 'page',
+				page: pageData.publication.staticPage,
+				publication: pageData.publication,
+				footerPosts,
+			},
+			revalidate: 1,
+		};
 	}
 
 	return {
@@ -529,24 +519,19 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 };
 
 export async function getStaticPaths() {
-	try {
-		const data = await request(
-			process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT,
-			SlugPostsByPublicationDocument,
-			{
-				first: 10,
-				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
-			},
-		);
+	const data = await request(
+		process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT,
+		SlugPostsByPublicationDocument,
+		{
+			first: 10,
+			host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
+		},
+	);
 
-		const postSlugs = (data.publication?.posts.edges ?? []).map((edge) => edge.node.slug);
+	const postSlugs = (data.publication?.posts.edges ?? []).map((edge) => edge.node.slug);
 
-		return {
-			paths: postSlugs.map((slug) => ({ params: { slug } })),
-			fallback: 'blocking',
-		};
-	} catch (e) {
-		console.warn('[getStaticPaths] Hashnode API unavailable, falling back to empty paths:', (e as Error).message);
-		return { paths: [], fallback: 'blocking' };
-	}
+	return {
+		paths: postSlugs.map((slug) => ({ params: { slug } })),
+		fallback: 'blocking',
+	};
 }

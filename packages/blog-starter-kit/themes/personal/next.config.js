@@ -15,13 +15,6 @@ const getBasePath = () => {
 };
 
 const getRedirectionRules = async () => {
-	if (!GQL_ENDPOINT || !host) {
-		console.warn(
-			'[next.config] Skipping remote redirects because NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT or NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST is missing.'
-		);
-		return [];
-	}
-
 	const query = gql`
 		query GetRedirectionRules {
 			publication(host: "${host}") {
@@ -35,24 +28,10 @@ const getRedirectionRules = async () => {
 		}
   	`;
 
-	let data;
-	try {
-		data = await request(GQL_ENDPOINT, query);
-	} catch (error) {
-		console.warn(
-			`[next.config] Failed to load remote redirects from ${GQL_ENDPOINT}. Continuing build without remote redirects.`
-		);
-		if (process.env.NODE_ENV !== 'production') {
-			console.warn(error instanceof Error ? error.message : error);
-		}
-		return [];
-	}
+	const data = await request(GQL_ENDPOINT, query);
 
 	if (!data.publication) {
-		console.warn(
-			'[next.config] Publication not found while loading redirects. Check NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST. Continuing without remote redirects.'
-		);
-		return [];
+		throw 'Please ensure you have set the env var NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST correctly.';
 	}
 
 	const redirectionRules = data.publication.redirectionRules;

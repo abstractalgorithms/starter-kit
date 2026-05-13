@@ -266,24 +266,19 @@ export default function GeneratedPostPage({ publication }: Props) {
 }
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
-	try {
-		const data = await request<PublicationByHostQuery, PublicationByHostQueryVariables>(
-			GQL_ENDPOINT,
-			PublicationByHostDocument,
-			{ host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST },
-		);
+	const data = await request<PublicationByHostQuery, PublicationByHostQueryVariables>(
+		GQL_ENDPOINT,
+		PublicationByHostDocument,
+		{ host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST },
+	);
 
-		const publication = data.publication;
-		if (!publication) {
-			return { notFound: true };
-		}
-
-		return {
-			props: { publication },
-			revalidate: 3600,
-		};
-	} catch (e) {
-		console.warn('[generated] Hashnode API unavailable:', (e as Error).message);
-		return { notFound: true, revalidate: 60 };
+	const publication = data.publication;
+	if (!publication) {
+		return { notFound: true };
 	}
+
+	return {
+		props: { publication },
+		revalidate: 3600,
+	};
 };

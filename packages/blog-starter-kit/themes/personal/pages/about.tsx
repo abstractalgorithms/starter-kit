@@ -155,7 +155,6 @@ export default function AboutPage({ publication, footerPosts, heroStats }: Props
 }
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
-	try {
 	const data = await request<PublicationByHostQuery, PublicationByHostQueryVariables>(
 		GQL_ENDPOINT,
 		PublicationByHostDocument,
@@ -233,8 +232,4 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		},
 		revalidate: 1,
 	};
-	} catch (e) {
-		console.warn('[about] Hashnode API unavailable:', (e as Error).message);
-		return { notFound: true, revalidate: 60 };
-	}
 };

@@ -126,7 +126,6 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 }
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
-	try {
 	// ── 1. Fetch first page ──────────────────────────────────────────────────
 	const data = await request<PostsByPublicationQuery, PostsByPublicationQueryVariables>(
 		GQL_ENDPOINT,
@@ -213,8 +212,4 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		},
 		revalidate: 1,
 	};
-	} catch (e) {
-		console.warn('[index] Hashnode API unavailable:', (e as Error).message);
-		return { notFound: true, revalidate: 60 };
-	}
 };
