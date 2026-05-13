@@ -4,7 +4,6 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { resizeImage } from '@starter-kit/utils/image';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import request from 'graphql-request';
 import { KeyboardEventHandler, useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -205,22 +204,18 @@ const NAV_LINKS = [
 
 export const PersonalHeader = () => {
 	const { publication } = useAppContext();
-	const router = useRouter();
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 	const navList = (
 		<ul className="flex list-none flex-row items-center gap-6 text-sm font-semibold tracking-tight text-neutral-600 dark:text-neutral-300">
-			{NAV_LINKS.map(({ href, label }) => {
-				const isActive = router.pathname === href;
-				return (
-					<li key={href}>
-						<Link href={href} className={`nav-link ${isActive ? 'active' : ''} hover:text-blue-600 dark:hover:text-blue-400`}>
-							{label}
-						</Link>
-					</li>
-				);
-			})}
+			{NAV_LINKS.map(({ href, label }) => (
+				<li key={href}>
+					<Link href={href} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+						{label}
+					</Link>
+				</li>
+			))}
 		</ul>
 	);
 
