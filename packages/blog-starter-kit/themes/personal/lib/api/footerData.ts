@@ -12,13 +12,18 @@ import {
  * page that doesn't already have all posts available.
  */
 export async function getFooterPosts(): Promise<PostFragment[]> {
-	const data = await request<PostsByPublicationQuery, PostsByPublicationQueryVariables>(
-		process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT,
-		PostsByPublicationDocument,
-		{
-			first: 20,
-			host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
-		},
-	);
-	return (data.publication?.posts.edges ?? []).map((e) => e.node);
+	try {
+		const data = await request<PostsByPublicationQuery, PostsByPublicationQueryVariables>(
+			process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT,
+			PostsByPublicationDocument,
+			{
+				first: 20,
+				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
+			},
+		);
+		return (data.publication?.posts.edges ?? []).map((e) => e.node);
+	} catch (e) {
+		console.warn('[getFooterPosts] Hashnode API unavailable:', (e as Error).message);
+		return [];
+	}
 }

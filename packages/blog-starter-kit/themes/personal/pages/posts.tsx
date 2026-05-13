@@ -643,47 +643,52 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 }
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
-	const data = await request<PostsByPublicationQuery, PostsByPublicationQueryVariables>(
-		GQL_ENDPOINT,
-		PostsByPublicationDocument,
-		{
-			first: 20,
-			host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
-		},
-	);
-
-	const publication = data.publication;
-	if (!publication) {
-		return {
-			notFound: true,
-		};
-	}
-
-	const allPosts = (publication.posts.edges ?? []).map((edge) => edge.node);
-	let cursor = publication.posts.pageInfo.endCursor;
-	let hasNextPage = !!publication.posts.pageInfo.hasNextPage;
-
-	while (hasNextPage && cursor) {
-		const next = await request<MorePostsByPublicationQuery, MorePostsByPublicationQueryVariables>(
+	try {
+		const data = await request<PostsByPublicationQuery, PostsByPublicationQueryVariables>(
 			GQL_ENDPOINT,
-			MorePostsByPublicationDocument,
-			{ first: 20, host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST, after: cursor },
+			PostsByPublicationDocument,
+			{
+				first: 20,
+				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
+			},
 		);
 
-		if (!next.publication) {
-			break;
+		const publication = data.publication;
+		if (!publication) {
+			return {
+				notFound: true,
+			};
 		}
 
-		allPosts.push(...next.publication.posts.edges.map((edge) => edge.node));
-		cursor = next.publication.posts.pageInfo.endCursor;
-		hasNextPage = !!next.publication.posts.pageInfo.hasNextPage;
-	}
+		const allPosts = (publication.posts.edges ?? []).map((edge) => edge.node);
+		let cursor = publication.posts.pageInfo.endCursor;
+		let hasNextPage = !!publication.posts.pageInfo.hasNextPage;
 
-	return {
-		props: {
-			publication,
-			initialPosts: allPosts,
-		},
-		revalidate: 1,
-	};
+		while (hasNextPage && cursor) {
+			const next = await request<MorePostsByPublicationQuery, MorePostsByPublicationQueryVariables>(
+				GQL_ENDPOINT,
+				MorePostsByPublicationDocument,
+				{ first: 20, host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST, after: cursor },
+			);
+
+			if (!next.publication) {
+				break;
+			}
+
+			allPosts.push(...next.publication.posts.edges.map((edge) => edge.node));
+			cursor = next.publication.posts.pageInfo.endCursor;
+			hasNextPage = !!next.publication.posts.pageInfo.hasNextPage;
+		}
+
+		return {
+			props: {
+				publication,
+				initialPosts: allPosts,
+			},
+			revalidate: 1,
+		};
+	} catch (e) {
+		console.warn('[posts] Hashnode API unavailable:', (e as Error).message);
+		return { notFound: true, revalidate: 60 };
+	}
 };
