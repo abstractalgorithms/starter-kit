@@ -74,9 +74,11 @@ module.exports = {
 			},
 			letterSpacing: {
 				tighter: '-.04em',
+				tight: '-0.02em',
 			},
 			lineHeight: {
 				tight: 1.2,
+				relaxed: 1.6,
 			},
 			fontSize: {
 				'5xl': '2.5rem',
@@ -87,6 +89,20 @@ module.exports = {
 			boxShadow: {
 				sm: '0 5px 10px rgba(0, 0, 0, 0.12)',
 				md: '0 8px 30px rgba(0, 0, 0, 0.12)',
+				'glass': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+				'glow-primary': '0 0 20px rgba(99, 102, 241, 0.3)',
+			},
+			animation: {
+				shimmer: 'shimmer 2s infinite',
+			},
+			keyframes: {
+				shimmer: {
+					'0%': { backgroundPosition: '-1000px 0' },
+					'100%': { backgroundPosition: '1000px 0' },
+				},
+			},
+			transitionTimingFunction: {
+				'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
 			},
 		},
 	},

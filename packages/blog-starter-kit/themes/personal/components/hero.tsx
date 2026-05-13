@@ -27,7 +27,7 @@ const TerminalWindow = ({ lines }: { lines: TerminalLine[] }) => {
 	}, [visibleCount, lines]);
 
 	return (
-		<div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-950 overflow-hidden shadow-xl shadow-neutral-950/10 dark:shadow-neutral-950/40">
+		<div className="terminal-window rounded-xl overflow-hidden">
 			{/* Title bar */}
 			<div className="flex items-center gap-1.5 px-4 py-3 border-b border-neutral-800 bg-neutral-900">
 				<span className="w-3 h-3 rounded-full bg-red-500/80" />
@@ -110,13 +110,13 @@ export const Hero = ({ totalPosts, totalSeries, topSeries, topTags }: Partial<He
 	}
 
 	return (
-		<section className="w-full py-10 md:py-14">
+		<section className="section-major w-full">
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-14 items-center">
 
 				{/* ── Left: Text ──────────────────────────────────────────── */}
 				<div className="flex flex-col gap-5">
 					<div>
-						<h1 className="text-4xl md:text-5xl font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50">
+						<h1 className="hero-title text-4xl md:text-5xl font-bold leading-tight tracking-tight text-neutral-900 dark:text-neutral-50">
 							Discover the Art of
 						</h1>
 						<div className="h-14 flex items-center overflow-visible">

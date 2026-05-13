@@ -280,7 +280,7 @@ const ExplorePanel = ({
 			<div className="px-5 py-4 space-y-4">
 				{/* Summary */}
 				{panelState === 'loading' && (
-					<div className="space-y-2 animate-pulse">
+					<div className="space-y-2 skeleton-shimmer">
 						<div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-full" />
 						<div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-4/5" />
 						<div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-3/5" />
@@ -353,7 +353,7 @@ const ExplorePanel = ({
 							AI Answer
 						</p>
 						{subAnswerLoading && (
-							<div className="space-y-1.5 animate-pulse">
+							<div className="space-y-1.5 skeleton-shimmer">
 								<div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-full" />
 								<div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-5/6" />
 								<div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-4/6" />
@@ -446,7 +446,7 @@ export const PopularTopicsStrip = ({ clusters, allPosts }: Props) => {
 						<button
 							key={cluster.slug}
 							onClick={() => toggle(cluster.slug)}
-							className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm font-medium transition-all duration-150 shadow-sm hover:shadow-md ${
+							className={`topic-card inline-flex items-center gap-2 px-3.5 py-2 rounded-full border text-sm font-medium shadow-sm hover:shadow-md ${
 								isActive ? PILL_ACTIVE[cluster.color] : `border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 ${PILL_HOVER[cluster.color]}`
 							}`}
 						>
