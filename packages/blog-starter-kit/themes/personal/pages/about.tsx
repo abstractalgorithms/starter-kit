@@ -24,6 +24,7 @@ import {
 } from '../generated/graphql';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
+const ABOUT_PAGE_REVALIDATE_SECONDS = 60 * 60;
 
 type Props = {
 	publication: PublicationFragment;
@@ -230,6 +231,6 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 			footerPosts,
 			heroStats,
 		},
-		revalidate: 1,
+		revalidate: ABOUT_PAGE_REVALIDATE_SECONDS,
 	};
 };

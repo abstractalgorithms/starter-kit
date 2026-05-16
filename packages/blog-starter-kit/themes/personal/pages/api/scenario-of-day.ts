@@ -1,4 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { setVercelApiCacheHeaders } from '../../lib/api/vercelCache';
+
+const SCENARIO_CACHE_SECONDS = 60 * 60;
 
 export type ScenarioDifficulty = 'Mid' | 'Senior' | 'Staff';
 
@@ -59,7 +62,7 @@ export default async function handler(
 			throw new Error('Upstream returned empty or unsuccessful response');
 		}
 
-		res.setHeader('Cache-Control', 'no-store');
+		setVercelApiCacheHeaders(res, { sMaxAge: SCENARIO_CACHE_SECONDS });
 		return res.status(200).json(body.data);
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
