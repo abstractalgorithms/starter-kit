@@ -83,9 +83,9 @@ export const sortPosts = (posts: PostFragment[], sort: PostListSort) =>
 					new Date(getEffectiveUpdatedAt(a)).getTime()
 				);
 			case 'popular-asc':
-				return a.views - b.views;
+				return (a.views ?? 0) - (b.views ?? 0);
 			case 'popular-desc':
-				return b.views - a.views;
+				return (b.views ?? 0) - (a.views ?? 0);
 			default:
 				return 0;
 		}

@@ -10,6 +10,7 @@ type TocItem = {
 
 type Props = {
 	items: TocItem[];
+	variant?: 'standalone' | 'embedded';
 };
 
 const decodeHtml = (html: string): string =>
@@ -21,7 +22,7 @@ const decodeHtml = (html: string): string =>
 		.replace(/&#39;/g, "'")
 		.replace(/&apos;/g, "'");
 
-export const TableOfContents = ({ items }: Props) => {
+export const TableOfContents = ({ items, variant = 'standalone' }: Props) => {
 	// The markdown renderer prefixes heading IDs with "heading-"
 	const toHeadingId = (slug: string) => `heading-${slug}`;
 
@@ -54,8 +55,8 @@ export const TableOfContents = ({ items }: Props) => {
 
 	if (items.length === 0) return null;
 
-	return (
-		<aside className="hidden xl:block sticky top-20 self-start w-56 flex-shrink-0">
+	const tocContent = (
+		<>
 			<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
 				On this page
 			</p>
@@ -89,6 +90,16 @@ export const TableOfContents = ({ items }: Props) => {
 					})}
 				</ol>
 			</nav>
+		</>
+	);
+
+	if (variant === 'embedded') {
+		return tocContent;
+	}
+
+	return (
+		<aside className="hidden xl:block sticky top-20 self-start w-56 flex-shrink-0">
+			{tocContent}
 		</aside>
 	);
 };

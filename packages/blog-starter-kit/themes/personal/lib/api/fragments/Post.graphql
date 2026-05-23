@@ -26,7 +26,4 @@ fragment Post on Post {
 		name
 		slug
 	}
-	comments(first: 0) {
-		totalDocuments
-	}
 }

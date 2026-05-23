@@ -10,7 +10,6 @@ query DraftById($id: ObjectId!) {
       name
       username
     }
-    dateUpdated
     tags {
       id
       name

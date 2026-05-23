@@ -18,7 +18,7 @@ export function Integrations() {
 	const gTagManagerID = integrations.gTagManagerID;
 	const koalaPublicKey = integrations.koalaPublicKey;
 	const msClarityID = integrations.msClarityID;
-	const domainURL = publication ? new URL(publication.url).hostname : '';
+	const domainURL = publication?.url ? new URL(publication.url).hostname : '';
 
 	let fbPixel = `
     !function(f,b,e,v,n,t,s)

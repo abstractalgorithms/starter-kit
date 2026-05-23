@@ -15,6 +15,13 @@ const getBasePath = () => {
 };
 
 const getRedirectionRules = async () => {
+	if (!GQL_ENDPOINT || !host) {
+		console.warn(
+			'[starter-kit] Skipping Hashnode redirection rules: NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT or NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST is missing.'
+		);
+		return [];
+	}
+
 	const query = gql`
 		query GetRedirectionRules {
 			publication(host: "${host}") {
@@ -28,10 +35,22 @@ const getRedirectionRules = async () => {
 		}
   	`;
 
-	const data = await request(GQL_ENDPOINT, query);
+	let data;
+	try {
+		data = await request(GQL_ENDPOINT, query);
+	} catch (error) {
+		console.warn('[starter-kit] Failed to fetch Hashnode redirection rules. Continuing without redirects.');
+		if (error && error.message) {
+			console.warn(`[starter-kit] ${error.message}`);
+		}
+		return [];
+	}
 
 	if (!data.publication) {
-		throw 'Please ensure you have set the env var NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST correctly.';
+		console.warn(
+			'[starter-kit] Publication not found for NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST. Continuing without redirects.'
+		);
+		return [];
 	}
 
 	const redirectionRules = data.publication.redirectionRules;
@@ -42,12 +61,24 @@ const getRedirectionRules = async () => {
 			// Hashnode gives an option to set a wildcard redirect,
 			// but it doesn't work properly with Next.js
 			// the solution is to filter out all the rules with wildcard and use static redirects for now
-			return rule.source.indexOf('*') === -1;
+			if (!rule?.source || !rule?.destination) {
+				return false;
+			}
+
+			const source = rule.source.trim();
+			const destination = rule.destination.trim();
+			const isValidSource = source.startsWith('/');
+			const isValidDestination =
+				destination.startsWith('/') ||
+				destination.startsWith('http://') ||
+				destination.startsWith('https://');
+
+			return source.indexOf('*') === -1 && isValidSource && isValidDestination;
 		})
 		.map((rule) => {
 			return {
-				source: rule.source,
-				destination: rule.destination,
+				source: rule.source.trim(),
+				destination: rule.destination.trim(),
 				permanent: rule.type === 'PERMANENT',
 			};
 		});

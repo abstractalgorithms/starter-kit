@@ -37,9 +37,21 @@ import {
 } from '../lib/post-listing';
 import { formatTagName } from '../utils/format';
 import { LearningPaths } from '../components/learning-paths';
+import { loadLearningPath, StoredLearningPath } from '../components/learn-today';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const PAGE_SIZE = 12;
+const RECENTLY_VIEWED_KEY = 'aa:recently-viewed-posts';
+
+type DifficultyFilter = 'all' | 'beginner' | 'intermediate' | 'advanced';
+type ImplementationFilter = 'all' | 'conceptual' | 'balanced' | 'hands-on';
+type DepthFilter = 'all' | 'quick' | 'standard' | 'deep';
+
+type RecentlyViewedItem = {
+	slug: string;
+	title: string;
+	seenAt: number;
+};
 
 type Props = {
 	publication: PublicationFragment;
@@ -152,15 +164,75 @@ const getVisibleOptions = <T extends { slug: string }>(
 	return selected ? [selected, ...topOptions.slice(0, Math.max(limit - 1, 0))] : topOptions;
 };
 
+const inferDifficulty = (post: PostFragment): Exclude<DifficultyFilter, 'all'> => {
+	const minutes = post.readTimeInMinutes ?? 0;
+	if (minutes <= 6) return 'beginner';
+	if (minutes <= 13) return 'intermediate';
+	return 'advanced';
+};
+
+const inferImplementationLevel = (
+	post: PostFragment,
+): Exclude<ImplementationFilter, 'all'> => {
+	const haystack = `${post.title} ${post.brief}`.toLowerCase();
+	if (/implementation|build|deploy|code|hands-on|step-by-step|tutorial/.test(haystack)) {
+		return 'hands-on';
+	}
+	if (/tradeoff|theory|fundamental|principle|concept|overview/.test(haystack)) {
+		return 'conceptual';
+	}
+	return 'balanced';
+};
+
+const inferDepth = (post: PostFragment): Exclude<DepthFilter, 'all'> => {
+	const minutes = post.readTimeInMinutes ?? 0;
+	if (minutes <= 6) return 'quick';
+	if (minutes <= 14) return 'standard';
+	return 'deep';
+};
+
+const readRecentlyViewed = (): RecentlyViewedItem[] => {
+	if (typeof window === 'undefined') return [];
+	try {
+		const raw = localStorage.getItem(RECENTLY_VIEWED_KEY);
+		if (!raw) return [];
+		return JSON.parse(raw) as RecentlyViewedItem[];
+	} catch {
+		return [];
+	}
+};
+
 export default function AllPostsPage({ publication, initialPosts }: Props) {
 	const router = useRouter();
 	const [searchTerm, setSearchTerm] = useState('');
 	const [searchFocused, setSearchFocused] = useState(false);
+	const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('all');
+	const [implementationFilter, setImplementationFilter] = useState<ImplementationFilter>('all');
+	const [depthFilter, setDepthFilter] = useState<DepthFilter>('all');
+	const [mobileNavOpen, setMobileNavOpen] = useState(false);
+	const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedItem[]>([]);
+	const [savedPath, setSavedPath] = useState<StoredLearningPath | null>(null);
 
 	const view = parsePostListView(router.query.view);
 	const sort = parsePostListSort(router.query.sort, view);
 	const tagSlug = getQueryValue(router.query.tag);
 	const seriesSlug = getQueryValue(router.query.series);
+
+	const rolePaths = [
+		{ id: 'system-design', label: 'System Design Engineer', query: 'system design' },
+		{ id: 'backend', label: 'Backend Engineer', query: 'backend api database' },
+		{ id: 'ai-llm', label: 'AI/LLM Engineer', query: 'llm rag ai model' },
+		{ id: 'distributed', label: 'Distributed Systems', query: 'distributed systems consensus replication' },
+		{ id: 'interview', label: 'Interview Prep', query: 'interview prep' },
+	] as const;
+
+	const architecturePatterns = [
+		{ id: 'event-driven', label: 'Event-driven', query: 'event queue kafka streaming' },
+		{ id: 'cqrs', label: 'CQRS', query: 'cqrs command query' },
+		{ id: 'microservices', label: 'Microservices', query: 'microservices service mesh' },
+		{ id: 'monolith', label: 'Modular Monolith', query: 'monolith modular' },
+		{ id: 'serverless', label: 'Serverless', query: 'serverless lambda edge' },
+	];
 
 	const updateQuery = (updates: QueryUpdates) => {
 		const nextState = {
@@ -187,7 +259,27 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 
 	const clearFilters = () => {
 		setSearchTerm('');
+		setDifficultyFilter('all');
+		setImplementationFilter('all');
+		setDepthFilter('all');
 		router.replace('/posts', undefined, { shallow: true, scroll: false });
+	};
+
+	useEffect(() => {
+		setRecentlyViewed(readRecentlyViewed());
+		setSavedPath(loadLearningPath());
+	}, []);
+
+	const rememberPostView = (post: PostFragment) => {
+		if (typeof window === 'undefined') return;
+		try {
+			const next = [
+				{ slug: post.slug, title: post.title, seenAt: Date.now() },
+				...readRecentlyViewed().filter((entry) => entry.slug !== post.slug),
+			].slice(0, 8);
+			localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(next));
+			setRecentlyViewed(next);
+		} catch {}
 	};
 
 	const tagOptions = useMemo(() => buildTagOptions(initialPosts), [initialPosts]);
@@ -213,7 +305,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 
 	const filteredPosts = useMemo(() => {
 		const basePosts = getPostsForView(initialPosts, view);
-		const matchingPosts = filterPosts(basePosts, {
+		const queryFilteredPosts = filterPosts(basePosts, {
 			searchTerm,
 			tagSlug: tagSlug || null,
 			seriesSlug: seriesSlug || null,
@@ -223,10 +315,34 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 			updatedTo: '',
 		});
 
-		return sortPosts(matchingPosts, sort);
-	}, [initialPosts, searchTerm, seriesSlug, sort, tagSlug, view]);
+		const navFilteredPosts = queryFilteredPosts.filter((post) => {
+			if (difficultyFilter !== 'all' && inferDifficulty(post) !== difficultyFilter) return false;
+			if (implementationFilter !== 'all' && inferImplementationLevel(post) !== implementationFilter) return false;
+			if (depthFilter !== 'all' && inferDepth(post) !== depthFilter) return false;
+			return true;
+		});
 
-	const activeFilterCount = [searchTerm, tagSlug, seriesSlug].filter(Boolean).length;
+		return sortPosts(navFilteredPosts, sort);
+	}, [
+		depthFilter,
+		difficultyFilter,
+		implementationFilter,
+		initialPosts,
+		searchTerm,
+		seriesSlug,
+		sort,
+		tagSlug,
+		view,
+	]);
+
+	const activeFilterCount = [
+		searchTerm,
+		tagSlug,
+		seriesSlug,
+		difficultyFilter !== 'all' ? difficultyFilter : '',
+		implementationFilter !== 'all' ? implementationFilter : '',
+		depthFilter !== 'all' ? depthFilter : '',
+	].filter(Boolean).length;
 	const activeView = POST_VIEW_META[view];
 	const activeSortField = getSortField(sort);
 
@@ -264,6 +380,270 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 			.slice(0, 5);
 	}, [initialPosts, searchTerm]);
 
+	const recentlyViewedPosts = useMemo(
+		() =>
+			recentlyViewed
+				.map((entry) => initialPosts.find((post) => post.slug === entry.slug))
+				.filter((post): post is PostFragment => Boolean(post))
+				.slice(0, 4),
+		[initialPosts, recentlyViewed],
+	);
+
+	const aiRecommendedPosts = useMemo(() => {
+		const recentlyViewedSlugs = new Set(recentlyViewed.map((entry) => entry.slug));
+		const recentlyViewedTags = new Set(
+			recentlyViewedPosts.flatMap((post) => (post.tags ?? []).map((tag) => tag.slug)),
+		);
+		const tagFocus = tagSlug || '';
+		const seriesFocus = seriesSlug || '';
+		const query = searchTerm.toLowerCase().trim();
+
+		return [...initialPosts]
+			.map((post) => {
+				let score = 0;
+				if (!recentlyViewedSlugs.has(post.slug)) score += 1;
+				if (tagFocus && post.tags?.some((tag) => tag.slug === tagFocus)) score += 4;
+				if (seriesFocus && post.series?.slug === seriesFocus) score += 4;
+				if (difficultyFilter !== 'all' && inferDifficulty(post) === difficultyFilter) score += 2;
+				if (implementationFilter !== 'all' && inferImplementationLevel(post) === implementationFilter) score += 2;
+				if (depthFilter !== 'all' && inferDepth(post) === depthFilter) score += 2;
+				if (query && `${post.title} ${post.brief}`.toLowerCase().includes(query)) score += 2;
+				if (post.tags?.some((tag) => recentlyViewedTags.has(tag.slug))) score += 3;
+				score += (post.views ?? 0) / 10000;
+				return { post, score };
+			})
+			.sort((a, b) => b.score - a.score)
+			.slice(0, 5)
+			.map((entry) => entry.post);
+	}, [
+		depthFilter,
+		difficultyFilter,
+		implementationFilter,
+		initialPosts,
+		recentlyViewed,
+		recentlyViewedPosts,
+		searchTerm,
+		seriesSlug,
+		tagSlug,
+	]);
+
+	const topicGraphNodes = useMemo(
+		() =>
+			tagOptions.slice(0, 10).map((tag, index) => ({
+				...tag,
+				level: index < 3 ? 'Core' : index < 7 ? 'Applied' : 'Advanced',
+				dependency:
+					index < 3
+						? null
+						: tagOptions[index - 1]?.name ?? tagOptions[0]?.name ?? null,
+			})),
+		[tagOptions],
+	);
+
+	const navSidebar = (
+		<div className="flex flex-col gap-4">
+			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+					Role-based paths
+				</p>
+				<div className="mt-3 flex flex-col gap-2">
+					{rolePaths.map((path) => (
+						<button
+							key={path.id}
+							onClick={() => setSearchTerm(path.query)}
+							className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-2 text-left text-sm text-neutral-700 transition-colors hover:border-blue-400 hover:text-blue-600 dark:text-neutral-200 dark:hover:text-blue-400"
+						>
+							{path.label}
+						</button>
+					))}
+				</div>
+			</div>
+
+			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+					Intelligent filters
+				</p>
+				<div className="mt-3 space-y-3">
+					<div>
+						<p className="mb-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Difficulty</p>
+						<div className="flex flex-wrap gap-2">
+							{(['all', 'beginner', 'intermediate', 'advanced'] as DifficultyFilter[]).map((level) => (
+								<button
+									key={level}
+									onClick={() => setDifficultyFilter(level)}
+									className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+										difficultyFilter === level
+											? 'bg-blue-600 text-white'
+											: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200'
+									}`}
+								>
+									{level}
+								</button>
+							))}
+						</div>
+					</div>
+					<div>
+						<p className="mb-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Implementation</p>
+						<div className="flex flex-wrap gap-2">
+							{(['all', 'conceptual', 'balanced', 'hands-on'] as ImplementationFilter[]).map((level) => (
+								<button
+									key={level}
+									onClick={() => setImplementationFilter(level)}
+									className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+										implementationFilter === level
+											? 'bg-purple-600 text-white'
+											: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200'
+									}`}
+								>
+									{level}
+								</button>
+							))}
+						</div>
+					</div>
+					<div>
+						<p className="mb-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400">Estimated depth</p>
+						<div className="flex flex-wrap gap-2">
+							{(['all', 'quick', 'standard', 'deep'] as DepthFilter[]).map((level) => (
+								<button
+									key={level}
+									onClick={() => setDepthFilter(level)}
+									className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+										depthFilter === level
+											? 'bg-emerald-600 text-white'
+											: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200'
+									}`}
+								>
+									{level}
+								</button>
+							))}
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+					Architecture patterns
+				</p>
+				<div className="mt-3 flex flex-wrap gap-2">
+					{architecturePatterns.map((pattern) => (
+						<button
+							key={pattern.id}
+							onClick={() => setSearchTerm(pattern.query)}
+							className="rounded-full border border-neutral-200 dark:border-neutral-700 px-2.5 py-1 text-xs text-neutral-600 transition-colors hover:border-blue-400 hover:text-blue-600 dark:text-neutral-300 dark:hover:text-blue-400"
+						>
+							{pattern.label}
+						</button>
+					))}
+				</div>
+			</div>
+
+			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+					Topic dependency graph
+				</p>
+				<div className="mt-3 space-y-2">
+					{topicGraphNodes.slice(0, 6).map((node) => (
+						<button
+							key={node.slug}
+							onClick={() => updateQuery({ tag: node.slug })}
+							className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 p-2 text-left hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+						>
+							<p className="text-xs font-semibold text-neutral-800 dark:text-neutral-100">
+								{node.name}
+								<span className="ml-1 rounded-full bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 text-[10px]">
+									{node.level}
+								</span>
+							</p>
+							<p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+								{node.dependency ? `Depends on: ${node.dependency}` : 'Foundational topic'}
+							</p>
+						</button>
+					))}
+				</div>
+			</div>
+		</div>
+	);
+
+	const recommendationSidebar = (
+		<div className="flex flex-col gap-4">
+			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+					Continue learning
+				</p>
+				{savedPath ? (
+					<div className="mt-2">
+						<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">{savedPath.headline}</p>
+						<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+							{savedPath.readSlugs.length}/{savedPath.totalPosts} lessons completed
+						</p>
+						<Link
+							href={
+								savedPath.readSlugs.length
+									? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}`
+									: '/guided-topics'
+							}
+							className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+						>
+							Resume path
+						</Link>
+					</div>
+				) : (
+					<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+						Start a guided path to unlock adaptive recommendations.
+					</p>
+				)}
+			</div>
+
+			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+					AI recommendation panel
+				</p>
+				<div className="mt-3 space-y-2">
+					{aiRecommendedPosts.map((post) => (
+						<Link
+							key={post.id}
+							href={`/${post.slug}`}
+							onClick={() => rememberPostView(post)}
+							className="block rounded-lg border border-neutral-200 dark:border-neutral-700 p-2 hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+						>
+							<p className="line-clamp-2 text-xs font-semibold text-neutral-800 dark:text-neutral-100">
+								{post.title}
+							</p>
+							<p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+								{post.readTimeInMinutes} min • {formatViews(post.views ?? 0)} views
+							</p>
+						</Link>
+					))}
+				</div>
+			</div>
+
+			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+					Recently viewed
+				</p>
+				<div className="mt-3 space-y-2">
+					{recentlyViewedPosts.length > 0 ? (
+						recentlyViewedPosts.map((post) => (
+							<Link
+								key={post.id}
+								href={`/${post.slug}`}
+								onClick={() => rememberPostView(post)}
+								className="block rounded-lg bg-neutral-50 dark:bg-neutral-800/60 p-2 text-xs text-neutral-700 dark:text-neutral-200 hover:text-blue-600 dark:hover:text-blue-400"
+							>
+								<p className="line-clamp-2 font-semibold">{post.title}</p>
+							</Link>
+						))
+					) : (
+						<p className="text-xs text-neutral-500 dark:text-neutral-400">
+							Your viewed articles will appear here.
+						</p>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+
 	return (
 		<AppProvider publication={publication} footerPosts={initialPosts}>
 			<Layout>
@@ -272,11 +652,11 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 					<meta name="description" content={`Browse all posts from ${publication.title}`} />
 					<meta property="og:title" content={`All Posts - ${publication.title}`} />
 					<meta property="og:description" content={`Browse all posts from ${publication.title}`} />
-					<meta property="og:image" content={publication.ogMetaData.image || getAutogeneratedPublicationOG(publication)} />
+					<meta property="og:image" content={publication.ogMetaData?.image || getAutogeneratedPublicationOG(publication)} />
 					<meta property="twitter:card" content="summary_large_image" />
 					<meta property="twitter:title" content={`All Posts - ${publication.title}`} />
 					<meta property="twitter:description" content={`Browse all posts from ${publication.title}`} />
-					<meta property="twitter:image" content={publication.ogMetaData.image || getAutogeneratedPublicationOG(publication)} />
+					<meta property="twitter:image" content={publication.ogMetaData?.image || getAutogeneratedPublicationOG(publication)} />
 					<script
 						type="application/ld+json"
 						dangerouslySetInnerHTML={{ __html: JSON.stringify(addPublicationJsonLd(publication)) }}
@@ -319,7 +699,27 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 						<div className="flex-1 border-t border-neutral-200 dark:border-neutral-800" />
 					</div>
 
-						<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 flex flex-col gap-5">
+						<div className="xl:hidden">
+							<button
+								onClick={() => setMobileNavOpen((prev) => !prev)}
+								className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-4 py-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200"
+							>
+								{mobileNavOpen ? 'Close intelligent navigation' : 'Open intelligent navigation'}
+							</button>
+							{mobileNavOpen && (
+								<div className="mt-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/40 p-3">
+									{navSidebar}
+								</div>
+							)}
+						</div>
+
+						<div className="grid grid-cols-1 gap-6 xl:grid-cols-[280px_minmax(0,1fr)_280px]">
+							<aside className="hidden xl:block">
+								<div className="sticky top-24">{navSidebar}</div>
+							</aside>
+
+							<div className="min-w-0 flex flex-col gap-5">
+								<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 flex flex-col gap-5">
 							<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 								<div className="flex flex-wrap items-center gap-2">
 									<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 mr-1">
@@ -360,6 +760,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 												<Link
 													key={post.id}
 													href={`/${post.slug}`}
+													onClick={() => rememberPostView(post)}
 													className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors border-b border-neutral-100 dark:border-neutral-800 last:border-0"
 												>
 													{post.coverImage?.url ? (
@@ -521,7 +922,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 										className="group flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700"
 									>
 										{post.coverImage?.url ? (
-											<Link href={`/${post.slug}`} className="block overflow-hidden">
+											<Link href={`/${post.slug}`} onClick={() => rememberPostView(post)} className="block overflow-hidden">
 												<img
 													src={post.coverImage.url}
 													alt={post.title}
@@ -549,7 +950,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 													</button>
 												))}
 											</div>
-											<Link href={`/${post.slug}`} className="group">
+											<Link href={`/${post.slug}`} onClick={() => rememberPostView(post)} className="group">
 												<h2 className="text-xl font-bold text-neutral-900 transition-colors group-hover:text-blue-600 dark:text-neutral-50 dark:group-hover:text-blue-400">
 													{post.title}
 												</h2>
@@ -567,25 +968,23 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 													<svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 													{post.readTimeInMinutes} min read
 												</span>
-												{post.views > 0 && (
+												{(post.views ?? 0) > 0 && (
 													<>
 														<span className="opacity-40">·</span>
 														<span className="inline-flex items-center gap-1">
 															<svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-															{formatViews(post.views)} views
+															{formatViews(post.views ?? 0)} views
 														</span>
 													</>
 												)}
 											</div>
 											<div className="mt-5 flex items-center justify-between border-t border-neutral-200 pt-4 text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
 												<span>
-												{post.comments.totalDocuments > 0
-													? `${post.comments.totalDocuments} comment${post.comments.totalDocuments !== 1 ? 's' : ''}`
-													: <em className="text-neutral-400 dark:text-neutral-500">Start the conversation</em>
-												}
-											</span>
+													<em className="text-neutral-400 dark:text-neutral-500">Join the discussion</em>
+												</span>
 												<Link
 													href={`/${post.slug}`}
+													onClick={() => rememberPostView(post)}
 													className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
 												>
 													Read post
@@ -634,6 +1033,12 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 								)}
 							</div>
 						)}
+							</div>
+
+							<aside className="hidden xl:block">
+								<div className="sticky top-24">{recommendationSidebar}</div>
+							</aside>
+						</div>
 					</div>
 					<Footer />
 				</Container>

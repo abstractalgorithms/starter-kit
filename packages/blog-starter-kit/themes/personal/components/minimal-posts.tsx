@@ -20,8 +20,8 @@ export const MinimalPosts = ({ posts }: Props) => {
 						name: post.author.name,
 					}}
 					slug={post.slug}
-					commentCount={post.comments?.totalDocuments}
-					coverImage={post.coverImage?.url}
+					commentCount={0}
+					coverImage={post.coverImage?.url ?? undefined}
 					readTimeInMinutes={post.readTimeInMinutes}
 				/>
 			))}

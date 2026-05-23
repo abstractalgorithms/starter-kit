@@ -256,6 +256,32 @@ html {
     color: #60a5fa !important;
 }
 
+/* ── Inline glossary terms ─────────────────────────────────────────────────── */
+.inline-glossary-term {
+    border-bottom: 1px dashed #60a5fa;
+    color: #2563eb;
+    cursor: help;
+    font-weight: 600;
+}
+
+.dark .inline-glossary-term {
+    color: #93c5fd;
+    border-bottom-color: #93c5fd;
+}
+
+/* ── Interactive diagram containers ────────────────────────────────────────── */
+.mermaid-container {
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 0.75rem;
+    padding: 0.5rem;
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(241, 245, 249, 0.85));
+}
+
+.dark .mermaid-container {
+    border-color: rgba(71, 85, 105, 0.7);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.85));
+}
+
 /* ── Heading anchor toast ─────────────────────────────────────────────────── */
 .heading-anchor-toast {
     position: fixed;

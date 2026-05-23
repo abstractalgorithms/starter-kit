@@ -39,7 +39,6 @@ fragment Publication on Publication {
 		hashnode
 	}
 	integrations {
-		umamiWebsiteUUID
 		gaTrackingID
 		fbPixelID
 		hotjarSiteID

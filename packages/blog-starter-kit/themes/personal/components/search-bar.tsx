@@ -99,7 +99,7 @@ export const SearchBar = ({ onQueryChange }: { onQueryChange?: (q: string) => vo
 				}`}
 				onClick={() => resetInput()}
 			>
-				{post.coverImage && (
+				{post.coverImage?.url && (
 					<Image
 						src={resizeImage(post.coverImage.url, {
 							w: 80,

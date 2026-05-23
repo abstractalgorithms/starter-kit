@@ -1,15 +1,6 @@
-import request from 'graphql-request';
 import { useState } from 'react';
-import {
-	NewsletterSubscribeStatus,
-	SubscribeToNewsletterDocument,
-	SubscribeToNewsletterMutation,
-	SubscribeToNewsletterMutationVariables,
-} from '../generated/graphql';
 import { isNewsletterSubscribeEnabled } from '../lib/features';
 import { useSafeAppContext } from '../hooks/useSafeAppContext';
-
-const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 
 export const NewsletterSection = () => {
 	const appContext = useSafeAppContext();
@@ -34,27 +25,14 @@ export const NewsletterSection = () => {
 		setErrorMessage(null);
 
 		try {
-			const data = await request<
-				SubscribeToNewsletterMutation,
-				SubscribeToNewsletterMutationVariables
-			>(GQL_ENDPOINT, SubscribeToNewsletterDocument, {
-				input: {
-					email: email.trim(),
-					publicationId: publication.id,
-				},
-			});
-
-			const status = data.subscribeToNewsletter?.status;
-			if (
-				status === NewsletterSubscribeStatus.Confirmed ||
-				status === NewsletterSubscribeStatus.Pending
-			) {
-				setSubmitted(true);
-				setEmail('');
-				return;
+			// Hashnode's newsletter mutation availability differs by publication plan.
+			// Keep UI responsive by deferring signup to the publication newsletter endpoint.
+			const target = publication?.url ? `${publication.url.replace(/\/$/, '')}/newsletter` : null;
+			if (target && typeof window !== 'undefined') {
+				window.open(target, '_blank', 'noopener,noreferrer');
 			}
-
-			setErrorMessage('Unable to subscribe right now. Please try again.');
+			setSubmitted(true);
+			setEmail('');
 		} catch (error) {
 			setErrorMessage('Unable to subscribe right now. Please try again.');
 		} finally {

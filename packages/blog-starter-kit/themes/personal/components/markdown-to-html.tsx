@@ -70,6 +70,14 @@ const COPY_ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" s
 const CHECK_ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 const LINK_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
 
+const INLINE_GLOSSARY: Array<{ term: string; definition: string }> = [
+	{ term: 'CAP', definition: 'Consistency, Availability, and Partition tolerance tradeoff model.' },
+	{ term: 'RAG', definition: 'Retrieval-Augmented Generation using external context for responses.' },
+	{ term: 'latency', definition: 'Delay between request start and response completion.' },
+	{ term: 'quorum', definition: 'Minimum number of nodes required to accept an operation.' },
+	{ term: 'replication', definition: 'Maintaining synchronized copies of data across nodes.' },
+];
+
 // ── Toast (lazy singleton) ────────────────────────────────────────────────
 let _toast: HTMLDivElement | null = null;
 let _toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -209,6 +217,7 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 				const mermaidElements = containerRef.current?.querySelectorAll('.mermaid');
 				if (mermaidElements && mermaidElements.length > 0) {
 					mermaidElements.forEach((element, index) => {
+						element.classList.add('mermaid-container');
 						const id = `mermaid-${Date.now()}-${index}`;
 						// Decode HTML entities that the markdown pipeline may have encoded
 						// (e.g. &quot; → ", &lt; → <) before passing to Mermaid
@@ -239,6 +248,33 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 		if (containerRef.current?.querySelector('.mermaid')) {
 			initMermaid();
 		}
+	}, [content]);
+
+	// Lightweight inline glossary decoration for key technical terms
+	useEffect(() => {
+		if (!containerRef.current) return;
+		const seenTerms = new Set<string>();
+		const nodes = containerRef.current.querySelectorAll('p, li');
+		nodes.forEach((node) => {
+			if (node.querySelector('code, pre, a, .inline-glossary-term')) return;
+			let html = node.innerHTML;
+			let changed = false;
+			INLINE_GLOSSARY.forEach(({ term, definition }) => {
+				if (seenTerms.has(term.toLowerCase())) return;
+				const regex = new RegExp(`\\b(${term})\\b`, 'i');
+				if (regex.test(html)) {
+					html = html.replace(
+						regex,
+						`<span class="inline-glossary-term" title="${definition}">$1</span>`,
+					);
+					seenTerms.add(term.toLowerCase());
+					changed = true;
+				}
+			});
+			if (changed) {
+				node.innerHTML = html;
+			}
+		});
 	}, [content]);
 
 	// Initialize diagram enhancements (zoom, pan, copy)

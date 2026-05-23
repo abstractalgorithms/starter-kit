@@ -15,10 +15,11 @@ import handleMathJax from '@starter-kit/utils/handle-math-jax';
 import { useEmbeds } from '@starter-kit/utils/renderer/hooks/useEmbeds';
 import { loadIframeResizer } from '@starter-kit/utils/renderer/services/embed';
 import request from 'graphql-request';
+import { motion, useReducedMotion } from 'framer-motion';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { CoverImage } from '../components/cover-image';
@@ -39,7 +40,6 @@ import {
 	SlugPostsByPublicationDocument,
 	StaticPageFragment,
 } from '../generated/graphql';
-import { MinimalPosts } from '../components/minimal-posts';
 // @ts-ignore
 import { triggerCustomWidgetEmbed } from '@starter-kit/utils/trigger-custom-widget-embed';
 import { getFooterPosts } from '../lib/api/footerData';
@@ -50,6 +50,7 @@ import { PostQuiz } from '../components/post-quiz';
 import { ScrollButtons } from '../components/scroll-buttons';
 import { LearningPathNav } from '../components/learning-path-nav';
 import { loadLearningPath } from '../components/learn-today';
+import { CalloutBlock } from '../components/callout-block';
 // CalloutBlock and QuizCard are available for use inside article content:
 // import { CalloutBlock } from '../components/callout-block';
 // import { QuizCard } from '../components/quiz-card';
@@ -57,6 +58,7 @@ import { loadLearningPath } from '../components/learn-today';
 // ─── Reading Progress Bar ─────────────────────────────────────────────────────
 const ReadingProgressBar = () => {
 	const [progress, setProgress] = useState(0);
+	const reduceMotion = useReducedMotion();
 
 	useEffect(() => {
 		const onScroll = () => {
@@ -74,10 +76,233 @@ const ReadingProgressBar = () => {
 			aria-hidden="true"
 			className="fixed top-0 left-0 z-50 w-full h-0.5 bg-transparent pointer-events-none"
 		>
-			<div
+			<motion.div
 				className="h-full bg-blue-500 dark:bg-blue-400"
-				style={{ width: `${progress}%`, transition: 'width 80ms linear' }}
+				animate={{ width: `${progress}%` }}
+				transition={reduceMotion ? { duration: 0 } : { duration: 0.12, ease: 'linear' }}
 			/>
+		</div>
+	);
+};
+
+type TocItem = {
+	id: string;
+	slug: string;
+	title: string;
+	level: number;
+	parentId?: string | null;
+};
+
+const stripMarkdown = (markdown: string) =>
+	markdown
+		.replace(/```[\s\S]*?```/g, ' ')
+		.replace(/`[^`]*`/g, ' ')
+		.replace(/!\[[^\]]*\]\([^)]+\)/g, ' ')
+		.replace(/\[[^\]]+\]\([^)]+\)/g, ' ')
+		.replace(/[#>*_\-\n]/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+
+const normalizeCoverImageUrl = (raw?: string | null) => {
+	if (!raw) return null;
+	const withProtocol = raw.startsWith('//') ? `https:${raw}` : raw;
+	return resizeImage(withProtocol, { w: 960, h: 540, c: 'thumb' });
+};
+
+const getAiSummaryBullets = (markdown: string, fallback: string) => {
+	const plain = stripMarkdown(markdown);
+	const sentences = plain
+		.split(/(?<=[.!?])\s+/)
+		.map((line) => line.trim())
+		.filter((line) => line.length > 35)
+		.slice(0, 4);
+	return sentences.length > 0 ? sentences : [`This article explains ${fallback.toLowerCase()} in depth.`];
+};
+
+const GLOSSARY_TERMS: Record<string, string> = {
+	cap: 'Consistency, Availability, and Partition tolerance tradeoff model.',
+	quorum: 'Minimum number of distributed votes required for validity.',
+	replication: 'Copying data across nodes to improve resilience and availability.',
+	latency: 'Time delay between request and response completion.',
+	rag: 'Retrieval-Augmented Generation: grounding LLM output in retrieved context.',
+	embedding: 'Vector representation used for semantic similarity and retrieval.',
+	transformer: 'Neural network architecture used by modern LLMs.',
+	sharding: 'Splitting data across partitions to scale throughput and storage.',
+	backpressure: 'Flow-control mechanism to prevent downstream overload.',
+	idempotency: 'Safe repeated operation producing the same result.',
+};
+
+const detectGlossaryTerms = (markdown: string) => {
+	const haystack = markdown.toLowerCase();
+	return Object.entries(GLOSSARY_TERMS)
+		.filter(([term]) => haystack.includes(term))
+		.slice(0, 8);
+};
+
+const ReadingContextSidebar = ({
+	tocItems,
+	readTimeInMinutes,
+	glossaryTerms,
+	conceptDependencies,
+}: {
+	tocItems: TocItem[];
+	readTimeInMinutes: number;
+	glossaryTerms: Array<[string, string]>;
+	conceptDependencies: Array<{ concept: string; dependsOn: string | null }>;
+}) => {
+	const [progress, setProgress] = useState(0);
+	const reduceMotion = useReducedMotion();
+
+	useEffect(() => {
+		const onScroll = () => {
+			const doc = document.documentElement;
+			const total = doc.scrollHeight - doc.clientHeight;
+			const next = total > 0 ? Math.min(100, (doc.scrollTop / total) * 100) : 0;
+			setProgress(next);
+		};
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
+	}, []);
+
+	const checkpoints = [25, 50, 75, 100].map((mark) => ({
+		mark,
+		minutes: Math.max(1, Math.round((readTimeInMinutes * mark) / 100)),
+	}));
+
+	return (
+		<aside className="hidden xl:block w-72 shrink-0">
+			<div className="sticky top-20 space-y-4">
+				<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3">
+					<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
+						Reading progress
+					</p>
+					<div className="h-2 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+						<motion.div
+							className="h-full bg-blue-500 dark:bg-blue-400"
+							animate={{ width: `${progress}%` }}
+							transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.2, 0, 0, 1] }}
+						/>
+					</div>
+					<div className="mt-2 grid grid-cols-4 gap-1">
+						{checkpoints.map((cp) => (
+							<div
+								key={cp.mark}
+								className={`rounded-md px-1.5 py-1 text-[10px] text-center ${
+									progress >= cp.mark
+										? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+										: 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+								}`}
+							>
+								{cp.minutes}m
+							</div>
+						))}
+					</div>
+				</div>
+
+				<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3">
+					<TableOfContents items={tocItems} variant="embedded" />
+				</div>
+
+				{glossaryTerms.length > 0 && (
+					<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3">
+						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
+							Inline glossary
+						</p>
+						<div className="space-y-2">
+							{glossaryTerms.map(([term, description]) => (
+								<div key={term} className="rounded-lg bg-neutral-50 dark:bg-neutral-800/60 p-2">
+									<p className="text-xs font-semibold text-neutral-800 dark:text-neutral-100 capitalize">
+										{term}
+									</p>
+									<p className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
+										{description}
+									</p>
+								</div>
+							))}
+						</div>
+					</div>
+				)}
+
+				{conceptDependencies.length > 0 && (
+					<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3">
+						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
+							Concept dependencies
+						</p>
+						<div className="space-y-2">
+							{conceptDependencies.map((item) => (
+								<div key={item.concept} className="text-xs text-neutral-600 dark:text-neutral-300">
+									<span className="font-semibold">{item.concept}</span>
+									<span className="text-neutral-400 dark:text-neutral-500">
+										{' '}
+										← {item.dependsOn ?? 'Foundations'}
+									</span>
+								</div>
+							))}
+						</div>
+					</div>
+				)}
+			</div>
+		</aside>
+	);
+};
+
+const MobileChunkNavigator = ({ tocItems }: { tocItems: TocItem[] }) => {
+	const [activeIdx, setActiveIdx] = useState(0);
+
+	useEffect(() => {
+		if (tocItems.length === 0) return;
+		const headings = tocItems
+			.map((item, index) => ({ index, el: document.getElementById(`heading-${item.slug}`) }))
+			.filter((entry): entry is { index: number; el: HTMLElement } => Boolean(entry.el));
+
+		if (headings.length === 0) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				const visible = entries
+					.filter((entry) => entry.isIntersecting)
+					.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+				if (visible[0]) {
+					const match = headings.find((h) => h.el.id === visible[0].target.id);
+					if (match) setActiveIdx(match.index);
+				}
+			},
+			{ rootMargin: '0px 0px -70% 0px', threshold: 0 },
+		);
+
+		headings.forEach((heading) => observer.observe(heading.el));
+		return () => observer.disconnect();
+	}, [tocItems]);
+
+	if (tocItems.length === 0) return null;
+
+	const goTo = (index: number) => {
+		const target = tocItems[index];
+		if (!target) return;
+		document.getElementById(`heading-${target.slug}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	};
+
+	return (
+		<div className="xl:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-950/95 backdrop-blur px-4 py-2">
+			<div className="flex items-center gap-2">
+				<button
+					onClick={() => goTo(Math.max(0, activeIdx - 1))}
+					disabled={activeIdx === 0}
+					className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-xs text-neutral-600 dark:text-neutral-300 disabled:opacity-40"
+				>
+					Prev
+				</button>
+				<p className="flex-1 min-w-0 text-xs text-neutral-600 dark:text-neutral-300 line-clamp-1">
+					{tocItems[activeIdx]?.title ?? 'Reading sections'}
+				</p>
+				<button
+					onClick={() => goTo(Math.min(tocItems.length - 1, activeIdx + 1))}
+					disabled={activeIdx >= tocItems.length - 1}
+					className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-xs text-neutral-600 dark:text-neutral-300 disabled:opacity-40"
+				>
+					Next
+				</button>
+			</div>
 		</div>
 	);
 };
@@ -129,13 +354,46 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 		? resizeImage(post.coverImage.url, { w: 1600, h: 840, c: 'thumb' })
 		: undefined;
 
-	const tocItems =
+	const tocItems: TocItem[] =
 		post.features?.tableOfContents?.isEnabled &&
 		(post.features.tableOfContents.items ?? []).length > 0
-			? post.features.tableOfContents.items ?? []
+			? (post.features.tableOfContents.items ?? []).map((item) => ({
+					id: item.id,
+					slug: item.slug,
+					title: item.title,
+					level: item.level ?? 1,
+					parentId: item.parentId ?? null,
+				}))
 			: [];
 
 	const tags = post.tags ?? [];
+	const aiSummaryBullets = useMemo(
+		() => getAiSummaryBullets(post.content.markdown, post.title),
+		[post.content.markdown, post.title],
+	);
+	const glossaryTerms = useMemo(
+		() => detectGlossaryTerms(post.content.markdown),
+		[post.content.markdown],
+	);
+	const prerequisites = useMemo(() => {
+		const pool = [
+			'Distributed systems basics',
+			'Networking and latency fundamentals',
+			'Data modeling and storage concepts',
+			'API and system design principles',
+			'Core LLM concepts and prompting',
+		];
+		const byTag = tags.map((tag) => `${formatTagName(tag.name)} foundations`);
+		return [...new Set([...byTag.slice(0, 3), ...pool.slice(0, Math.max(0, 3 - byTag.length))])];
+	}, [tags]);
+	const conceptDependencies = useMemo(
+		() =>
+			tags.slice(0, 6).map((tag, index) => ({
+				concept: formatTagName(tag.name),
+				dependsOn: index > 0 ? formatTagName(tags[index - 1].name) : null,
+			})),
+		[tags],
+	);
 
 	return (
 		<>
@@ -324,10 +582,86 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</p>
 					</div>
 
+					{/* AI-generated summary + prerequisite architecture blocks */}
+					<section className="mb-8 space-y-4">
+						<div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-950/30 p-4">
+							<p className="text-[10px] font-mono uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-2">
+								AI-generated summary
+							</p>
+							<ul className="m-0 list-disc pl-5 space-y-1 text-sm text-neutral-700 dark:text-neutral-300">
+								{aiSummaryBullets.map((bullet) => (
+									<li key={bullet}>{bullet}</li>
+								))}
+							</ul>
+						</div>
+
+						<div className="rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/70 dark:bg-purple-950/30 p-4">
+							<p className="text-[10px] font-mono uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-2">
+								Prerequisites required
+							</p>
+							<div className="flex flex-wrap gap-2">
+								{prerequisites.map((item) => (
+									<span
+										key={item}
+										className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 px-3 py-1 text-xs text-purple-700 dark:text-purple-300"
+									>
+										{item}
+									</span>
+								))}
+							</div>
+						</div>
+
+						<CalloutBlock variant="deep-dive" title="Architecture callout">
+							This section highlights system boundaries, failure modes, and scaling constraints that matter in real production environments.
+						</CalloutBlock>
+
+						<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
+								Tradeoff comparison
+							</p>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+								<div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/30 p-3">
+									<p className="font-semibold text-emerald-700 dark:text-emerald-300">Option A: Latency-first</p>
+									<p className="mt-1 text-neutral-600 dark:text-neutral-300">Optimizes response time and user interaction loops, with higher implementation complexity.</p>
+								</div>
+								<div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/30 p-3">
+									<p className="font-semibold text-amber-700 dark:text-amber-300">Option B: Consistency-first</p>
+									<p className="mt-1 text-neutral-600 dark:text-neutral-300">Prioritizes determinism and simpler operations, with increased latency under load.</p>
+								</div>
+							</div>
+						</div>
+					</section>
+
 					{/* Article body — article-doc activates docs-article.css scoped styles (h2 borders, p max-width); overflow-x handled by outer container */}
 					<div className="article-doc w-full min-w-0">
 						<MarkdownToHtml contentMarkdown={post.content.markdown} />
 					</div>
+
+					{/* Expandable deep dives */}
+					{tocItems.length > 0 && (
+						<section className="mt-8 space-y-3">
+							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+								Expandable deep dives
+							</p>
+							{tocItems.slice(0, 4).map((item) => (
+								<details
+									key={item.id}
+									className="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4"
+								>
+									<summary className="cursor-pointer list-none text-sm font-semibold text-neutral-800 dark:text-neutral-100 flex items-center justify-between">
+										<span>{item.title}</span>
+										<span className="text-xs text-neutral-400 group-open:rotate-180 transition-transform">⌄</span>
+									</summary>
+									<p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
+										Dive deeper into this section and cross-reference concepts before moving to the next heading.
+										<Link href={`#heading-${item.slug}`} className="ml-1 text-blue-600 dark:text-blue-400">
+											Jump to section
+										</Link>
+									</p>
+								</details>
+							))}
+						</section>
+					)}
 
 					{/* Share — mobile/tablet (desktop uses sticky sidebar) */}
 					<MobileShareBar url={post.url} title={post.title} excerpt={post.brief ?? ''} tags={(post.tags ?? []).map((t) => t.name)} />
@@ -378,25 +712,57 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</div>
 					</div>
 
-					{/* Related Posts */}
-					{morePosts.length > 0 && (
-						<div className="mt-16 pt-10 border-t border-neutral-200 dark:border-neutral-800">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-6">
-								More Posts
-							</p>
-							<MinimalPosts posts={morePosts} context="home" />
+					{/* What to learn next */}
+					<section className="mt-10 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5">
+						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
+							What to learn next
+						</p>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+							{(morePosts.length > 0 ? morePosts.slice(0, 4) : []).map((nextPost) => {
+								const nextCoverImage = normalizeCoverImageUrl(nextPost.coverImage?.url);
+								return (
+									<Link
+										key={nextPost.id}
+										href={`/${nextPost.slug}`}
+										className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+									>
+										{nextCoverImage ? (
+											<img
+												src={nextCoverImage}
+												alt={nextPost.title}
+												className="mb-2 h-24 w-full rounded-md object-cover"
+											/>
+										) : (
+											<div className="mb-2 h-24 w-full rounded-md bg-gradient-to-br from-blue-100 via-indigo-100 to-teal-100 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-teal-950/30" />
+										)}
+										<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 line-clamp-2">
+											{nextPost.title}
+										</p>
+										<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+											{nextPost.readTimeInMinutes} min read
+										</p>
+									</Link>
+								);
+							})}
 						</div>
-					)}
+					</section>
+
 				</div>
 
-				{/* Right: sticky ToC (xl+) */}
-				<TableOfContents items={tocItems} />
+				{/* Right: reading context sidebar (xl+) */}
+				<ReadingContextSidebar
+					tocItems={tocItems}
+					readTimeInMinutes={post.readTimeInMinutes}
+					glossaryTerms={glossaryTerms}
+					conceptDependencies={conceptDependencies}
+				/>
 			</div>
 
 			{/* Floating AI Chatbot */}
 			<PostChatbot postTitle={post.title} postContent={post.content.markdown} />
 			<ScrollButtons />
 			<LearningPathNav slug={post.slug} />
+			<MobileChunkNavigator tocItems={tocItems} />
 		</>
 	);
 };
@@ -424,7 +790,7 @@ export default function PostOrPage(props: Props) {
 				{props.type === 'post' && <ReadingProgressBar />}
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-7xl mx-auto w-full px-4 sm:px-5 pt-10 pb-20 overflow-x-hidden">
+					<div className="max-w-7xl mx-auto w-full px-4 sm:px-5 pt-10 pb-28 md:pb-20 overflow-x-hidden">
 						<article className="w-full min-w-0">
 							{props.type === 'post' && <Post {...props} />}
 							{props.type === 'page' && <Page {...props} />}

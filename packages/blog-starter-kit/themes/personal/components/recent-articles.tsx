@@ -96,7 +96,7 @@ const ClusterRow = ({
 		// top
 		return (
 			<>
-				<span>{formatViews(post.views)} views</span>
+				<span>{formatViews(post.views ?? 0)} views</span>
 				<span>·</span>
 				<span>{post.readTimeInMinutes} min read</span>
 			</>
@@ -113,7 +113,7 @@ const ClusterRow = ({
 					{rank}
 				</span>
 			)}
-			{post.coverImage ? (
+			{post.coverImage?.url ? (
 				<img
 					src={post.coverImage.url}
 					alt={post.title}
@@ -227,4 +227,3 @@ export const RecentArticles = ({ recentlyCreated, recentlyUpdated, topPosts }: P
 		</section>
 	);
 };
-

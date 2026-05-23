@@ -46,18 +46,18 @@ export const UserProfile = ({ onLoginClick }: UserProfileProps) => {
 			<button
 				onClick={() => setIsOpen(!isOpen)}
 				className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors"
+				aria-label="Account menu"
 			>
+				<span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
 				<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
 				</svg>
-				{user.email?.split('@')[0]}
 			</button>
 
 			{isOpen && (
 				<div className="absolute right-0 mt-2 w-48 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 shadow-lg z-50">
-					<div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-700">
-						<p className="text-xs text-neutral-500 dark:text-neutral-400">Signed in as</p>
-						<p className="text-sm font-medium text-neutral-900 dark:text-white truncate">{user.email}</p>
+					<div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 text-xs text-neutral-500 dark:text-neutral-400">
+						Account
 					</div>
 
 					<div className="px-4 py-3">
@@ -65,7 +65,7 @@ export const UserProfile = ({ onLoginClick }: UserProfileProps) => {
 							href="/progress"
 							className="block text-sm text-neutral-700 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
 						>
-							📊 Progress Tracker
+							📚 Learning Hub
 						</Link>
 					</div>
 
