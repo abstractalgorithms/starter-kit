@@ -9,6 +9,7 @@ import type { PostFragment, PublicationFragment } from '../generated/graphql';
 import type { LearnPost } from './learn-today';
 import { loadLearningPath } from './learn-today';
 import type { TopicCluster } from './topic-clusters';
+import { AuthModal } from './auth-modal';
 import { useAuth } from './contexts/authContext';
 import { MOTION_EASE, MOTION_TIMING, getHoverLift } from './motion-system';
 
@@ -106,6 +107,7 @@ const SIMULATIONS = [
 	},
 ];
 const isVisualizationLabEnabled = process.env.NEXT_PUBLIC_ENABLE_VISUALIZATION_LAB === 'true';
+const LEARNING_STREAK_KEY = 'aa:learning-streak';
 
 const sectionTransition = {
 	duration: MOTION_TIMING.slow,
@@ -269,16 +271,24 @@ export const HomepageRedesign = ({
 	const reduceMotion = useReducedMotion();
 	const { user } = useAuth();
 	const [savedPath, setSavedPath] = useState<ReturnType<typeof loadLearningPath>>(null);
+	const [learningStreak, setLearningStreak] = useState(0);
 	const [aiQuery, setAiQuery] = useState('');
 	const [searchText, setSearchText] = useState('');
 	const [placeholderIndex, setPlaceholderIndex] = useState(0);
 	const [selectedPathId, setSelectedPathId] = useState(LEARNING_PATHS[0].id);
 	const [graphActiveSlug, setGraphActiveSlug] = useState(topicClusters[0]?.slug ?? '');
 	const [copilotOpen, setCopilotOpen] = useState(false);
+	const [dashboardAuthOpen, setDashboardAuthOpen] = useState(false);
 	const pathsRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		setSavedPath(loadLearningPath());
+		try {
+			const storedStreak = Number(localStorage.getItem(LEARNING_STREAK_KEY) ?? '0');
+			setLearningStreak(Number.isFinite(storedStreak) && storedStreak > 0 ? storedStreak : 0);
+		} catch {
+			setLearningStreak(0);
+		}
 	}, []);
 
 	useEffect(() => {
@@ -354,6 +364,67 @@ export const HomepageRedesign = ({
 		return Math.round((savedPath.readSlugs.length / savedPath.totalPosts) * 100);
 	}, [savedPath]);
 
+	const nextRecommendation = useMemo(() => {
+		const readSlugs = new Set(savedPath?.readSlugs ?? []);
+		return trendingPosts.find((post) => !readSlugs.has(post.slug)) ?? trendingPosts[0] ?? null;
+	}, [savedPath, trendingPosts]);
+
+	const secondaryRecommendations = useMemo(() => {
+		const readSlugs = new Set(savedPath?.readSlugs ?? []);
+		return trendingPosts
+			.filter((post) => post.slug !== nextRecommendation?.slug && !readSlugs.has(post.slug))
+			.slice(0, 2);
+	}, [nextRecommendation?.slug, savedPath, trendingPosts]);
+
+	const dashboardFocusArea =
+		nextRecommendation?.tags?.[0]?.name ?? topicClusters[0]?.label ?? savedPath?.headline ?? null;
+
+	const dashboardCards = user
+		? [
+				{
+					label: 'Streak',
+					value: learningStreak > 0 ? `${learningStreak} day${learningStreak === 1 ? '' : 's'}` : 'Not started',
+					detail: learningStreak > 0 ? 'Tracked from reading activity' : 'Read an article to begin',
+				},
+				{
+					label: 'Mastery',
+					value: completionPercent > 0 ? `${completionPercent}%` : 'No progress yet',
+					detail: savedPath?.headline ?? 'Start or resume a roadmap',
+				},
+				{
+					label: 'Focus area',
+					value: dashboardFocusArea ?? 'Choose a topic',
+					detail: nextRecommendation ? 'Based on your next unread post' : 'Based on your roadmap',
+				},
+				{
+					label: 'Recommendation',
+					value: nextRecommendation?.title ?? 'Browse the library',
+					detail: nextRecommendation ? `${nextRecommendation.readTimeInMinutes} min read` : 'No article signal yet',
+				},
+		  ]
+		: [
+				{
+					label: 'Streak',
+					value: 'Sign in to track',
+					detail: 'No activity is tracked while signed out',
+				},
+				{
+					label: 'Mastery',
+					value: 'Not started',
+					detail: 'Progress appears after you save a roadmap',
+				},
+				{
+					label: 'Focus area',
+					value: 'Personalized later',
+					detail: 'Based on saved topics and completed posts',
+				},
+				{
+					label: 'Recommendation',
+					value: nextRecommendation?.title ?? 'Browse the library',
+					detail: nextRecommendation ? 'Popular with readers right now' : 'Available after posts load',
+				},
+		  ];
+
 	const motionConfig = reduceMotion
 		? { initial: { opacity: 1, y: 0 }, whileInView: { opacity: 1, y: 0 } }
 		: { initial: { opacity: 0, y: 10 }, whileInView: { opacity: 1, y: 0 } };
@@ -392,13 +463,13 @@ export const HomepageRedesign = ({
 								onClick={() => pathsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
 								className="rounded-lg bg-gradient-to-r from-violet-600 to-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:from-violet-700 hover:to-blue-700"
 							>
-								Start Learning Free
+								Start Learning
 							</button>
 							<button
 								onClick={() => setCopilotOpen(true)}
 								className="rounded-lg border border-neutral-300 bg-white px-5 py-3 text-sm font-semibold text-neutral-800 shadow-sm hover:border-blue-400 hover:text-blue-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:text-blue-400"
 							>
-								✦ Ask AI Copilot
+								✦ Ask AI
 							</button>
 						</div>
 					</div>
@@ -519,41 +590,47 @@ export const HomepageRedesign = ({
 				<div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
 					<div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 md:grid md:grid-cols-[minmax(0,1fr)_300px] md:items-center md:gap-4">
 						<div>
-							<p className="text-[11px] text-neutral-500 dark:text-neutral-400">System Design Interview Prep</p>
-							<p className="mt-1 text-lg font-bold text-neutral-900 dark:text-neutral-50 line-clamp-1">
-								{savedPath?.headline ?? trendingPosts[0]?.title ?? 'Load Balancer Deep Dive'}
+							<p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+								{savedPath?.interviewLabel ?? (savedPath ? 'Active roadmap' : 'Recommended deep dive')}
 							</p>
-							<p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">{completionPercent || 65}% complete</p>
+							<p className="mt-1 text-lg font-bold text-neutral-900 dark:text-neutral-50 line-clamp-1">
+								{savedPath?.headline ?? nextRecommendation?.title ?? 'Explore the latest deep dives'}
+							</p>
+							<p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+								{savedPath ? `${completionPercent}% complete` : 'Start a roadmap to track completion'}
+							</p>
 							<div className="mt-2 h-2 w-full max-w-sm overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
-								<motion.div animate={{ width: `${completionPercent || 65}%` }} transition={{ duration: reduceMotion ? 0 : 0.35 }} className="h-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-500" />
+								<motion.div animate={{ width: `${completionPercent}%` }} transition={{ duration: reduceMotion ? 0 : 0.35 }} className="h-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-500" />
 							</div>
 							<Link
-								href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : trendingPosts[0] ? `/${trendingPosts[0].slug}` : '/posts'}
+								href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : nextRecommendation ? `/${nextRecommendation.slug}` : '/posts'}
 								className="mt-4 inline-flex rounded-lg bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-2 text-sm font-semibold text-white hover:from-violet-700 hover:to-blue-700"
 							>
-								Continue
+								{savedPath ? 'Continue' : 'Start reading'}
 							</Link>
 						</div>
 						<LoadBalancerGraphic />
 					</div>
 					<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-						{[
-							{ title: 'Kafka Internals', subtitle: 'Replication & ISR', progress: 40 },
-							{ title: 'Designing a URL Shortener', subtitle: 'System Design', progress: 75 },
-						].map((item) => (
-							<div key={item.title} className="rounded-xl p-3">
-								<div className="flex items-center justify-between gap-3 text-xs">
-									<div>
-										<p className="font-bold text-neutral-800 dark:text-neutral-100">{item.title}</p>
-										<p className="text-neutral-500 dark:text-neutral-400">{item.subtitle}</p>
+						{secondaryRecommendations.length > 0 ? (
+							secondaryRecommendations.map((post) => (
+								<Link key={post.id} href={`/${post.slug}`} className="block rounded-xl p-3 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
+									<div className="flex items-start justify-between gap-3 text-xs">
+										<div>
+											<p className="font-bold text-neutral-800 dark:text-neutral-100 line-clamp-2">{post.title}</p>
+											<p className="text-neutral-500 dark:text-neutral-400">
+												{post.tags?.[0]?.name ?? 'Deep dive'} • {post.readTimeInMinutes} min
+											</p>
+										</div>
+										<span className="shrink-0 text-neutral-500 dark:text-neutral-400">Next</span>
 									</div>
-									<span className="text-neutral-500 dark:text-neutral-400">{item.progress}%</span>
-								</div>
-								<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
-									<div className="h-1.5 rounded-full bg-gradient-to-r from-violet-500 to-blue-500" style={{ width: `${item.progress}%` }} />
-								</div>
+								</Link>
+							))
+						) : (
+							<div className="rounded-xl bg-neutral-50 p-3 text-xs text-neutral-500 dark:bg-neutral-800/60 dark:text-neutral-400">
+								More recommendations appear as new posts are available.
 							</div>
-						))}
+						)}
 					</div>
 				</div>
 			</SectionShell>
@@ -656,30 +733,35 @@ export const HomepageRedesign = ({
 			<SectionShell>
 				<SectionHeading
 					title="Personalized dashboard preview"
-					description="Track streaks, mastery, weak areas, and next recommendations."
+					description={
+						user
+							? 'Track streaks, mastery, focus areas, and next recommendations from your activity.'
+							: 'Sign in to turn reading activity into a personalized learning dashboard.'
+					}
 				/>
 				<div className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-5">
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-						<div className="rounded-xl bg-neutral-50 dark:bg-neutral-800/60 p-3">
-							<p className="text-[11px] text-neutral-500 dark:text-neutral-400">Streak</p>
-							<p className="mt-1 text-lg font-semibold text-neutral-900 dark:text-neutral-50">7 days</p>
-						</div>
-						<div className="rounded-xl bg-neutral-50 dark:bg-neutral-800/60 p-3">
-							<p className="text-[11px] text-neutral-500 dark:text-neutral-400">Mastery</p>
-							<p className="mt-1 text-lg font-semibold text-neutral-900 dark:text-neutral-50">{completionPercent || 18}%</p>
-						</div>
-						<div className="rounded-xl bg-neutral-50 dark:bg-neutral-800/60 p-3">
-							<p className="text-[11px] text-neutral-500 dark:text-neutral-400">Weak areas</p>
-							<p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-50">Consistency models</p>
-						</div>
-						<div className="rounded-xl bg-neutral-50 dark:bg-neutral-800/60 p-3">
-							<p className="text-[11px] text-neutral-500 dark:text-neutral-400">Recommendation</p>
-							<p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-50">Quorum deep dive</p>
-						</div>
+						{dashboardCards.map((card) => (
+							<div key={card.label} className="rounded-xl bg-neutral-50 dark:bg-neutral-800/60 p-3">
+								<p className="text-[11px] text-neutral-500 dark:text-neutral-400">{card.label}</p>
+								<p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-50 line-clamp-2">{card.value}</p>
+								<p className="mt-1 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400 line-clamp-2">{card.detail}</p>
+							</div>
+						))}
 					</div>
-					<Link href="/progress" className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-						Open Learning Dashboard
-					</Link>
+					{user ? (
+						<Link href="/progress" className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+							Open Learning Dashboard
+						</Link>
+					) : (
+						<button
+							type="button"
+							onClick={() => setDashboardAuthOpen(true)}
+							className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+						>
+							Sign in to set up dashboard
+						</button>
+					)}
 				</div>
 			</SectionShell>
 
@@ -688,7 +770,7 @@ export const HomepageRedesign = ({
 				<div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
 					<div className="w-full max-w-xl rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-5 shadow-xl">
 						<div className="flex items-center justify-between">
-							<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Ask AI Copilot</p>
+							<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Ask AI</p>
 							<button onClick={() => setCopilotOpen(false)} className="text-sm text-neutral-500 dark:text-neutral-400">Close</button>
 						</div>
 						<input
@@ -713,6 +795,7 @@ export const HomepageRedesign = ({
 					</div>
 				</div>
 			) : null}
+			<AuthModal isOpen={dashboardAuthOpen} onClose={() => setDashboardAuthOpen(false)} />
 
 			{/* Mobile bottom navigation */}
 			<nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-950/95 backdrop-blur px-2 py-2">
