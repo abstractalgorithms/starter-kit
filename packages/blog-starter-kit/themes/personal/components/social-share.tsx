@@ -488,7 +488,7 @@ export const MobileShareBar = ({ url, title, excerpt = '', tags = [] }: Props) =
 							aria-label="AI Share on X / Twitter"
 							className="relative w-8 h-8 flex items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 disabled:opacity-40"
 						>
-							{isLoading && modal.status !== 'idle' && modal.platform === 'twitter' ? <Spinner /> : <span className="text-[11px] font-semibold">X</span>}
+							{isLoading && modal.platform === 'twitter' ? <Spinner /> : <span className="text-[11px] font-semibold">X</span>}
 						</button>
 						<button
 							onClick={() => openAIShare('linkedin')}
@@ -496,7 +496,7 @@ export const MobileShareBar = ({ url, title, excerpt = '', tags = [] }: Props) =
 							aria-label="AI Share on LinkedIn"
 							className="relative w-8 h-8 flex items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 disabled:opacity-40"
 						>
-							{isLoading && modal.status !== 'idle' && modal.platform === 'linkedin' ? <Spinner /> : <span className="text-[11px] font-semibold">in</span>}
+							{isLoading && modal.platform === 'linkedin' ? <Spinner /> : <span className="text-[11px] font-semibold">in</span>}
 						</button>
 					</div>
 				) : null}
