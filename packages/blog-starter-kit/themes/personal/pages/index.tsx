@@ -9,7 +9,6 @@ import { Footer } from '../components/footer';
 import { HomepageRedesign } from '../components/homepage-redesign';
 import { Layout } from '../components/layout';
 import { PersonalHeader } from '../components/personal-theme-header';
-import { StartHereSeries } from '../components/start-here-section';
 import { TopicCluster, buildTopicClusters } from '../components/topic-clusters';
 import { PostChatbot } from '../components/post-chatbot';
 import { LearnPost } from '../components/learn-today';
@@ -30,11 +29,11 @@ type Props = {
 	publication: PublicationFragment;
 	initialPosts: PostFragment[];
 	allPosts: LearnPost[];
-	featuredSeries: StartHereSeries[];
+	popularPosts: LearnPost[];
 	topicClusters: TopicCluster[];
 };
 
-export default function Index({ publication, initialPosts, allPosts, featuredSeries, topicClusters }: Props) {
+export default function Index({ publication, initialPosts, allPosts, popularPosts, topicClusters }: Props) {
 	return (
 		<AppProvider publication={publication} posts={initialPosts}>
 			<Layout>
@@ -70,8 +69,8 @@ export default function Index({ publication, initialPosts, allPosts, featuredSer
 						<HomepageRedesign
 							publication={publication}
 							allPosts={allPosts}
+							popularPosts={popularPosts}
 							initialPosts={initialPosts}
-							featuredSeries={featuredSeries}
 							topicClusters={topicClusters}
 						/>
 					</div>
@@ -122,24 +121,6 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 	// ── 3. Build topic clusters ───────────────────────────────────────────────
 	const topicClusters: TopicCluster[] = buildTopicClusters(allPosts);
 
-	// ── 4. Derive featured series ─────────────────────────────────────────────
-	const seriesCountMap = new Map<string, { name: string; slug: string; count: number }>();
-	for (const post of allPosts) {
-		if (!post.series) continue;
-		const { id, name, slug } = post.series;
-		const prev = seriesCountMap.get(id);
-		seriesCountMap.set(id, { name, slug, count: (prev?.count ?? 0) + 1 });
-	}
-
-	const topSeriesList = [...seriesCountMap.values()].sort((a, b) => b.count - a.count).slice(0, 3);
-
-	const featuredSeries: StartHereSeries[] = topSeriesList.map((series) => {
-		const seriesPosts = allPosts
-			.filter((p) => p.series?.slug === series.slug)
-			.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
-		return { seriesName: series.name, seriesSlug: series.slug, posts: seriesPosts, totalPostCount: series.count };
-	});
-
 	return {
 		props: {
 			publication,
@@ -156,7 +137,21 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 				tags: p.tags ?? null,
 				series: p.series ?? null,
 			})),
-			featuredSeries,
+			popularPosts: allPosts
+				.map((p) => ({
+					id: p.id,
+					title: p.title,
+					slug: p.slug,
+					brief: p.brief,
+					readTimeInMinutes: p.readTimeInMinutes,
+					views: p.views ?? 0,
+					publishedAt: p.publishedAt,
+					coverImage: p.coverImage?.url ? { url: p.coverImage.url } : null,
+					tags: p.tags ?? null,
+					series: p.series ?? null,
+				}))
+				.sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
+				.slice(0, 12),
 			topicClusters,
 		},
 		revalidate: 1,

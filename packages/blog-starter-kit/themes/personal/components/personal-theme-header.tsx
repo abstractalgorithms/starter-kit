@@ -16,6 +16,7 @@ import { useAppContext } from './contexts/appContext';
 import { ToggleTheme } from './toggle-theme';
 import { UserProfile } from './user-profile';
 import { AuthModal } from './auth-modal';
+import { isNewsletterSubscribeEnabled } from '../lib/features';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const NO_OF_SEARCH_RESULTS = 5;
@@ -200,18 +201,48 @@ const HeaderSearch = () => {
 export const PersonalHeader = () => {
 	const { publication } = useAppContext();
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const [isScrolled, setIsScrolled] = useState(false);
+	const isVisualizationLabEnabled = process.env.NEXT_PUBLIC_ENABLE_VISUALIZATION_LAB === 'true';
+	const followUrl = publication.links?.hashnode || `https://hashnode.com/@${publication.author.username}`;
+	const newsletterUrl = publication.url ? `${publication.url.replace(/\/$/, '')}/newsletter` : null;
+	const navItems = [
+		{ label: 'Learn', href: '/assistant' },
+		{ label: 'Roadmaps', href: '/guided-topics' },
+		...(isVisualizationLabEnabled ? [{ label: 'Simulations', href: '/visualizations' }] : []),
+		{ label: 'Explore', href: '/series' },
+		{ label: 'Library', href: '/posts' },
+	] as const;
+	const roadmapLinks = [
+		{ label: 'Backend Engineer', href: '/assistant?q=backend%20engineering%20learning%20path' },
+		{ label: 'AI Engineer', href: '/assistant?q=llm%20engineering%20and%20rag' },
+		{ label: 'Distributed Systems', href: '/assistant?q=distributed%20systems%20fundamentals' },
+	];
+
+	useEffect(() => {
+		const onScroll = () => setIsScrolled(window.scrollY > 20);
+		onScroll();
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
+	}, []);
 
 	return (
-		<header className="w-full bg-white dark:bg-neutral-950">
-			{/* Top line: Logo + Actions */}
-			<div className="max-w-7xl mx-auto px-5 py-2.5 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
-				<h1>
+		<header
+			className={`sticky top-0 z-40 w-full transition-all duration-300 ${
+				isScrolled
+					? 'bg-white/85 dark:bg-neutral-950/85 backdrop-blur border-b border-neutral-200/80 dark:border-neutral-800/80 shadow-sm'
+					: 'bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800'
+			}`}
+		>
+			{/* Desktop header */}
+			<div className={`mx-auto hidden max-w-[1440px] md:grid grid-cols-[1fr_auto_1fr] items-center px-7 ${isScrolled ? 'py-2.5' : 'py-3'} gap-4`}>
+				<h1 className="justify-self-start">
 					<Link
 						className="flex flex-row items-center gap-3 hover:opacity-90 transition-opacity"
 						href="/"
 						aria-label={`${publication.author.name}'s blog home page`}
 					>
-						{publication.favicon && (
+						{publication.favicon ? (
 							<img
 								className="block h-10 w-10 rounded-full fill-current"
 								alt={publication.title}
@@ -221,23 +252,151 @@ export const PersonalHeader = () => {
 									c: 'face',
 								})}
 							/>
+						) : (
+							<span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 via-blue-500 to-emerald-400 text-lg font-black text-white shadow-lg shadow-violet-500/20">
+								A
+							</span>
 						)}
 						<div className="flex flex-col leading-tight">
-							<span className="text-lg font-bold tracking-tight text-black dark:text-white">
+							<span className="text-lg font-extrabold tracking-tight text-black dark:text-white">
 								{publication.title}
-							</span>
-							<span className="hidden sm:block text-xs font-medium text-neutral-500 dark:text-neutral-400 tracking-wide">
-								An AI Powered Learning Platform
 							</span>
 						</div>
 					</Link>
 				</h1>
-				<div className="flex items-center gap-3">
+				<nav className="justify-self-center flex items-center gap-1">
+					{navItems.map((item) => (
+						<Link
+							key={item.label}
+							href={item.href}
+							className="rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
+						>
+							{item.label}
+						</Link>
+					))}
+				</nav>
+				<div className="justify-self-end flex items-center gap-3">
 					<HeaderSearch />
+					<a
+						href={followUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="hidden rounded-lg border border-neutral-200 px-3 py-1.5 text-sm font-semibold text-neutral-700 transition-colors hover:border-violet-300 hover:text-violet-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:text-violet-300 lg:inline-flex"
+					>
+						Follow
+					</a>
+					{isNewsletterSubscribeEnabled && newsletterUrl ? (
+						<a
+							href={newsletterUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="hidden rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-violet-700 lg:inline-flex"
+						>
+							Subscribe
+						</a>
+					) : null}
 					<ToggleTheme />
 					<UserProfile onLoginClick={() => setIsAuthModalOpen(true)} />
 				</div>
 			</div>
+
+			{/* Mobile header */}
+			<div className={`md:hidden max-w-7xl mx-auto px-4 ${isScrolled ? 'py-2.5' : 'py-3'} flex items-center justify-between`}>
+				<button
+					onClick={() => setIsMobileMenuOpen(true)}
+					aria-label="Open menu"
+					className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200"
+				>
+					<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+					</svg>
+				</button>
+				<Link href="/" className="inline-flex items-center gap-2">
+					{publication.favicon ? (
+						<img
+							className="h-8 w-8 rounded-full"
+							alt={publication.title}
+							src={resizeImage(publication.favicon, { w: 32, h: 32, c: 'face' })}
+						/>
+					) : (
+						<span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 via-blue-500 to-emerald-400 text-sm font-black text-white">
+							A
+						</span>
+					)}
+				</Link>
+				<div className="flex items-center gap-2">
+					<HeaderSearch />
+					<UserProfile onLoginClick={() => setIsAuthModalOpen(true)} />
+				</div>
+			</div>
+
+			{/* Mobile full-screen menu */}
+			{isMobileMenuOpen ? (
+				<div className="md:hidden fixed inset-0 z-50 bg-white dark:bg-neutral-950 p-5 overflow-y-auto">
+					<div className="flex items-center justify-between">
+						<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Navigation</p>
+						<button
+							onClick={() => setIsMobileMenuOpen(false)}
+							className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-sm text-neutral-600 dark:text-neutral-300"
+						>
+							Close
+						</button>
+					</div>
+					<div className="mt-6 space-y-2">
+						{navItems.map((item) => (
+							<Link
+								key={item.label}
+								href={item.href}
+								onClick={() => setIsMobileMenuOpen(false)}
+								className="block rounded-xl border border-neutral-200 dark:border-neutral-800 px-4 py-3 text-base font-medium text-neutral-800 dark:text-neutral-100"
+							>
+								{item.label}
+							</Link>
+						))}
+						<a
+							href={followUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+							onClick={() => setIsMobileMenuOpen(false)}
+							className="block rounded-xl border border-neutral-200 px-4 py-3 text-base font-medium text-neutral-800 dark:border-neutral-800 dark:text-neutral-100"
+						>
+							Follow {publication.author.name}
+						</a>
+						{isNewsletterSubscribeEnabled && newsletterUrl ? (
+							<a
+								href={newsletterUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								onClick={() => setIsMobileMenuOpen(false)}
+								className="block rounded-xl bg-violet-600 px-4 py-3 text-base font-semibold text-white"
+							>
+								Subscribe
+							</a>
+						) : null}
+					</div>
+					<div className="mt-8">
+						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Recent learning shortcuts</p>
+						<div className="mt-2 space-y-2">
+							<Link href="/progress" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg bg-neutral-100 dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
+								Open Learning Hub
+							</Link>
+							<Link href="/assistant?q=How%20does%20Kafka%20transactions%20work%20internally%3F" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg bg-neutral-100 dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
+								Ask AI about Kafka transactions
+							</Link>
+						</div>
+					</div>
+					<div className="mt-8">
+						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Roadmap quick links</p>
+						<div className="mt-2 space-y-2">
+							{roadmapLinks.map((item) => (
+								<Link key={item.label} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
+									{item.label}
+								</Link>
+							))}
+						</div>
+					</div>
+				</div>
+			) : null}
 
 			<AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 		</header>

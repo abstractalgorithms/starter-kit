@@ -389,6 +389,8 @@ export const SocialShare = ({ url, title, excerpt = '', tags = [] }: Props) => {
 
 export const MobileShareBar = ({ url, title, excerpt = '', tags = [] }: Props) => {
 	const [linkCopied, setLinkCopied] = useState(false);
+	const [saved, setSaved] = useState(false);
+	const [showMore, setShowMore] = useState(false);
 	const { modal, editableContent, setEditableContent, copied, openAIShare, handlePost, handleCopy, closeModal } =
 		useAIShare(url, title, excerpt, tags);
 
@@ -399,6 +401,36 @@ export const MobileShareBar = ({ url, title, excerpt = '', tags = [] }: Props) =
 	};
 
 	const isLoading = modal.status === 'loading';
+
+	const savePost = () => {
+		try {
+			const key = 'aa:saved-post-urls';
+			const existing = JSON.parse(localStorage.getItem(key) || '[]') as string[];
+			const next = Array.from(new Set([url, ...existing])).slice(0, 200);
+			localStorage.setItem(key, JSON.stringify(next));
+			setSaved(true);
+		} catch {
+			setSaved(true);
+		}
+	};
+
+	const nativeShare = async () => {
+		if (typeof navigator !== 'undefined' && navigator.share) {
+			try {
+				await navigator.share({ title, text: excerpt || title, url });
+				return;
+			} catch {}
+		}
+		await copyLink();
+	};
+
+	const goToHelpful = () => {
+		document.getElementById('article-feedback')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	};
+
+	const askAi = () => {
+		window.location.href = `/assistant?q=${encodeURIComponent(title)}`;
+	};
 
 	return (
 		<>
@@ -413,71 +445,61 @@ export const MobileShareBar = ({ url, title, excerpt = '', tags = [] }: Props) =
 				postUrl={url}
 			/>
 
-			{/* Mobile share strip — sits after article body, hidden on lg where sidebar handles it */}
-			<div className="flex lg:hidden items-center gap-2 mt-8 mb-2 py-4 border-t border-neutral-100 dark:border-neutral-800">
-				<span className="text-[10px] font-mono uppercase tracking-widest text-neutral-300 dark:text-neutral-600 mr-1 select-none">
-					Share
-				</span>
+			{/* Mobile action strip — compact single row */}
+			<div className="relative lg:hidden mt-8 mb-2 py-3 border-t border-neutral-100 dark:border-neutral-800">
+				<div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap no-scrollbar">
+					<button
+						onClick={savePost}
+						className="h-8 rounded-md border border-neutral-200 dark:border-neutral-700 px-2.5 text-[11px] font-medium text-neutral-600 dark:text-neutral-300"
+					>
+						{saved ? 'Saved' : 'Save'}
+					</button>
+					<button
+						onClick={nativeShare}
+						className="h-8 rounded-md border border-neutral-200 dark:border-neutral-700 px-2.5 text-[11px] font-medium text-neutral-600 dark:text-neutral-300"
+					>
+						{linkCopied ? 'Copied' : 'Share'}
+					</button>
+					<button
+						onClick={goToHelpful}
+						className="h-8 rounded-md border border-neutral-200 dark:border-neutral-700 px-2.5 text-[11px] font-medium text-neutral-600 dark:text-neutral-300"
+					>
+						Helpful
+					</button>
+					<button
+						onClick={askAi}
+						className="h-8 rounded-md border border-neutral-200 dark:border-neutral-700 px-2.5 text-[11px] font-medium text-neutral-600 dark:text-neutral-300"
+					>
+						Ask AI
+					</button>
+					<button
+						onClick={() => setShowMore((prev) => !prev)}
+						className="h-8 rounded-md border border-neutral-200 dark:border-neutral-700 px-2.5 text-[11px] font-medium text-neutral-600 dark:text-neutral-300"
+					>
+						More
+					</button>
+				</div>
 
-				{/* X / Twitter – AI share */}
-				<button
-					onClick={() => openAIShare('twitter')}
-					disabled={isLoading}
-					aria-label="AI Share on X / Twitter"
-					className="relative w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-150 dark:border-neutral-800 bg-transparent text-neutral-400 dark:text-neutral-500 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all disabled:opacity-40"
-				>
-					{isLoading && modal.platform === 'twitter' ? (
-						<Spinner />
-					) : (
-						<>
-							<svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-								<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-							</svg>
-							<span className="absolute -top-1 -right-1 text-yellow-400">
-								<SparkleIcon />
-							</span>
-						</>
-					)}
-				</button>
-
-				{/* LinkedIn – AI share */}
-				<button
-					onClick={() => openAIShare('linkedin')}
-					disabled={isLoading}
-					aria-label="AI Share on LinkedIn"
-					className="relative w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-150 dark:border-neutral-800 bg-transparent text-neutral-400 dark:text-neutral-500 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all disabled:opacity-40"
-				>
-					{isLoading && modal.platform === 'linkedin' ? (
-						<Spinner />
-					) : (
-						<>
-							<svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-								<path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
-								<circle cx="4" cy="4" r="2" />
-							</svg>
-							<span className="absolute -top-1 -right-1 text-yellow-400">
-								<SparkleIcon />
-							</span>
-						</>
-					)}
-				</button>
-
-				{/* Copy link */}
-				<button
-					onClick={copyLink}
-					aria-label={linkCopied ? 'Copied!' : 'Copy link'}
-					className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-150 dark:border-neutral-800 bg-transparent text-neutral-400 dark:text-neutral-500 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
-				>
-					{linkCopied ? (
-						<svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-						</svg>
-					) : (
-						<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-						</svg>
-					)}
-				</button>
+				{showMore ? (
+					<div className="absolute right-0 top-full mt-2 z-20 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-2 shadow-xl flex items-center gap-1.5">
+						<button
+							onClick={() => openAIShare('twitter')}
+							disabled={isLoading}
+							aria-label="AI Share on X / Twitter"
+							className="relative w-8 h-8 flex items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 disabled:opacity-40"
+						>
+							{isLoading && modal.status !== 'idle' && modal.platform === 'twitter' ? <Spinner /> : <span className="text-[11px] font-semibold">X</span>}
+						</button>
+						<button
+							onClick={() => openAIShare('linkedin')}
+							disabled={isLoading}
+							aria-label="AI Share on LinkedIn"
+							className="relative w-8 h-8 flex items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 disabled:opacity-40"
+						>
+							{isLoading && modal.status !== 'idle' && modal.platform === 'linkedin' ? <Spinner /> : <span className="text-[11px] font-semibold">in</span>}
+						</button>
+					</div>
+				) : null}
 			</div>
 		</>
 	);
