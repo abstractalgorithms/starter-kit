@@ -207,6 +207,46 @@ const getTakeawayHeading = (turn: Turn) => `What to remember about ${getTurnTopi
 
 const toMarkdownBullets = (items: string[]) => items.map((item) => `- ${item}`).join('\n');
 
+const escapeCodeString = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+const buildImplementationSnippet = (turn: Turn) => {
+	const primaryConcept = turn.response.conceptGraph[0]?.concept ?? turn.query;
+	const secondaryConcept = turn.response.conceptGraph[1]?.concept ?? 'FallbackStrategy';
+	const firstPrerequisite = turn.response.prerequisites[0] ?? 'Validate the failure mode before implementation';
+	const firstQuestion = turn.response.interviewQuestions[0] ?? 'What tradeoff are you optimizing for?';
+	const overview = turn.response.overview
+		.replace(/\s+/g, ' ')
+		.trim()
+		.slice(0, 160);
+
+	return `// ${turn.query}
+type Decision = {
+	name: string;
+	benefit: string;
+	guardrail: string;
+};
+
+const implementationPlan: Decision[] = [
+	{
+		name: '${escapeCodeString(primaryConcept)}',
+		benefit: '${escapeCodeString(overview)}',
+		guardrail: '${escapeCodeString(firstPrerequisite)}',
+	},
+	{
+		name: '${escapeCodeString(secondaryConcept)}',
+		benefit: 'Use this as the alternative when operating constraints change.',
+		guardrail: '${escapeCodeString(firstQuestion)}',
+	},
+];
+
+export function reviewArchitectureDecision() {
+	return implementationPlan.map((item) => ({
+		...item,
+		status: item.guardrail ? 'ready-for-review' : 'needs-validation',
+	}));
+}`;
+};
+
 const normalizeSuggestionKey = (value: string) =>
 	value
 		.toLowerCase()
@@ -233,7 +273,7 @@ const parseSlashCommand = (value: string): { query: string; tab?: AssistantTab; 
 		case '/quiz':
 			return { query: topic, tab: 'interview', personaBoost: 'quiz-mode' };
 		case '/compare':
-			return { query: topic, tab: 'code', personaBoost: 'tradeoff-compare' };
+			return { query: topic, tab: 'answer', personaBoost: 'tradeoff-compare' };
 		case '/deep-dive':
 			return { query: topic, tab: 'answer', personaBoost: 'advanced-depth' };
 		default:
@@ -577,6 +617,17 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		runAssistant(value);
 	};
 
+	const runInterviewAction = (mode: 'deep-dive' | 'compare', question: string) => {
+		const baseTopic = currentTurn?.query?.trim();
+		const contextualPrompt =
+			mode === 'deep-dive'
+				? `/deep-dive ${question}${baseTopic ? ` in the context of ${baseTopic}` : ''}`
+				: `/compare ${question}${baseTopic ? ` for ${baseTopic}` : ''}`;
+
+		setQuery(contextualPrompt);
+		runAssistant(contextualPrompt);
+	};
+
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
@@ -875,7 +926,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 														</div>
 													))}
 												</div>
-												<Link href="/progress" className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700">
+												<Link href="/guided-topics" className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700">
 													Open Full Roadmap
 												</Link>
 											</section>
@@ -956,20 +1007,46 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 
 										{activeTab === 'code' ? (
 											<section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-												<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Implementation starter code</p>
-												<pre className="mt-2 overflow-auto rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-950 text-neutral-100 p-3 text-xs">
-{`// ${currentTurn.query}
-type Tradeoff = { option: string; benefit: string; risk: string };
+												<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Implementation guide</p>
+												<div className="mt-3 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] gap-4">
+													<div>
+														<div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3">
+															<p className="text-xs font-semibold text-neutral-800 dark:text-neutral-100">Implementation outline</p>
+															<ul className="mt-2 space-y-2">
+																{[
+																	...(currentTurn.response.recommendedSequence.slice(0, 3).map((step) => step.reason)),
+																	...(currentTurn.response.prerequisites.slice(0, 2).map((item) => `Check prerequisite: ${item}`)),
+																].slice(0, 5).map((item) => (
+																	<li key={`code-step-${item}`} className="rounded-md bg-neutral-50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-300">
+																		{item}
+																	</li>
+																))}
+															</ul>
+														</div>
 
-const designReview: Tradeoff[] = [
-  { option: '${currentTurn.response.conceptGraph[0]?.concept ?? currentTurn.query}', benefit: '${currentTurn.response.overview.slice(0, 70).replace(/'/g, "\\'")}', risk: '${currentTurn.response.prerequisites[0] ?? 'Validate assumptions before implementation'}' },
-  { option: '${currentTurn.response.conceptGraph[1]?.concept ?? 'Alternative design'}', benefit: '${currentTurn.response.adaptiveRecommendations[0]?.title ?? 'Clearer operational model'}', risk: '${currentTurn.response.interviewQuestions[0]?.slice(0, 80).replace(/'/g, "\\'") ?? 'Document tradeoffs explicitly'}' },
-];
+														<pre className="mt-3 overflow-auto rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-950 text-neutral-100 p-3 text-xs">
+{buildImplementationSnippet(currentTurn)}
+														</pre>
+													</div>
 
-export function explainArchitectureDecision() {
-  return designReview.map(item => \`\${item.option}: \${item.benefit} | risk: \${item.risk}\`);
-}`}
-												</pre>
+													<div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3">
+														<p className="text-xs font-semibold text-neutral-800 dark:text-neutral-100">Reference articles</p>
+														<div className="mt-2 space-y-2">
+															{(currentTurn.response.implementationArticles.length > 0
+																? currentTurn.response.implementationArticles
+																: currentTurn.response.adaptiveRecommendations.map((item) => ({ title: item.title, slug: item.slug }))
+															).slice(0, 4).map((item) => (
+																<Link
+																	key={`code-article-${item.slug}`}
+																	href={`/${item.slug}`}
+																	className="block rounded-md bg-neutral-50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-700 hover:text-blue-600 dark:text-neutral-300 dark:hover:text-blue-400"
+																>
+																	{item.title}
+																</Link>
+															))}
+														</div>
+													</div>
+												</div>
 											</section>
 										) : null}
 
@@ -981,8 +1058,8 @@ export function explainArchitectureDecision() {
 														<li key={`q-${question}`} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3">
 															<p className="text-sm text-neutral-800 dark:text-neutral-100">{question}</p>
 															<div className="mt-2 flex gap-2">
-																<button onClick={() => runAssistant(`/deep-dive ${question}`)} className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-[11px]">Deep dive</button>
-																<button onClick={() => runAssistant(`/compare ${question}`)} className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-[11px]">Compare trade-offs</button>
+																<button onClick={() => runInterviewAction('deep-dive', question)} className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-[11px]">Deep dive</button>
+																<button onClick={() => runInterviewAction('compare', question)} className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-[11px]">Compare trade-offs</button>
 															</div>
 														</li>
 													))}
