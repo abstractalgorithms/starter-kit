@@ -36,7 +36,6 @@ import {
 	sortPosts,
 } from '../lib/post-listing';
 import { formatTagName } from '../utils/format';
-import { LearningPaths } from '../components/learning-paths';
 import { loadLearningPath, StoredLearningPath } from '../components/learn-today';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
@@ -362,16 +361,6 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	};
 
-	const postCounts = useMemo(() => {
-		const counts: Record<string, number> = {};
-		for (const post of initialPosts) {
-			for (const tag of post.tags ?? []) {
-				if (tag?.slug) counts[tag.slug] = (counts[tag.slug] ?? 0) + 1;
-			}
-		}
-		return counts;
-	}, [initialPosts]);
-
 	const searchPreviewPosts = useMemo(() => {
 		if (searchTerm.length < 2) return [];
 		const q = searchTerm.toLowerCase();
@@ -682,8 +671,6 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 								{activeFilterCount > 0 ? ` · ${activeFilterCount} active filter${activeFilterCount !== 1 ? 's' : ''}` : ''}
 							</div>
 						</div>
-
-					<LearningPaths postCounts={postCounts} />
 
 					{/* ── Section divider ─────────────────────────────────── */}
 					<div className="flex items-center gap-4">

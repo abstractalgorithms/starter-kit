@@ -124,12 +124,47 @@ const normalizeCoverImageUrl = (raw?: string | null) => {
 	return resizeImage(withProtocol, { w: 960, h: 540, c: 'thumb' });
 };
 
-const deriveTakeaways = (overview: string) =>
-	overview
+const TAKEAWAY_NOISE = new Set([
+	'answer',
+	'overview',
+	'summary',
+	'tldr',
+	'tl;dr',
+	'what to remember',
+]);
+
+const normalizeTakeawayLine = (line: string) =>
+	line
+		// Strip markdown bullets, headings, blockquotes, and ordered list prefixes.
+		.replace(/^\s*(?:[-*+]|#{1,6}|>+|\d+[.)])\s*/g, '')
+		// Strip inline markdown markers.
+		.replace(/[*_`~]/g, '')
+		.replace(/\s+/g, ' ')
+		.trim();
+
+const isUsefulTakeaway = (line: string) => {
+	const normalized = line.toLowerCase().replace(/[:.\-]+$/g, '').trim();
+	if (normalized.length < 16) return false;
+	if (TAKEAWAY_NOISE.has(normalized)) return false;
+	return true;
+};
+
+const deriveTakeaways = (overview: string) => {
+	const byLine = overview
+		.split(/\r?\n/)
+		.map(normalizeTakeawayLine)
+		.filter(isUsefulTakeaway);
+
+	if (byLine.length > 0) {
+		return byLine.slice(0, 5);
+	}
+
+	return overview
 		.split(/[.?!]/)
-		.map((line) => line.trim())
-		.filter((line) => line.length > 8)
+		.map(normalizeTakeawayLine)
+		.filter(isUsefulTakeaway)
 		.slice(0, 5);
+};
 
 const getTurnTopic = (turn: Turn) =>
 	turn.response.relatedArchitectureTopics[0] ||
@@ -170,8 +205,7 @@ const getFlowHeading = (turn: Turn) => {
 
 const getTakeawayHeading = (turn: Turn) => `What to remember about ${getTurnTopic(turn)}`;
 
-const toMarkdownBullets = (items: string[]) =>
-	items.map((item, index) => `- **${index + 1}.** ${item}`).join('\n');
+const toMarkdownBullets = (items: string[]) => items.map((item) => `- ${item}`).join('\n');
 
 const normalizeSuggestionKey = (value: string) =>
 	value
@@ -651,17 +685,6 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 										</div>
 									</div>
 
-									<div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/70 p-3 dark:border-violet-900 dark:bg-violet-950/20">
-										<p className="text-xs font-semibold text-neutral-800 dark:text-neutral-100">Upgrade to Pro</p>
-										<p className="mt-1 text-[11px] text-neutral-600 dark:text-neutral-300">
-											{isVisualizationLabEnabled
-												? 'Unlimited Copilot usage, advanced simulations, and downloadable resources.'
-												: 'Unlimited Copilot usage, deeper learning guidance, and downloadable resources.'}
-										</p>
-										<Link href="/about" className="mt-2 inline-flex rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-violet-700 dark:border-violet-800 dark:bg-neutral-950 dark:text-violet-300">
-											Upgrade now →
-										</Link>
-									</div>
 								</div>
 							</aside>
 
@@ -788,8 +811,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 											<>
 												{sectionVisible(currentTurn, 'overview') ? (
 													<motion.section key={`overview-${currentTurn.id}`} variants={reveal} initial="hidden" animate="show" className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-														<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">AI Response</p>
-														<div className="mt-2 text-sm text-neutral-700 dark:text-neutral-300">
+														<div className="text-sm text-neutral-700 dark:text-neutral-300">
 															<MarkdownToHtml contentMarkdown={currentTurn.response.overview} />
 														</div>
 													</motion.section>
