@@ -4,11 +4,13 @@ import request from 'graphql-request';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { LearningPaths } from '../components/learning-paths';
+import { useLearningContext } from '../components/learning-context-provider';
 import { PersonalHeader } from '../components/personal-theme-header';
 import {
 	MorePostsByPublicationDocument,
@@ -30,6 +32,19 @@ type Props = {
 };
 
 export default function LearningPathsPage({ publication, postCounts, footerPosts }: Props) {
+	const { setContext } = useLearningContext();
+
+	useEffect(() => {
+		setContext({
+			source: 'roadmap',
+			pathname: '/guided-topics',
+			title: 'Guided Topics',
+			domain: 'Engineering',
+			topic: 'Roadmaps',
+			roadmapHref: '/guided-topics',
+		});
+	}, [setContext]);
+
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
@@ -72,20 +87,20 @@ export default function LearningPathsPage({ publication, postCounts, footerPosts
 						</Link>
 
 						{/* Page header */}
-						<div className="mb-12">
+						<div className="mb-8">
 							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
-								Curated Roadmaps
+								Adaptive Skill Trees
 							</p>
 							<h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3">
-								Guided Topics
+								Engineering Skill Trees
 							</h1>
 							<p className="text-lg text-neutral-500 dark:text-neutral-400 max-w-2xl">
-								Choose a path and follow it from start to finish — each post builds on the previous so you develop real, lasting understanding.
+								Progress through locked prerequisites, branch into specializations, rehearse weak concepts, and connect each node to articles, simulations, and interview drills.
 							</p>
 						</div>
 
 						{/* ── Topic-based paths ────────────────────────────────────── */}
-						<LearningPaths postCounts={postCounts} />
+						<LearningPaths postCounts={postCounts} posts={footerPosts} />
 
 					</div>
 					<Footer />

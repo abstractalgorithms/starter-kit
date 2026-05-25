@@ -3,6 +3,8 @@ import { AppProps } from 'next/app';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { useEffect } from 'react';
 import { AuthProvider } from '../components/contexts/authContext';
+import { LearningContextProvider } from '../components/learning-context-provider';
+import { StickyLearningContextRail } from '../components/sticky-learning-context-rail';
 import 'katex/dist/katex.min.css';
 import '../styles/index.css';
 import '../styles/diagram-enhancements.css';
@@ -35,9 +37,12 @@ export default function MyApp({ Component, pageProps }: AppProps) {
 	return (
 		<ThemeProvider attribute="class">
 			<AuthProvider>
-				<main className={`${plusJakartaSans.variable} font-sans`}>
-					<Component {...pageProps} />
-				</main>
+				<LearningContextProvider>
+					<main className={`${plusJakartaSans.variable} font-sans`}>
+						<Component {...pageProps} />
+					</main>
+					<StickyLearningContextRail />
+				</LearningContextProvider>
 			</AuthProvider>
 		</ThemeProvider>
 	);

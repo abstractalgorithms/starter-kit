@@ -209,7 +209,7 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 				// Initialize mermaid with config
 				mermaid.initialize({
 					startOnLoad: false,
-					theme: 'default',
+					theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
 					securityLevel: 'loose',
 				});
 				
@@ -256,7 +256,7 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 		const seenTerms = new Set<string>();
 		const nodes = containerRef.current.querySelectorAll('p, li');
 		nodes.forEach((node) => {
-			if (node.querySelector('code, pre, a, .inline-glossary-term')) return;
+			if (node.querySelector('code, pre, a, .inline-glossary-term, .katex, .katex-display, .katex-inline')) return;
 			let html = node.innerHTML;
 			let changed = false;
 			INLINE_GLOSSARY.forEach(({ term, definition }) => {
@@ -273,6 +273,32 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 			});
 			if (changed) {
 				node.innerHTML = html;
+			}
+		});
+	}, [content]);
+
+	// Editorial layout extensions for authored HTML/MDX-like blocks in Hashnode markdown.
+	useEffect(() => {
+		if (!containerRef.current) return;
+		containerRef.current
+			.querySelectorAll<HTMLElement>('[data-aa-layout="full-bleed"], [data-aa-layout="immersive-diagram"], [data-aa-layout="asymmetric"], [data-aa-layout="transition"]')
+			.forEach((node) => {
+				node.classList.add('aa-story-block');
+				const layout = node.dataset.aaLayout;
+				if (layout) node.classList.add(`aa-story-${layout}`);
+			});
+
+		containerRef.current
+			.querySelectorAll<HTMLElement>('.mermaid-container, figure, table')
+			.forEach((node) => {
+				if (node.tagName.toLowerCase() === 'figure' && !node.querySelector('img')) return;
+				node.classList.add('aa-story-immersive-diagram');
+			});
+
+		containerRef.current.querySelectorAll<HTMLElement>('blockquote').forEach((node) => {
+			const text = node.textContent?.trim() ?? '';
+			if (/^(story|transition|mental model|system lens):/i.test(text)) {
+				node.classList.add('aa-story-transition');
 			}
 		});
 	}, [content]);

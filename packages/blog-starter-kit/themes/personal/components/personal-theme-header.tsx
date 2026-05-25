@@ -16,7 +16,7 @@ import { useAppContext } from './contexts/appContext';
 import { ToggleTheme } from './toggle-theme';
 import { UserProfile } from './user-profile';
 import { AuthModal } from './auth-modal';
-import { isNewsletterSubscribeEnabled } from '../lib/features';
+import { isInterviewPrepEnabled, isNewsletterSubscribeEnabled, isVisualizationLabEnabled } from '../lib/features';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const NO_OF_SEARCH_RESULTS = 5;
@@ -203,15 +203,19 @@ export const PersonalHeader = () => {
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
-	const isVisualizationLabEnabled = process.env.NEXT_PUBLIC_ENABLE_VISUALIZATION_LAB === 'true';
-	const followUrl = publication.links?.hashnode || `https://hashnode.com/@${publication.author.username}`;
+	const followUrl =
+		publication.links?.linkedin ||
+		publication.links?.hashnode ||
+		`https://hashnode.com/@${publication.author.username}`;
 	const newsletterUrl = publication.url ? `${publication.url.replace(/\/$/, '')}/newsletter` : null;
 	const navItems = [
-		{ label: 'Learn', href: '/assistant' },
+		{ label: 'Learn', href: '/posts' },
 		{ label: 'Roadmaps', href: '/guided-topics' },
 		...(isVisualizationLabEnabled ? [{ label: 'Simulations', href: '/visualizations' }] : []),
+		{ label: 'AI Copilot', href: '/assistant' },
+		...(isInterviewPrepEnabled ? [{ label: 'Interview Prep', href: '/interview-prep' }] : []),
 		{ label: 'Explore', href: '/series' },
-		{ label: 'Library', href: '/posts' },
+		{ label: 'Library', href: '/progress' },
 	] as const;
 	const roadmapLinks = [
 		{ label: 'Backend Engineer', href: '/assistant?q=backend%20engineering%20learning%20path' },

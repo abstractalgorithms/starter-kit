@@ -11,7 +11,10 @@ import { loadLearningPath } from './learn-today';
 import type { TopicCluster } from './topic-clusters';
 import { AuthModal } from './auth-modal';
 import { useAuth } from './contexts/authContext';
+import { CTAButton, CTALink } from './cta-system';
+import { useLearningContext } from './learning-context-provider';
 import { MOTION_EASE, MOTION_TIMING, getHoverLift } from './motion-system';
+import { isVisualizationLabEnabled } from '../lib/features';
 
 type Props = {
 	publication: PublicationFragment;
@@ -106,7 +109,6 @@ const SIMULATIONS = [
 		time: '7 min',
 	},
 ];
-const isVisualizationLabEnabled = process.env.NEXT_PUBLIC_ENABLE_VISUALIZATION_LAB === 'true';
 const LEARNING_STREAK_KEY = 'aa:learning-streak';
 
 const sectionTransition = {
@@ -280,6 +282,7 @@ export const HomepageRedesign = ({
 	const [copilotOpen, setCopilotOpen] = useState(false);
 	const [dashboardAuthOpen, setDashboardAuthOpen] = useState(false);
 	const pathsRef = useRef<HTMLDivElement>(null);
+	const { setContext } = useLearningContext();
 
 	useEffect(() => {
 		setSavedPath(loadLearningPath());
@@ -379,6 +382,21 @@ export const HomepageRedesign = ({
 	const dashboardFocusArea =
 		nextRecommendation?.tags?.[0]?.name ?? topicClusters[0]?.label ?? savedPath?.headline ?? null;
 
+	useEffect(() => {
+		setContext({
+			source: 'homepage',
+			pathname: '/',
+			title: 'Abstract Algorithms',
+			domain: 'Engineering',
+			topic: savedPath?.interviewLabel ?? topicClusters[0]?.label ?? 'Learning platform',
+			subtopic: savedPath?.headline ?? nextRecommendation?.title,
+			concept: nextRecommendation?.tags?.[0]?.name,
+			roadmapNode: savedPath?.headline ?? nextRecommendation?.title,
+			roadmapHref: '/guided-topics',
+			simulationTopic: nextRecommendation?.title ?? topicClusters[0]?.label,
+		});
+	}, [nextRecommendation, savedPath, setContext, topicClusters]);
+
 	const dashboardCards = user
 		? [
 				{
@@ -459,18 +477,20 @@ export const HomepageRedesign = ({
 								: 'Interactive explanations, guided concept maps, and an AI copilot to accelerate your engineering journey.'}
 						</p>
 						<div className="mt-6 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
-							<button
+							<CTAButton
 								onClick={() => pathsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-								className="rounded-lg bg-gradient-to-r from-violet-600 to-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:from-violet-700 hover:to-blue-700"
+								level={1}
+								size="lg"
 							>
 								Start Learning
-							</button>
-							<button
+							</CTAButton>
+							<CTAButton
 								onClick={() => setCopilotOpen(true)}
-								className="rounded-lg border border-neutral-300 bg-white px-5 py-3 text-sm font-semibold text-neutral-800 shadow-sm hover:border-blue-400 hover:text-blue-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:text-blue-400"
+								level={2}
+								size="lg"
 							>
-								✦ Ask AI
-							</button>
+								Ask AI
+							</CTAButton>
 						</div>
 					</div>
 					<div className="hidden lg:block">
@@ -570,12 +590,14 @@ export const HomepageRedesign = ({
 									Includes {path.previewTitles.join(' + ')}
 								</p>
 							) : null}
-							<Link
+							<CTALink
 								href={`/assistant?q=${encodeURIComponent(path.query)}`}
-								className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+								level={3}
+								size="sm"
+								className="mt-3"
 							>
 								Explore Path
-							</Link>
+							</CTALink>
 						</motion.button>
 					))}
 				</div>
@@ -602,12 +624,14 @@ export const HomepageRedesign = ({
 							<div className="mt-2 h-2 w-full max-w-sm overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
 								<motion.div animate={{ width: `${completionPercent}%` }} transition={{ duration: reduceMotion ? 0 : 0.35 }} className="h-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-500" />
 							</div>
-							<Link
+							<CTALink
 								href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : nextRecommendation ? `/${nextRecommendation.slug}` : '/posts'}
-								className="mt-4 inline-flex rounded-lg bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-2 text-sm font-semibold text-white hover:from-violet-700 hover:to-blue-700"
+								level={1}
+								size="md"
+								className="mt-4"
 							>
 								{savedPath ? 'Continue' : 'Start reading'}
-							</Link>
+							</CTALink>
 						</div>
 						<LoadBalancerGraphic />
 					</div>
@@ -654,12 +678,14 @@ export const HomepageRedesign = ({
 								<p className="mt-3 text-sm font-semibold text-neutral-900 dark:text-neutral-50">{item.title}</p>
 								<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{item.description}</p>
 								<p className="mt-2 text-[11px] text-neutral-500 dark:text-neutral-400">{item.interaction} • {item.time}</p>
-								<Link
+								<CTALink
 									href="/visualizations"
-									className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+									level={3}
+									size="sm"
+									className="mt-3"
 								>
 									Try now
-								</Link>
+								</CTALink>
 							</motion.div>
 						))}
 					</div>
@@ -724,7 +750,7 @@ export const HomepageRedesign = ({
 					<div className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
 						<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">{activeGraphCluster?.label ?? 'Concept'}</p>
 						<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Connected topics and dependencies highlighted. Click to open explorer.</p>
-						<Link href={activeGraphCluster ? `/tag/${activeGraphCluster.slug}` : '/posts'} className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Open concept explorer</Link>
+						<CTALink href={activeGraphCluster ? `/tag/${activeGraphCluster.slug}` : '/posts'} level={3} size="sm" className="mt-3">Open concept explorer</CTALink>
 					</div>
 				</div>
 			</SectionShell>
@@ -750,17 +776,19 @@ export const HomepageRedesign = ({
 						))}
 					</div>
 					{user ? (
-						<Link href="/progress" className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+						<CTALink href="/progress" level={2} size="md" className="mt-4">
 							Open Learning Dashboard
-						</Link>
+						</CTALink>
 					) : (
-						<button
+						<CTAButton
 							type="button"
 							onClick={() => setDashboardAuthOpen(true)}
-							className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+							level={2}
+							size="md"
+							className="mt-4"
 						>
 							Sign in to set up dashboard
-						</button>
+						</CTAButton>
 					)}
 				</div>
 			</SectionShell>

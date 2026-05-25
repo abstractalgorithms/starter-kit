@@ -1,12 +1,35 @@
 export type VizLayer = 'overview' | 'deepDive' | 'tradeoffs';
 
+export type VizNodeKind =
+	| 'client'
+	| 'service'
+	| 'storage'
+	| 'queue'
+	| 'compute'
+	| 'gateway'
+	| 'coordinator'
+	| 'replica'
+	| 'cache'
+	| 'worker'
+	| 'ai';
+
+export type VizNodeHealth = 'healthy' | 'hot' | 'degraded' | 'failed' | 'recovering';
+export type VizEdgeSemantic = 'request' | 'command' | 'replication' | 'event' | 'read' | 'write' | 'control' | 'fallback';
+export type VizAnimationMode = 'normal' | 'slow' | 'stepping' | 'failure';
+
 export type VizNode = {
 	id: string;
 	label: string;
-	kind: 'service' | 'storage' | 'queue' | 'compute' | 'client';
+	kind: VizNodeKind;
 	x: number;
 	y: number;
 	description?: string;
+	health?: VizNodeHealth;
+	semantics?: {
+		responsibility?: string;
+		interviewPrompt?: string;
+		failureHint?: string;
+	};
 };
 
 export type VizEdge = {
@@ -15,6 +38,7 @@ export type VizEdge = {
 	to: string;
 	label?: string;
 	direction?: 'uni' | 'bi';
+	semantic?: VizEdgeSemantic;
 };
 
 export type VizMessage = {
@@ -23,6 +47,7 @@ export type VizMessage = {
 	label: string;
 	color?: string;
 	progress: number;
+	semantic?: VizEdgeSemantic;
 };
 
 export type VizStep = {
@@ -34,6 +59,17 @@ export type VizStep = {
 	highlightEdgeIds?: string[];
 	messages?: VizMessage[];
 	layers: Record<VizLayer, string>;
+};
+
+export type VizFailureMode = {
+	id: string;
+	title: string;
+	nodeId?: string;
+	edgeId?: string;
+	description: string;
+	blastRadius: string;
+	recovery: string;
+	severity: 'low' | 'medium' | 'high';
 };
 
 export type VizScenario = {
@@ -55,4 +91,5 @@ export type VizScenario = {
 	nodes: VizNode[];
 	edges: VizEdge[];
 	steps: VizStep[];
+	failureModes?: VizFailureMode[];
 };

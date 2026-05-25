@@ -1,20 +1,91 @@
 import { VizScenario } from './types';
 
 const BASE_NODES = [
-	{ id: 'client', label: 'Client', kind: 'client' as const, x: 60, y: 170 },
-	{ id: 'api', label: 'API Gateway', kind: 'service' as const, x: 220, y: 170 },
-	{ id: 'core', label: 'Core Service', kind: 'compute' as const, x: 400, y: 110 },
-	{ id: 'store', label: 'State Store', kind: 'storage' as const, x: 610, y: 110 },
-	{ id: 'queue', label: 'Event Stream', kind: 'queue' as const, x: 400, y: 245 },
-	{ id: 'consumer', label: 'Consumer', kind: 'service' as const, x: 610, y: 245 },
+	{
+		id: 'client',
+		label: 'Client',
+		kind: 'client' as const,
+		x: 60,
+		y: 170,
+		description: 'External actor entering the system.',
+		semantics: {
+			responsibility: 'Creates demand and defines latency expectations.',
+			interviewPrompt: 'Clarify traffic shape, retry behavior, and user-visible latency.',
+		},
+	},
+	{
+		id: 'api',
+		label: 'API Gateway',
+		kind: 'gateway' as const,
+		x: 220,
+		y: 170,
+		description: 'Trust and routing boundary.',
+		semantics: {
+			responsibility: 'Authenticates, routes, rate-limits, and normalizes requests.',
+			interviewPrompt: 'Explain where you enforce idempotency, auth, throttling, and backpressure.',
+			failureHint: 'Gateway overload can amplify retries into downstream saturation.',
+		},
+	},
+	{
+		id: 'core',
+		label: 'Core Service',
+		kind: 'coordinator' as const,
+		x: 400,
+		y: 110,
+		description: 'Decision and coordination point.',
+		health: 'hot' as const,
+		semantics: {
+			responsibility: 'Turns commands into ordered state transitions.',
+			interviewPrompt: 'Name the consistency boundary and the conflict-resolution rule.',
+			failureHint: 'Coordinator failure tests leader election, retries, and duplicate suppression.',
+		},
+	},
+	{
+		id: 'store',
+		label: 'State Store',
+		kind: 'storage' as const,
+		x: 610,
+		y: 110,
+		description: 'Durable system of record.',
+		semantics: {
+			responsibility: 'Persists source-of-truth state and exposes read consistency semantics.',
+			interviewPrompt: 'Discuss write acknowledgement, indexing, compaction, and recovery.',
+			failureHint: 'Storage latency changes the whole system tail.',
+		},
+	},
+	{
+		id: 'queue',
+		label: 'Event Stream',
+		kind: 'queue' as const,
+		x: 400,
+		y: 245,
+		description: 'Temporal decoupling layer.',
+		semantics: {
+			responsibility: 'Buffers facts and enables replay, fan-out, and async recovery.',
+			interviewPrompt: 'Explain ordering, retention, consumer lag, and poison-message handling.',
+			failureHint: 'Consumer lag creates freshness and memory-pressure failures.',
+		},
+	},
+	{
+		id: 'consumer',
+		label: 'Consumer',
+		kind: 'worker' as const,
+		x: 610,
+		y: 245,
+		description: 'Derived state processor.',
+		semantics: {
+			responsibility: 'Consumes events and updates projections or side effects.',
+			interviewPrompt: 'State how the worker handles duplicates, retries, and partial failures.',
+		},
+	},
 ];
 
 const BASE_EDGES = [
-	{ id: 'e1', from: 'client', to: 'api', label: 'request' },
-	{ id: 'e2', from: 'api', to: 'core', label: 'command' },
-	{ id: 'e3', from: 'core', to: 'store', label: 'persist' },
-	{ id: 'e4', from: 'core', to: 'queue', label: 'publish' },
-	{ id: 'e5', from: 'queue', to: 'consumer', label: 'consume' },
+	{ id: 'e1', from: 'client', to: 'api', label: 'request', semantic: 'request' as const },
+	{ id: 'e2', from: 'api', to: 'core', label: 'command', semantic: 'command' as const },
+	{ id: 'e3', from: 'core', to: 'store', label: 'persist', semantic: 'write' as const },
+	{ id: 'e4', from: 'core', to: 'queue', label: 'publish', semantic: 'event' as const },
+	{ id: 'e5', from: 'queue', to: 'consumer', label: 'consume', semantic: 'event' as const },
 ];
 
 const createScenario = (
@@ -65,6 +136,28 @@ const createScenario = (
 				deepDive: `${deepDiveHint} Downstream consumers react to immutable events for replayability.`,
 				tradeoffs: tradeoffHint,
 			},
+		},
+	],
+	failureModes: [
+		{
+			id: `${id}-coordinator-failure`,
+			title: 'Coordinator stalls under pressure',
+			nodeId: 'core',
+			edgeId: 'e2',
+			description: 'The command boundary stops making progress while upstream retries continue.',
+			blastRadius: 'Writes slow down first, then queue lag and client retries create cascading pressure.',
+			recovery: 'Apply backpressure, fail over leadership, dedupe retries, and replay from durable state.',
+			severity: 'high',
+		},
+		{
+			id: `${id}-stream-lag`,
+			title: 'Event stream lag grows',
+			nodeId: 'queue',
+			edgeId: 'e5',
+			description: 'Consumers cannot keep up with published work.',
+			blastRadius: 'Read models become stale and storage pressure increases.',
+			recovery: 'Scale consumers, isolate hot partitions, pause low-priority publishers, and replay safely.',
+			severity: 'medium',
 		},
 	],
 });

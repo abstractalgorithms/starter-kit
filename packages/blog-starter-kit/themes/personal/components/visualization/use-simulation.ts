@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { VizLayer, VizScenario } from './types';
+import { useVisualizationEngine } from './use-visualization-engine';
+
+export { useVisualizationEngine };
 
 export const useSimulation = (scenario: VizScenario) => {
 	const [stepIndex, setStepIndex] = useState(0);

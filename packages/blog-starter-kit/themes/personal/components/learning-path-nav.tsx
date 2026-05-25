@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { LP_STORAGE_KEY, StoredLearningPath, clearLearningPath } from './learn-today';
 import type { LearningPhase, LearnPost } from '../pages/api/learning-path';
+import { isInterviewPrepEnabled } from '../lib/features';
 
 type PostLocation = {
 	phase: LearningPhase;
@@ -121,9 +122,9 @@ export const LearningPathNav = ({ slug }: Props) => {
 						{/* Path context — interview-prep shows icon + label as back link; learn-today shows phase badge */}
 						{path.source === 'interview-prep' ? (
 							<Link
-								href="/interview-prep"
+								href={isInterviewPrepEnabled ? '/interview-prep' : '/posts'}
 								className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-								title="Back to Interview Prep"
+								title={isInterviewPrepEnabled ? 'Back to Interview Prep' : 'Back to Library'}
 							>
 								{path.interviewIcon && <span>{path.interviewIcon}</span>}
 								<span className="hidden xs:inline">{path.interviewLabel ?? 'Interview Prep'}</span>

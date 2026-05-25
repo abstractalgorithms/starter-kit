@@ -41,16 +41,15 @@ import {
 // @ts-ignore
 import { triggerCustomWidgetEmbed } from '@starter-kit/utils/trigger-custom-widget-embed';
 import { getFooterPosts } from '../lib/api/footerData';
-import { MobileShareBar } from '../components/social-share';
 import { PostChatbot } from '../components/post-chatbot';
 import { PostQuiz } from '../components/post-quiz';
 import { ScrollButtons } from '../components/scroll-buttons';
 import { LearningPathNav } from '../components/learning-path-nav';
-import { CalloutBlock } from '../components/callout-block';
 import { ArticleEngagement } from '../components/article-engagement';
-// CalloutBlock and QuizCard are available for use inside article content:
-// import { CalloutBlock } from '../components/callout-block';
-// import { QuizCard } from '../components/quiz-card';
+import { ContextualBreadcrumbs } from '../components/contextual-breadcrumbs';
+import { useLearningContext } from '../components/learning-context-provider';
+import { CTAButton, CTALink } from '../components/cta-system';
+import { isInterviewPrepEnabled } from '../lib/features';
 
 // ─── Reading Progress Bar ─────────────────────────────────────────────────────
 const ReadingProgressBar = () => {
@@ -214,7 +213,7 @@ const ReadingNavigationSidebar = ({
 	}, [tocItems]);
 
 	return (
-		<aside className="hidden xl:block w-[270px] shrink-0">
+		<aside className="hidden xl:block min-w-0">
 			<div className="sticky top-24 space-y-4">
 				<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
 					<p className="mb-3 flex items-center gap-2 text-xs font-bold text-neutral-900 dark:text-neutral-100">
@@ -223,7 +222,7 @@ const ReadingNavigationSidebar = ({
 					</p>
 					<div className="relative max-h-72 space-y-1 overflow-auto pr-1">
 						<div className="absolute bottom-2 left-[11px] top-2 w-px bg-violet-100 dark:bg-violet-950" aria-hidden="true" />
-						{tocItems.slice(0, 10).map((item) => {
+						{tocItems.map((item) => {
 							const headingId = `heading-${item.slug}`;
 							const isActive = activeSection === headingId;
 							return (
@@ -289,7 +288,7 @@ const ReadingNavigationSidebar = ({
 								placeholder="Search section"
 								className="mb-2 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-xs outline-none focus:border-violet-300 dark:border-neutral-700 dark:bg-neutral-950"
 							/>
-							{filteredToc.slice(0, 12).map((item) => (
+							{filteredToc.map((item) => (
 								<a key={`toc-mini-${item.id}`} href={`#heading-${item.slug}`} className="block rounded-md px-2 py-1 text-xs text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
 									{decodeHtml(item.title)}
 								</a>
@@ -315,125 +314,27 @@ const ReadingNavigationSidebar = ({
 	);
 };
 
-const ReadingContextSidebar = ({
-	tocItems,
-	readTimeInMinutes,
-	glossaryTerms,
-	conceptDependencies,
-	aiSummaryBullets,
-	morePosts,
-}: {
-	tocItems: TocItem[];
-	readTimeInMinutes: number;
-	glossaryTerms: Array<[string, string]>;
-	conceptDependencies: Array<{ concept: string; dependsOn: string | null }>;
-	aiSummaryBullets: string[];
-	morePosts: PostFragment[];
-}) => {
-	const [progress, setProgress] = useState(0);
-	useEffect(() => {
-		const onScroll = () => {
-			const doc = document.documentElement;
-			const total = doc.scrollHeight - doc.clientHeight;
-			const next = total > 0 ? Math.min(100, (doc.scrollTop / total) * 100) : 0;
-			setProgress(next);
-		};
-		window.addEventListener('scroll', onScroll, { passive: true });
-		return () => window.removeEventListener('scroll', onScroll);
-	}, []);
-
-	return (
-		<aside className="hidden xl:block w-[300px] shrink-0">
-			<div className="sticky top-24 space-y-4">
-				<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
-					<p className="mb-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">At a glance</p>
-					<div className="space-y-3 text-xs">
-						<div className="flex items-center justify-between gap-4">
-							<span className="font-semibold text-neutral-700 dark:text-neutral-300">Difficulty</span>
-							<span className="text-neutral-600 dark:text-neutral-300">{readTimeInMinutes > 12 ? 'Advanced' : 'Intermediate'} ▥</span>
-						</div>
-						<div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-							<span className="font-semibold text-neutral-700 dark:text-neutral-300">Concepts</span>
-							<span className="text-neutral-600 dark:text-neutral-300">{Math.max(5, tocItems.length)}</span>
-						</div>
-						<div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-							<span className="font-semibold text-neutral-700 dark:text-neutral-300">Estimated time</span>
-							<span className="text-neutral-600 dark:text-neutral-300">{readTimeInMinutes} min</span>
-						</div>
-						<div className="flex items-start justify-between gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-							<span className="font-semibold text-neutral-700 dark:text-neutral-300">Prerequisites</span>
-							<span className="max-w-[150px] text-right text-neutral-600 dark:text-neutral-300">
-								{conceptDependencies.slice(0, 2).map((item) => item.concept).join(', ') || 'Foundations'}
-							</span>
-						</div>
-					</div>
-				</div>
-
-				<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
-					<p className="mb-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">Key takeaways</p>
-					<ul className="space-y-3 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
-						{aiSummaryBullets.slice(0, 4).map((item) => (
-							<li key={item} className="flex gap-2">
-								<span className="mt-0.5 text-violet-600 dark:text-violet-300">✓</span>
-								<span>{item}</span>
-							</li>
-						))}
-					</ul>
-				</div>
-
-				<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
-					<p className="mb-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">Related Topics</p>
-					<div className="flex flex-wrap gap-1.5">
-						{conceptDependencies.slice(0, 6).map((item) => (
-							<Link key={item.concept} href={`/posts?q=${encodeURIComponent(item.concept)}`} className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-neutral-300">
-								{item.concept}
-							</Link>
-						))}
-					</div>
-				</div>
-
-				{glossaryTerms.length > 0 ? (
-					<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
-						<p className="mb-2 text-sm font-bold text-neutral-900 dark:text-neutral-100">Roadmap anchor</p>
-						<p className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
-							{glossaryTerms[0]?.[0] ? `${glossaryTerms[0][0]} is a useful concept to revisit while reading this article.` : 'Use this topic as a concept anchor while reading.'}
-						</p>
-					</div>
-				) : null}
-
-				<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
-					<p className="mb-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">Continue learning</p>
-					{morePosts[0] ? (
-						<Link href={`/${morePosts[0].slug}`} className="grid grid-cols-[56px_minmax(0,1fr)] gap-3 rounded-xl border border-neutral-200 p-2 transition-colors hover:border-violet-300 dark:border-neutral-700">
-							<div className="flex h-14 w-14 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-950/30 dark:text-violet-300">◇</div>
-							<div>
-								<p className="line-clamp-2 text-sm font-semibold text-neutral-900 dark:text-neutral-50">{morePosts[0].title}</p>
-								<p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-									{morePosts[0].readTimeInMinutes} min read · best next step
-								</p>
-							</div>
-						</Link>
-					) : (
-						<p className="text-xs text-neutral-500 dark:text-neutral-400">Recommendations appear as you complete more topics.</p>
-					)}
-				</div>
-			</div>
-		</aside>
-	);
-};
+const ReadingContextSidebar = () => null;
 
 const MobileChunkNavigator = ({
 	tocItems,
 	onAiExplain,
 	onBookmark,
 	isBookmarked,
+	interviewHref,
+	whiteboardHref,
+	mockHref,
 }: {
 	tocItems: TocItem[];
 	onAiExplain: (sectionTitle: string) => void;
 	onBookmark: () => void;
 	isBookmarked: boolean;
+	interviewHref: string;
+	whiteboardHref: string;
+	mockHref: string;
 }) => {
 	const [activeIdx, setActiveIdx] = useState(0);
+	const [trayOpen, setTrayOpen] = useState(false);
 
 	useEffect(() => {
 		if (tocItems.length === 0) return;
@@ -470,28 +371,108 @@ const MobileChunkNavigator = ({
 
 	return (
 		<div className="xl:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 bg-white/95 px-3 py-3 shadow-[0_-16px_40px_rgba(15,23,42,0.08)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
-			<div className="mx-auto grid max-w-xl grid-cols-[1fr_1.45fr] gap-3">
+			{trayOpen ? (
+				<div className="fixed inset-0 z-[-1] bg-black/20" onClick={() => setTrayOpen(false)} aria-hidden="true" />
+			) : null}
+			{trayOpen ? (
+				<div className="mx-auto mb-3 max-w-xl rounded-3xl border border-neutral-200 bg-white p-3 shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
+					<div className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+					<p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Section actions</p>
+					<div className="mt-2 grid grid-cols-2 gap-2">
+						<a
+							href={interviewHref}
+							onClick={() => setTrayOpen(false)}
+							className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-3 text-center text-xs font-bold text-violet-700 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-300"
+						>
+							Interview Drill
+						</a>
+						<a
+							href={whiteboardHref}
+							onClick={() => setTrayOpen(false)}
+							className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-center text-xs font-bold text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
+						>
+							Whiteboard
+						</a>
+						<button
+							onClick={() => {
+								goTo(Math.max(0, activeIdx - 1));
+								setTrayOpen(false);
+							}}
+							disabled={activeIdx === 0}
+							className="rounded-xl border border-neutral-200 px-3 py-3 text-xs font-bold text-neutral-700 disabled:opacity-40 dark:border-neutral-700 dark:text-neutral-300"
+						>
+							Previous
+						</button>
+						<button
+							onClick={() => {
+								onAiExplain(tocItems[activeIdx]?.title ?? 'current section');
+								setTrayOpen(false);
+							}}
+							className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-3 text-xs font-bold text-violet-700 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-300"
+						>
+							Ask AI
+						</button>
+						<button
+							onClick={() => {
+								onBookmark();
+								setTrayOpen(false);
+							}}
+							className="rounded-xl border border-neutral-200 px-3 py-3 text-xs font-bold text-neutral-700 dark:border-neutral-700 dark:text-neutral-300"
+						>
+							{isBookmarked ? 'Saved' : 'Save'}
+						</button>
+						<a
+							href={mockHref}
+							onClick={() => setTrayOpen(false)}
+							className="rounded-xl border border-neutral-200 px-3 py-3 text-center text-xs font-bold text-neutral-700 dark:border-neutral-700 dark:text-neutral-300"
+						>
+							Mock
+						</a>
+						<a
+							href={`#heading-${tocItems[activeIdx]?.slug}`}
+							onClick={() => setTrayOpen(false)}
+							className="rounded-xl border border-neutral-200 px-3 py-3 text-center text-xs font-bold text-neutral-700 dark:border-neutral-700 dark:text-neutral-300"
+						>
+							Current
+						</a>
+					</div>
+					<div className="mt-2 max-h-44 overflow-y-auto rounded-2xl bg-neutral-50 p-1 dark:bg-neutral-900">
+						{tocItems.slice(0, 10).map((item, index) => (
+							<button
+								key={`tray-${item.id}`}
+								onClick={() => {
+									goTo(index);
+									setTrayOpen(false);
+								}}
+								className={`block w-full rounded-xl px-3 py-2 text-left text-xs font-semibold ${
+									index === activeIdx
+										? 'bg-white text-violet-700 shadow-sm dark:bg-neutral-800 dark:text-violet-300'
+										: 'text-neutral-600 dark:text-neutral-300'
+								}`}
+							>
+								{decodeHtml(item.title)}
+							</button>
+						))}
+					</div>
+				</div>
+			) : null}
+			<div className="mx-auto grid max-w-xl grid-cols-[44px_minmax(0,1fr)] gap-2">
 				<button
-					onClick={() => goTo(Math.max(0, activeIdx - 1))}
-					disabled={activeIdx === 0}
-					className="rounded-xl border border-neutral-200 px-3 py-3 text-xs font-bold text-neutral-700 disabled:opacity-40 dark:border-neutral-700 dark:text-neutral-300"
+					onClick={() => setTrayOpen((prev) => !prev)}
+					className="rounded-2xl border border-neutral-200 px-3 py-3 text-lg font-black text-neutral-700 dark:border-neutral-700 dark:text-neutral-300"
+					aria-expanded={trayOpen}
+					aria-label="Open section action tray"
 				>
-					← Previous
+					⋯
 				</button>
 				<button
 					onClick={() => goTo(Math.min(tocItems.length - 1, activeIdx + 1))}
 					disabled={activeIdx >= tocItems.length - 1}
-					className="rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-3 py-3 text-xs font-bold text-white shadow-lg shadow-violet-500/20 disabled:opacity-40"
+					className="min-w-0 rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-3 py-3 text-xs font-bold text-white shadow-lg shadow-violet-500/20 disabled:opacity-40"
 				>
-					Next: {decodeHtml(tocItems[Math.min(tocItems.length - 1, activeIdx + 1)]?.title ?? 'Topic')} →
-				</button>
-			</div>
-			<div className="mx-auto mt-2 flex max-w-xl items-center justify-center gap-4 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">
-				<button onClick={() => onAiExplain(tocItems[activeIdx]?.title ?? 'current section')} className="hover:text-violet-600 dark:hover:text-violet-300">
-					AI Explain
-				</button>
-				<button onClick={onBookmark} className={isBookmarked ? 'text-amber-600 dark:text-amber-300' : 'hover:text-violet-600 dark:hover:text-violet-300'}>
-					{isBookmarked ? 'Saved' : 'Bookmark'}
+					<span className="block truncate">
+						Next: {decodeHtml(tocItems[Math.min(tocItems.length - 1, activeIdx + 1)]?.title ?? 'Topic')}
+					</span>
 				</button>
 			</div>
 		</div>
@@ -548,7 +529,7 @@ const MobileArticleLearningPanel = ({
 
 	return (
 		<div className="mb-5 space-y-2.5 xl:hidden">
-			<div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+			<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
 				<div className="flex items-center justify-between gap-4">
 					<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Reading progress</p>
 					<p className="text-xs text-neutral-500 dark:text-neutral-400">{estimatedRemaining} min left</p>
@@ -559,16 +540,32 @@ const MobileArticleLearningPanel = ({
 					</div>
 					<span className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">{Math.round(progress)}%</span>
 				</div>
+				<details className="group mt-3">
+					<summary className="flex cursor-pointer list-none items-center justify-between rounded-xl bg-neutral-50 px-3 py-2 text-xs font-semibold text-neutral-600 dark:bg-neutral-800/60 dark:text-neutral-300">
+						<span>Metadata and pacing</span>
+						<span className="transition group-open:rotate-180">⌄</span>
+					</summary>
+					<div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+						<div className="rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
+							<p className="text-neutral-500 dark:text-neutral-400">Total read</p>
+							<p className="mt-1 font-bold text-neutral-900 dark:text-neutral-50">{readTimeInMinutes} min</p>
+						</div>
+						<div className="rounded-xl border border-neutral-200 p-3 dark:border-neutral-800">
+							<p className="text-neutral-500 dark:text-neutral-400">Sections</p>
+							<p className="mt-1 font-bold text-neutral-900 dark:text-neutral-50">{tocItems.length || 1}</p>
+						</div>
+					</div>
+				</details>
 			</div>
 
-			<details className="group rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+			<details className="group rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
 				<summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
 					<span className="inline-flex items-center gap-2"><span className="text-violet-600 dark:text-violet-300">◴</span> On this page</span>
 					<span className="text-neutral-400 transition group-open:rotate-180">⌄</span>
 				</summary>
 				<div className="border-t border-neutral-100 px-4 py-3 dark:border-neutral-800">
 					<div className="space-y-1">
-						{tocItems.slice(0, 8).map((item) => (
+						{tocItems.map((item) => (
 							<a
 								key={`mobile-toc-${item.id}`}
 								href={`#heading-${item.slug}`}
@@ -581,7 +578,7 @@ const MobileArticleLearningPanel = ({
 				</div>
 			</details>
 
-			<details className="group rounded-xl border border-violet-200 bg-violet-50/50 dark:border-violet-900 dark:bg-violet-950/20">
+			<details className="group rounded-2xl border border-violet-200 bg-violet-50/50 dark:border-violet-900 dark:bg-violet-950/20">
 				<summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
 					<span className="inline-flex items-center gap-2"><span className="text-violet-600 dark:text-violet-300">✣</span> Need another angle?</span>
 					<span className="text-neutral-400 transition group-open:rotate-180">⌄</span>
@@ -697,6 +694,360 @@ const ArticleOverviewBlock = ({
 	);
 };
 
+const ArticleAtAGlancePanel = ({
+	tocItems,
+	readTimeInMinutes,
+	conceptDependencies,
+}: {
+	tocItems: TocItem[];
+	readTimeInMinutes: number;
+	conceptDependencies: Array<{ concept: string; dependsOn: string | null }>;
+}) => (
+	<section className="mb-7 rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
+		<p className="mb-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">At a glance</p>
+		<div className="space-y-3 text-xs">
+			<div className="flex items-center justify-between gap-4">
+				<span className="font-semibold text-neutral-700 dark:text-neutral-300">Difficulty</span>
+				<span className="text-neutral-600 dark:text-neutral-300">{readTimeInMinutes > 12 ? 'Advanced' : 'Intermediate'} ▥</span>
+			</div>
+			<div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+				<span className="font-semibold text-neutral-700 dark:text-neutral-300">Concepts</span>
+				<span className="text-neutral-600 dark:text-neutral-300">{Math.max(5, tocItems.length)}</span>
+			</div>
+			<div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+				<span className="font-semibold text-neutral-700 dark:text-neutral-300">Estimated time</span>
+				<span className="text-neutral-600 dark:text-neutral-300">{readTimeInMinutes} min</span>
+			</div>
+			<div className="flex items-start justify-between gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+				<span className="font-semibold text-neutral-700 dark:text-neutral-300">Prerequisites</span>
+				<span className="max-w-[220px] text-right text-neutral-600 dark:text-neutral-300">
+					{conceptDependencies.slice(0, 2).map((item) => item.concept).join(', ') || 'Foundations'}
+				</span>
+			</div>
+		</div>
+	</section>
+);
+
+const ImmersiveArticleStory = ({
+	postTitle,
+	overview,
+	flowNodes,
+	architectureSequence,
+	insightCards,
+	tradeoffOptions,
+	failureScenarios,
+	animateArchitecture,
+	reduceMotion,
+	onToggleAnimation,
+	getSimulationHref,
+	onSimulationIntent,
+}: {
+	postTitle: string;
+	overview: string;
+	flowNodes: string[];
+	architectureSequence: string[];
+	insightCards: Array<{ title: string; icon: string; body: string }>;
+	tradeoffOptions: Array<{ title: string; body: string }>;
+	failureScenarios: Array<{ title: string; impact: string; mitigation: string; severity: number }>;
+	animateArchitecture: boolean;
+	reduceMotion: boolean | null;
+	onToggleAnimation: () => void;
+	getSimulationHref: (sectionTitle: string, sectionId?: string) => string;
+	onSimulationIntent: (sectionTitle: string, sectionId?: string) => void;
+}) => {
+	const topologyNodes = flowNodes.length > 0 ? flowNodes.slice(0, 5) : architectureSequence.slice(0, 5);
+	const storySections = insightCards.slice(0, 3);
+
+	return (
+		<section className="my-10 space-y-10">
+			<div className="relative w-screen left-1/2 -translate-x-1/2 xl:w-auto xl:left-auto xl:translate-x-0 border-y xl:border border-violet-100 bg-gradient-to-br from-white via-violet-50/60 to-blue-50/70 py-8 dark:border-violet-950 dark:from-neutral-950 dark:via-violet-950/20 dark:to-blue-950/20 md:py-10 xl:rounded-3xl xl:px-6 xl:mx-0">
+				<div className="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,0.84fr)_minmax(520px,1.16fr)] xl:grid-cols-1 lg:items-center">
+					<div>
+						<p className="text-[10px] font-mono uppercase tracking-[0.24em] text-violet-600 dark:text-violet-300">
+							System lens
+						</p>
+						<h2 id="story-architecture" className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50 md:text-4xl">
+							See {postTitle} as a living topology.
+						</h2>
+						<p className="mt-4 text-base leading-relaxed text-neutral-600 dark:text-neutral-300">
+							{overview}
+						</p>
+						<div className="mt-5 flex flex-wrap gap-2">
+							{isVisualizationLabEnabled ? (
+								<CTALink
+									href={getSimulationHref('Visual topology', 'story-architecture')}
+									level={1}
+									size="md"
+									onClick={() => onSimulationIntent('Visual topology', 'story-architecture')}
+								>
+									Launch Section Simulation
+								</CTALink>
+							) : null}
+							<CTAButton type="button" level={2} size="md" onClick={onToggleAnimation}>
+								{animateArchitecture ? 'Pause Flow' : 'Play Flow'}
+							</CTAButton>
+						</div>
+					</div>
+
+					<div className="overflow-x-auto rounded-3xl border border-white/80 bg-white/80 p-4 shadow-2xl shadow-violet-500/10 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/80 dark:shadow-violet-950/20">
+						<div className="relative min-w-[620px] rounded-2xl bg-[linear-gradient(to_right,rgba(99,102,241,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(99,102,241,0.08)_1px,transparent_1px)] bg-[size:28px_28px] p-5">
+							<div className="grid grid-cols-5 gap-3">
+								{topologyNodes.map((node, index) => (
+									<div key={`${node}-${index}`} className="relative min-h-32 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+										<div className={`mb-3 h-10 w-10 rounded-2xl ${
+											index % 3 === 0
+												? 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-200'
+												: index % 3 === 1
+												? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-200'
+												: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200'
+										} flex items-center justify-center text-sm font-black`}>
+											{index + 1}
+										</div>
+										<p className="text-sm font-bold text-neutral-950 dark:text-neutral-50">{node}</p>
+										<p className="mt-2 text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+											{index === 0 ? 'Ingress and assumptions' : index === topologyNodes.length - 1 ? 'Outcome and guarantees' : 'State transition'}
+										</p>
+										{index < topologyNodes.length - 1 ? (
+											<motion.div
+												aria-hidden="true"
+												className="absolute -right-5 top-1/2 z-10 h-1 w-8 rounded-full bg-gradient-to-r from-violet-500 to-blue-500"
+												animate={
+													animateArchitecture && !reduceMotion
+														? { opacity: [0.35, 1, 0.35], scaleX: [0.72, 1, 0.72] }
+														: { opacity: 0.65, scaleX: 1 }
+												}
+												transition={{ duration: 1.8 + index * 0.18, repeat: animateArchitecture && !reduceMotion ? Infinity : 0 }}
+											/>
+										) : null}
+									</div>
+								))}
+							</div>
+							<div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-center text-sm font-bold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+								The article becomes easier when every section maps to a state change, a guarantee, or a failure boundary.
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div className="grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-start">
+				<div className="md:sticky md:top-28">
+					<p className="text-[10px] font-mono uppercase tracking-[0.24em] text-blue-600 dark:text-blue-300">
+						Narrative transition
+					</p>
+					<h2 id="story-pacing" className="mt-2 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
+						Move from explanation to operating judgment.
+					</h2>
+					<p className="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+						Use these checkpoints as the conceptual pacing layer before continuing into the full article.
+					</p>
+				</div>
+				<div className="space-y-3">
+					{storySections.map((item, index) => (
+						<div
+							key={item.title}
+							className={`rounded-2xl border p-4 ${
+								index === 1
+									? 'ml-0 border-blue-200 bg-blue-50/70 dark:border-blue-900 dark:bg-blue-950/20 md:ml-8'
+									: 'border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900'
+							}`}
+						>
+							<p className="text-sm font-bold text-neutral-950 dark:text-neutral-50">
+								<span className="mr-2 text-violet-600 dark:text-violet-300">{item.icon}</span>
+								{item.title}
+							</p>
+							<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">{item.body}</p>
+						</div>
+					))}
+				</div>
+			</div>
+
+			<div className="grid gap-4 md:grid-cols-2">
+				{tradeoffOptions.slice(0, 2).map((option, index) => (
+					<div key={option.title} className={`rounded-2xl border p-5 ${
+						index === 0
+							? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20'
+							: 'border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20'
+					}`}>
+						<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">
+							Tradeoff path {index + 1}
+						</p>
+						<h3 className="mt-2 text-base font-extrabold text-neutral-950 dark:text-neutral-50">{option.title}</h3>
+						<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">{option.body}</p>
+					</div>
+				))}
+			</div>
+
+			<div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-5 dark:border-rose-950 dark:bg-rose-950/15">
+				<div className="flex flex-wrap items-start justify-between gap-3">
+					<div>
+						<p className="text-[10px] font-mono uppercase tracking-[0.24em] text-rose-600 dark:text-rose-300">
+							Failure rehearsal
+						</p>
+						<h2 id="story-failure" className="mt-2 text-xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
+							Pressure-test the mental model.
+						</h2>
+					</div>
+					{isVisualizationLabEnabled ? (
+						<CTALink
+							href={getSimulationHref('Failure rehearsal', 'story-failure')}
+							level={2}
+							size="sm"
+							onClick={() => onSimulationIntent('Failure rehearsal', 'story-failure')}
+						>
+							Simulate Failure Mode
+						</CTALink>
+					) : null}
+				</div>
+				<div className="mt-4 space-y-3">
+					{failureScenarios.map((scenario) => (
+						<div key={scenario.title} className="rounded-2xl border border-white/80 bg-white/80 p-4 dark:border-neutral-800 dark:bg-neutral-950/70">
+							<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_120px] md:items-center">
+								<div>
+									<p className="text-sm font-bold text-neutral-950 dark:text-neutral-50">{scenario.title}</p>
+									<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{scenario.impact}</p>
+									<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
+										Mitigation: <span className="font-semibold">{scenario.mitigation}</span>
+									</p>
+								</div>
+								<div>
+									<p className="text-right text-[11px] font-semibold text-rose-700 dark:text-rose-300">Risk {scenario.severity}%</p>
+									<div className="mt-2 h-2 overflow-hidden rounded-full bg-rose-100 dark:bg-rose-950">
+										<motion.div
+											className="h-full rounded-full bg-rose-500"
+											animate={{ width: `${scenario.severity}%` }}
+											transition={{ duration: reduceMotion ? 0 : 0.45 }}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
+
+			<div className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+				<p className="text-[10px] font-mono uppercase tracking-[0.24em] text-neutral-500 dark:text-neutral-400">
+					Back to the article
+				</p>
+				<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+					Continue into the authored sections with the topology in mind: each heading should now answer what changes, what can fail, and what guarantee the system is trying to preserve.
+				</p>
+			</div>
+		</section>
+	);
+};
+
+type InterviewPromptSet = {
+	relevanceScore: number;
+	relevanceLabel: string;
+	practiceQuestion: string;
+	tradeoffPrompt: string;
+	whiteboardPrompt: string;
+	mockDiscussionPrompt: string;
+	checkpoints: string[];
+};
+
+const getInterviewPromptSet = ({
+	title,
+	tags,
+	flowNodes,
+	tradeoffOptions,
+	failureScenarios,
+	tocItems,
+}: {
+	title: string;
+	tags: NonNullable<PostFullFragment['tags']>;
+	flowNodes: string[];
+	tradeoffOptions: Array<{ title: string; body: string }>;
+	failureScenarios: Array<{ title: string; impact: string; mitigation: string; severity: number }>;
+	tocItems: TocItem[];
+}): InterviewPromptSet => {
+	const corpus = `${title} ${tags.map((tag) => tag.name).join(' ')} ${tocItems.map((item) => item.title).join(' ')}`.toLowerCase();
+	const signals = [
+		/system|design|architecture|distributed|scalability|database|kafka|consensus|replication/.test(corpus),
+		/interview|tradeoff|failure|latency|throughput|consistency|availability/.test(corpus),
+		flowNodes.length >= 3,
+		failureScenarios.length > 0,
+	].filter(Boolean).length;
+	const relevanceScore = Math.min(96, 42 + signals * 14 + Math.min(10, tocItems.length));
+	const primaryFlow = flowNodes.slice(0, 3).join(' -> ') || title;
+	const tradeoff = tradeoffOptions[0]?.title || 'speed, correctness, and operational simplicity';
+	const failure = failureScenarios[0]?.title || 'the most likely production failure mode';
+
+	return {
+		relevanceScore,
+		relevanceLabel: relevanceScore >= 82 ? 'High interview signal' : relevanceScore >= 64 ? 'Useful interview practice' : 'Light interview practice',
+		practiceQuestion: `Explain ${title} to a senior engineering interviewer in under two minutes. Include the core mechanism, one tradeoff, and one failure mode.`,
+		tradeoffPrompt: `Help me explain the tradeoffs in ${title}. Compare ${tradeoff} with the alternative and give me interviewer follow-ups.`,
+		whiteboardPrompt: `Whiteboard ${title} as a system design discussion. Use this flow: ${primaryFlow}. Include APIs, state, scaling limits, and failure recovery.`,
+		mockDiscussionPrompt: `Start a mock interview discussion for ${title}. Interrupt me with clarification questions, scaling follow-ups, and tradeoff challenges.`,
+		checkpoints: [
+			`Clarify the problem boundary before explaining ${title}.`,
+			`Draw the flow: ${primaryFlow}.`,
+			`Name the main tradeoff: ${tradeoff}.`,
+			`Handle failure scenario: ${failure}.`,
+			`Close with observability, rollback, and scaling signals.`,
+		],
+	};
+};
+
+const InterviewArticleOverlay = ({
+	promptSet,
+	onAsk,
+	assistantHref,
+	mockHref,
+	whiteboardHref,
+}: {
+	promptSet: InterviewPromptSet;
+	onAsk: (prompt: string) => void;
+	assistantHref: string;
+	mockHref: string;
+	whiteboardHref: string;
+}) => (
+	<section className="my-8 overflow-hidden rounded-3xl border border-violet-200 bg-gradient-to-br from-white via-violet-50/70 to-blue-50/70 p-5 dark:border-violet-900 dark:from-neutral-950 dark:via-violet-950/20 dark:to-blue-950/20">
+		<div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.55fr)]">
+			<div>
+				<div className="flex flex-wrap items-center gap-2">
+					<span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-violet-700 dark:bg-violet-950 dark:text-violet-200">
+						{promptSet.relevanceLabel}
+					</span>
+					<span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-neutral-600 shadow-sm dark:bg-neutral-900 dark:text-neutral-300">
+						{promptSet.relevanceScore}% readiness relevance
+					</span>
+				</div>
+				<h2 id="interview-mode" className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
+					Interview mode for this article.
+				</h2>
+				<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+					Use this article as a live interview drill: explain the mechanism, defend tradeoffs, whiteboard the architecture, and handle production failure follow-ups.
+				</p>
+				<div className="mt-4 grid gap-2 sm:grid-cols-2">
+					<CTALink href={assistantHref} level={1} size="sm">Practice Interview Question</CTALink>
+					<CTAButton type="button" level={2} size="sm" onClick={() => onAsk(promptSet.tradeoffPrompt)}>
+						Explain Tradeoffs
+					</CTAButton>
+					<CTALink href={whiteboardHref} level={2} size="sm">Whiteboard This System</CTALink>
+					<CTALink href={mockHref} level={3} size="sm">Start Mock Discussion</CTALink>
+				</div>
+			</div>
+			<div className="rounded-2xl border border-white/80 bg-white/85 p-4 shadow-lg shadow-violet-500/10 dark:border-neutral-800 dark:bg-neutral-950/70">
+				<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">System design checkpoints</p>
+				<ol className="mt-3 space-y-2">
+					{promptSet.checkpoints.map((checkpoint, index) => (
+						<li key={checkpoint} className="grid grid-cols-[24px_minmax(0,1fr)] gap-2 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
+							<span className="flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-[10px] font-black text-violet-700 dark:bg-violet-950 dark:text-violet-200">
+								{index + 1}
+							</span>
+							<span>{checkpoint}</span>
+						</li>
+					))}
+				</ol>
+			</div>
+		</div>
+	</section>
+);
+
 type PostProps = {
 	type: 'post';
 	post: PostFullFragment;
@@ -719,13 +1070,13 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 		'.hljs{display:block;overflow-x:auto;padding:.5em;background:#23241f}.hljs,.hljs-subst,.hljs-tag{color:#f8f8f2}.hljs-emphasis,.hljs-strong{color:#a8a8a2}.hljs-bullet,.hljs-link,.hljs-literal,.hljs-number,.hljs-quote,.hljs-regexp{color:#ae81ff}.hljs-code,.hljs-section,.hljs-selector-class,.hljs-title{color:#a6e22e}.hljs-strong{font-weight:700}.hljs-emphasis{font-style:italic}.hljs-attr,.hljs-keyword,.hljs-name,.hljs-selector-tag{color:#f92672}.hljs-attribute,.hljs-symbol{color:#66d9ef}.hljs-class .hljs-title,.hljs-params{color:#f8f8f2}.hljs-addition,.hljs-built_in,.hljs-builtin-name,.hljs-selector-attr,.hljs-selector-id,.hljs-selector-pseudo,.hljs-string,.hljs-template-variable,.hljs-type,.hljs-variable{color:#e6db74}.hljs-comment,.hljs-deletion,.hljs-meta{color:#75715e}';
 	const [, setMobMount] = useState(false);
 	const [canLoadEmbeds, setCanLoadEmbeds] = useState(false);
-	const [explanationMode, setExplanationMode] = useState<'beginner' | 'production' | 'interview'>('production');
 	const [animateArchitecture, setAnimateArchitecture] = useState(true);
 	const [readingProgress, setReadingProgress] = useState(0);
 	const [showQuizDrawer, setShowQuizDrawer] = useState(false);
 	const [isBookmarked, setIsBookmarked] = useState(false);
 	const [markedHelpful, setMarkedHelpful] = useState(false);
 	const reduceMotion = useReducedMotion();
+	const { setContext, buildPrompt, getContextHref } = useLearningContext();
 	useEmbeds({ enabled: canLoadEmbeds });
 
 	if (post.hasLatexInPost) {
@@ -766,6 +1117,25 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			: [];
 
 	const tags = post.tags ?? [];
+
+	useEffect(() => {
+		const primaryTag = tags[0] ? formatTagName(tags[0].name) : undefined;
+		const secondaryTag = tags[1] ? formatTagName(tags[1].name) : undefined;
+		setContext({
+			source: 'article',
+			pathname: `/${post.slug}`,
+			title: post.title,
+			slug: post.slug,
+			domain: primaryTag ? 'Engineering' : 'Abstract Algorithms',
+			topic: primaryTag ?? post.series?.name ?? post.title,
+			subtopic: post.series?.name ?? secondaryTag,
+			concept: secondaryTag ?? primaryTag ?? post.title,
+			roadmapNode: post.title,
+			roadmapHref: post.series?.slug ? `/series/${post.series.slug}` : '/guided-topics',
+			simulationTopic: post.title,
+		});
+	}, [post.series?.name, post.series?.slug, post.slug, post.title, setContext, tags]);
+
 	const aiSummaryBullets = useMemo(
 		() => getAiSummaryBullets(post.content.markdown, post.title),
 		[post.content.markdown, post.title],
@@ -774,16 +1144,6 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 		() => detectGlossaryTerms(post.content.markdown),
 		[post.content.markdown],
 	);
-	const prerequisites = useMemo(() => {
-		const fromTags = tags.map((tag) => `${formatTagName(tag.name)} foundations`);
-		const fromToc = tocItems
-			.filter((item) => item.level <= 2)
-			.map((item) => decodeHtml(item.title).replace(/^[\d.]+\s*/, '').trim())
-			.filter(Boolean)
-			.slice(0, 2)
-			.map((item) => `${item} basics`);
-		return [...new Set([...fromTags, ...fromToc])].slice(0, 4);
-	}, [tags, tocItems]);
 	const conceptDependencies = useMemo(
 		() =>
 			tags.slice(0, 6).map((tag, index) => ({
@@ -882,18 +1242,68 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			].slice(0, 3),
 		[post.title],
 	);
+	const interviewPrompts = useMemo(
+		() =>
+			getInterviewPromptSet({
+				title: post.title,
+				tags,
+				flowNodes: articleFlowNodes,
+				tradeoffOptions,
+				failureScenarios,
+				tocItems,
+			}),
+		[articleFlowNodes, failureScenarios, post.title, tags, tocItems, tradeoffOptions],
+	);
 	const upNextPost = morePosts[0] ?? null;
-	const remainingMinutes = Math.max(1, Math.round((post.readTimeInMinutes * (100 - readingProgress)) / 100));
+	const storyOverview =
+		post.subtitle ||
+		post.brief ||
+		aiSummaryBullets[0] ||
+		`Understand ${post.title} through a practical engineering lens.`;
+
+	const getSimulationHrefForSection = (sectionTitle: string, sectionId?: string) => {
+		const params = new URLSearchParams({
+			q: post.title,
+			from: `/${post.slug}`,
+			section: sectionTitle,
+			node: sectionTitle,
+		});
+		if (sectionId) params.set('sectionId', sectionId);
+		return `/visualizations?${params.toString()}`;
+	};
+
+	const syncSimulationContext = (sectionTitle: string, sectionId?: string) => {
+		setContext({
+			source: 'article',
+			pathname: `/${post.slug}`,
+			title: post.title,
+			slug: post.slug,
+			sectionId,
+			sectionTitle,
+			roadmapNode: sectionTitle,
+			simulationTopic: post.title,
+		});
+	};
+	const interviewAssistantHref = `/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.practiceQuestion))}`;
+	const whiteboardHref = `/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.whiteboardPrompt))}`;
+	const mockDiscussionHref = isInterviewPrepEnabled
+		? `/interview-prep#mock-interviews`
+		: `/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.mockDiscussionPrompt))}`;
 
 	const handleAiExplain = (section: string) => {
-		window.location.href = `/assistant?q=${encodeURIComponent(`Explain ${section} from ${post.title} in simpler terms`)}`;
+		window.location.href = `/assistant?q=${encodeURIComponent(
+			buildPrompt(`Explain ${section} from ${post.title} in simpler terms.`),
+		)}`;
 	};
 
 	const openArticleChat = (question?: string) => {
+		const currentQuestion =
+			question ||
+			buildPrompt(`Summarize the key ideas in "${post.title}" and explain what I should focus on.`);
 		window.dispatchEvent(
 			new CustomEvent('open-chatbot', {
 				detail: {
-					question: question || `Summarize the key ideas in "${post.title}" and explain what I should focus on.`,
+					question: currentQuestion,
 				},
 			}),
 		);
@@ -944,11 +1354,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 				{/* Left: title, subtitle, meta */}
 				<div className="w-full">
 					<div className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
-						<Link href="/" className="text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
-						<span className="text-neutral-300 dark:text-neutral-700">/</span>
-						<Link href="/posts" className="text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400">Engineering Articles</Link>
-						<span className="text-neutral-300 dark:text-neutral-700">/</span>
-						<span className="text-neutral-700 dark:text-neutral-200 line-clamp-1">{post.title}</span>
+						<ContextualBreadcrumbs compact />
 					</div>
 					<div className="mb-2.5 flex flex-wrap items-center gap-2">
 						<span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -1032,43 +1438,55 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						)}
 					</div>
 
-					{/* Progress Badge */}
-					<div id="mark-complete-anchor" className="mt-3.5 grid grid-cols-4 divide-x divide-neutral-100 rounded-xl border border-neutral-200 bg-white text-center dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
-						<button
-							onClick={() => setIsBookmarked((prev) => !prev)}
-							className={`px-2 py-2.5 text-xs font-semibold ${isBookmarked ? 'text-amber-600 dark:text-amber-300' : 'text-neutral-600 dark:text-neutral-300'}`}
-						>
-							<span className="block text-base">▱</span>
-							{isBookmarked ? 'Saved' : 'Save'}
-						</button>
-						<button
-							onClick={() => navigator.share?.({ title: post.title, text: post.brief ?? post.subtitle ?? '', url: post.url })}
-							className="px-2 py-2.5 text-xs font-semibold text-neutral-600 dark:text-neutral-300"
-						>
-							<span className="block text-base">↗</span>
-							Share
-						</button>
-						<button
-							onClick={() => setMarkedHelpful((prev) => !prev)}
-							className={`px-2 py-2.5 text-xs font-semibold ${markedHelpful ? 'text-emerald-600 dark:text-emerald-300' : 'text-neutral-600 dark:text-neutral-300'}`}
-						>
-							<span className="block text-base">♧</span>
-							Helpful
-						</button>
-						<button
-							onClick={() => openArticleChat()}
-							className="px-2 py-2.5 text-xs font-semibold text-violet-600 dark:text-violet-300"
-						>
-							<span className="block text-base">✦</span>
-							Ask AI
-						</button>
-						<button
-							onClick={() => navigator.clipboard.writeText(post.url)}
-							className="px-2 py-2.5 text-xs font-semibold text-neutral-600 dark:text-neutral-300"
-						>
-							<span className="block text-base">…</span>
-							More
-						</button>
+					{/* Mobile primary action + expandable tray */}
+					<div id="mark-complete-anchor" className="mt-3.5 rounded-2xl border border-neutral-200 bg-white p-2 dark:border-neutral-800 dark:bg-neutral-900">
+						<CTAButton type="button" level={1} size="lg" className="w-full" onClick={() => openArticleChat()}>
+							Ask AI About This Article
+						</CTAButton>
+						<details className="group mt-2">
+							<summary className="flex cursor-pointer list-none items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-neutral-600 dark:text-neutral-300">
+								<span>More actions</span>
+								<span className="transition group-open:rotate-180">⌄</span>
+							</summary>
+							<div className="mt-2 grid grid-cols-2 gap-2">
+								<Link
+									href={interviewAssistantHref}
+									className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-3 text-center text-xs font-semibold text-violet-700 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-300"
+								>
+									Practice Interview
+								</Link>
+								<Link
+									href={mockDiscussionHref}
+									className="rounded-xl border border-violet-200 bg-white px-3 py-3 text-center text-xs font-semibold text-violet-700 dark:border-violet-800 dark:bg-neutral-950 dark:text-violet-300"
+								>
+									Mock Discussion
+								</Link>
+								<button
+									onClick={() => setIsBookmarked((prev) => !prev)}
+									className={`rounded-xl border border-neutral-200 px-3 py-3 text-xs font-semibold dark:border-neutral-700 ${isBookmarked ? 'text-amber-600 dark:text-amber-300' : 'text-neutral-600 dark:text-neutral-300'}`}
+								>
+									{isBookmarked ? 'Saved' : 'Save'}
+								</button>
+								<button
+									onClick={() => navigator.share?.({ title: post.title, text: post.brief ?? post.subtitle ?? '', url: post.url })}
+									className="rounded-xl border border-neutral-200 px-3 py-3 text-xs font-semibold text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
+								>
+									Share
+								</button>
+								<button
+									onClick={() => setMarkedHelpful((prev) => !prev)}
+									className={`rounded-xl border border-neutral-200 px-3 py-3 text-xs font-semibold dark:border-neutral-700 ${markedHelpful ? 'text-emerald-600 dark:text-emerald-300' : 'text-neutral-600 dark:text-neutral-300'}`}
+								>
+									{markedHelpful ? 'Helpful' : 'Rate helpful'}
+								</button>
+								<button
+									onClick={() => navigator.clipboard.writeText(post.url)}
+									className="rounded-xl border border-neutral-200 px-3 py-3 text-xs font-semibold text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
+								>
+									Copy link
+								</button>
+							</div>
+						</details>
 					</div>
 					<div className="mt-3">
 						<ProgressBadge postId={post.id} postTitle={post.title} />
@@ -1080,32 +1498,28 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 				tocItems={tocItems}
 				readTimeInMinutes={post.readTimeInMinutes}
 				progress={readingProgress}
-				onBeginnerHelp={() => setExplanationMode('beginner')}
+				onBeginnerHelp={() => openArticleChat(buildPrompt(`Explain the current section of "${post.title}" in simpler terms.`))}
 				onOpenQuiz={() => setShowQuizDrawer(true)}
 			/>
 
-			{/* ── 3-Column Reading Layout ── */}
-			<div className="mt-3 flex min-w-0 w-full gap-6 md:mt-5 lg:gap-8 xl:mt-4 xl:gap-8">
+			{/* ── Responsive article layout: 2 cols on xl, 3 cols on 2xl ── */}
+			<div className="mt-3 grid min-w-0 w-full items-start gap-6 md:mt-5 lg:gap-8 xl:mt-4 xl:grid-cols-[240px_minmax(0,1fr)] xl:gap-6">
 				<ReadingNavigationSidebar
 					tocItems={tocItems}
 					readTimeInMinutes={post.readTimeInMinutes}
 					progress={readingProgress}
-					onBeginnerHelp={() => setExplanationMode('beginner')}
+					onBeginnerHelp={() => openArticleChat(buildPrompt(`Explain the current section of "${post.title}" in simpler terms.`))}
 					onOpenQuiz={() => setShowQuizDrawer(true)}
 					onMarkComplete={() => {
 						document.getElementById('mark-complete-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 					}}
 				/>
 
-				{/* Center: article content — responsive max-width based on ToC visibility */}
-				<div className="flex-1 min-w-0 max-w-[780px]">
+				{/* Center: article content gets priority width */}
+				<div className="min-w-0 w-full max-w-[860px]">
 					<div className="mb-5 hidden xl:block">
 						<div className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
-							<Link href="/" className="text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400">Home</Link>
-							<span className="text-neutral-300 dark:text-neutral-700">/</span>
-							<Link href="/posts" className="text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400">Engineering Articles</Link>
-							<span className="text-neutral-300 dark:text-neutral-700">/</span>
-							<span className="text-neutral-700 line-clamp-1 dark:text-neutral-200">{post.title}</span>
+							<ContextualBreadcrumbs compact />
 						</div>
 						<div className="mb-3 flex flex-wrap items-center gap-2">
 							<span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -1171,6 +1585,12 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 								>
 									<span aria-hidden="true">✦</span> Ask AI
 								</button>
+								<Link
+									href={interviewAssistantHref}
+									className="inline-flex items-center gap-2 text-xs font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200"
+								>
+									<span aria-hidden="true">▣</span> Interview
+								</Link>
 								<div className="pt-2">
 									<p className="mb-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">Helpful?</p>
 									<div className="flex gap-2">
@@ -1199,225 +1619,6 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</div>
 					</div>
 
-					{/* AI-generated summary + prerequisite architecture blocks */}
-					{false ? (
-					<section className="mt-10 hidden space-y-4 md:block">
-						<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
-								Explanation mode
-							</p>
-							<div className="inline-flex rounded-lg border border-neutral-200 dark:border-neutral-700 p-1">
-								<button
-									onClick={() => setExplanationMode('beginner')}
-									aria-pressed={explanationMode === 'beginner'}
-									className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-										explanationMode === 'beginner'
-											? 'bg-blue-600 text-white'
-											: 'text-neutral-600 dark:text-neutral-300'
-									}`}
-								>
-									Beginner explanation
-								</button>
-								<button
-									onClick={() => setExplanationMode('production')}
-									aria-pressed={explanationMode === 'production'}
-									className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-										explanationMode === 'production'
-											? 'bg-blue-600 text-white'
-											: 'text-neutral-600 dark:text-neutral-300'
-									}`}
-								>
-									Production perspective
-								</button>
-								<button
-									onClick={() => setExplanationMode('interview')}
-									aria-pressed={explanationMode === 'interview'}
-									className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-										explanationMode === 'interview'
-											? 'bg-blue-600 text-white'
-											: 'text-neutral-600 dark:text-neutral-300'
-									}`}
-								>
-									Interview mode
-								</button>
-							</div>
-							<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-								{explanationMode === 'beginner'
-									? 'You are seeing simpler language and foundation-first framing.'
-									: explanationMode === 'production'
-									? 'You are seeing failure modes, constraints, and operational tradeoffs.'
-									: 'You are seeing interview framing, whiteboarding hints, and tradeoff prompts.'}
-							</p>
-						</div>
-
-						<div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-950/30 p-4">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-2">
-								AI-generated summary
-							</p>
-							<ul className="m-0 list-disc pl-5 space-y-1 text-sm text-neutral-700 dark:text-neutral-300">
-								{aiSummaryBullets.map((bullet) => (
-									<li key={bullet}>{bullet}</li>
-								))}
-								<li>
-									{explanationMode === 'beginner'
-										? 'Begin with the core mental model first, then map each section to one concrete example.'
-										: explanationMode === 'production'
-										? 'Map each section to an SLO, failure boundary, and observability signal before implementation.'
-										: 'For interview prep, convert each section into one design decision and one tradeoff.'}
-								</li>
-							</ul>
-						</div>
-
-						<div className="rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/70 dark:bg-purple-950/30 p-4">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-2">
-								Prerequisites required
-							</p>
-							{prerequisites.length > 0 ? (
-								<div className="flex flex-wrap gap-2">
-									{prerequisites.map((item) => (
-										<span
-											key={item}
-											className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800 px-3 py-1 text-xs text-purple-700 dark:text-purple-300"
-										>
-											{item}
-										</span>
-									))}
-								</div>
-							) : (
-								<p className="text-sm text-purple-800 dark:text-purple-300">
-									Start with the first section; no explicit prerequisites were detected for this article.
-								</p>
-							)}
-						</div>
-
-						<CalloutBlock variant="deep-dive" title="Architecture callout">
-							This section highlights system boundaries, failure modes, and scaling constraints that matter in real production environments.
-						</CalloutBlock>
-
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-							{insightCards.map((item) => (
-								<details key={item.title} className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3">
-									<summary className="cursor-pointer list-none flex items-center justify-between text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-										<span>{item.icon} {item.title}</span>
-										<span className="text-xs text-neutral-400">Expand</span>
-									</summary>
-									<p className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">{item.body}</p>
-								</details>
-							))}
-						</div>
-
-						<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
-								Tradeoff comparison
-							</p>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-								<div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/30 p-3">
-									<p className="font-semibold text-emerald-700 dark:text-emerald-300">Option A: {tradeoffOptions[0].title}</p>
-									<p className="mt-1 text-neutral-600 dark:text-neutral-300">{tradeoffOptions[0].body}</p>
-								</div>
-								<div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/30 p-3">
-									<p className="font-semibold text-amber-700 dark:text-amber-300">Option B: {tradeoffOptions[1].title}</p>
-									<p className="mt-1 text-neutral-600 dark:text-neutral-300">{tradeoffOptions[1].body}</p>
-								</div>
-							</div>
-						</div>
-
-						<div className="rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50/70 dark:bg-rose-950/20 p-4">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-rose-600 dark:text-rose-400 mb-2">
-								You may misunderstand this
-							</p>
-							<ul className="list-disc pl-5 space-y-1 text-sm text-rose-800 dark:text-rose-300">
-								{misunderstandingWarnings.map((item) => (
-									<li key={item}>{item}</li>
-								))}
-							</ul>
-						</div>
-
-						<div className="rounded-xl border border-indigo-200 dark:border-indigo-900 bg-gradient-to-br from-indigo-50/80 to-blue-50/80 dark:from-indigo-950/30 dark:to-blue-950/20 p-4">
-							<div className="flex items-center justify-between gap-2">
-								<p className="text-[10px] font-mono uppercase tracking-widest text-indigo-600 dark:text-indigo-300">
-									Visual architecture section
-								</p>
-								{isVisualizationLabEnabled ? (
-									<Link href={`/visualizations?q=${encodeURIComponent(post.title)}`} className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-										View Interactive Simulation
-									</Link>
-								) : null}
-							</div>
-							<div className="mt-3 grid grid-cols-2 md:grid-cols-5 gap-2">
-								{articleFlowNodes.slice(0, 5).map((node, index) => (
-									<div key={node} className="rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white/80 dark:bg-neutral-900/80 p-2">
-										<p className="text-xs font-semibold text-neutral-800 dark:text-neutral-100">{node}</p>
-										<p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">Concept {index + 1}</p>
-									</div>
-								))}
-							</div>
-							<p className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">
-								Hover and click interactions are available in full simulator mode with step-through flow and failure replay.
-							</p>
-						</div>
-
-						<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-							<div className="flex items-center justify-between gap-2">
-								<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
-									Animated architecture sequence
-								</p>
-								<button
-									onClick={() => setAnimateArchitecture((prev) => !prev)}
-									className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-[11px] text-neutral-600 dark:text-neutral-300"
-								>
-									{animateArchitecture ? 'Pause' : 'Play'}
-								</button>
-							</div>
-							<div className="mt-3 space-y-2">
-								{architectureSequence.map((step, index) => (
-									<div key={step} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-2">
-										<div className="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-300">
-											<span>Step {index + 1}</span>
-											<span>{step}</span>
-										</div>
-										<div className="mt-1 h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-											<motion.div
-												className="h-1.5 rounded-full bg-blue-500"
-												animate={
-													animateArchitecture && !reduceMotion
-														? { width: ['20%', '100%', '35%'] }
-														: { width: '45%' }
-												}
-												transition={{ duration: 2.6 + index * 0.25, repeat: animateArchitecture && !reduceMotion ? Infinity : 0 }}
-											/>
-										</div>
-									</div>
-								))}
-							</div>
-						</div>
-
-						<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
-								Failure scenario visualizations
-							</p>
-							<div className="space-y-3">
-								{failureScenarios.map((scenario) => (
-									<div key={scenario.title} className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/25 p-3">
-										<p className="text-sm font-semibold text-amber-800 dark:text-amber-300">{scenario.title}</p>
-										<p className="mt-1 text-xs text-neutral-600 dark:text-neutral-300">{scenario.impact}</p>
-										<p className="mt-1 text-xs text-neutral-600 dark:text-neutral-300">
-											Mitigation: <span className="font-medium">{scenario.mitigation}</span>
-										</p>
-										<div className="mt-2 h-1.5 rounded-full bg-amber-100 dark:bg-amber-900/40 overflow-hidden">
-											<motion.div
-												className="h-1.5 rounded-full bg-amber-500"
-												animate={{ width: `${scenario.severity}%` }}
-												transition={{ duration: reduceMotion ? 0 : 0.35 }}
-											/>
-										</div>
-									</div>
-								))}
-							</div>
-						</div>
-					</section>
-					) : null}
-
 					<ArticleOverviewBlock
 						post={post}
 						tags={tags}
@@ -1425,6 +1626,37 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						summaryBullets={aiSummaryBullets}
 						flowNodes={articleFlowNodes}
 					/>
+
+					<ArticleAtAGlancePanel
+						tocItems={tocItems}
+						readTimeInMinutes={post.readTimeInMinutes}
+						conceptDependencies={conceptDependencies}
+					/>
+
+					<ImmersiveArticleStory
+						postTitle={post.title}
+						overview={storyOverview}
+						flowNodes={articleFlowNodes}
+						architectureSequence={architectureSequence}
+						insightCards={insightCards}
+						tradeoffOptions={tradeoffOptions}
+						failureScenarios={failureScenarios}
+						animateArchitecture={animateArchitecture}
+						reduceMotion={reduceMotion}
+						onToggleAnimation={() => setAnimateArchitecture((prev) => !prev)}
+						getSimulationHref={getSimulationHrefForSection}
+						onSimulationIntent={syncSimulationContext}
+					/>
+
+					{isInterviewPrepEnabled ? (
+						<InterviewArticleOverlay
+							promptSet={interviewPrompts}
+							onAsk={(prompt) => openArticleChat(buildPrompt(prompt))}
+							assistantHref={interviewAssistantHref}
+							mockHref={mockDiscussionHref}
+							whiteboardHref={whiteboardHref}
+						/>
+					) : null}
 
 					{/* Article body — article-doc activates docs-article.css scoped styles (h2 borders, p max-width); overflow-x handled by outer container */}
 					<div className="article-doc w-full min-w-0">
@@ -1457,8 +1689,17 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</section>
 					)}
 
-					{/* Share — mobile/tablet (desktop uses sticky sidebar) */}
-					<MobileShareBar url={post.url} title={post.title} excerpt={post.brief ?? ''} tags={(post.tags ?? []).map((t) => t.name)} />
+					<section className="mt-8 rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
+						<p className="mb-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">Key takeaways</p>
+						<ul className="space-y-3 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
+							{aiSummaryBullets.slice(0, 4).map((item) => (
+								<li key={item} className="flex gap-2">
+									<span className="mt-0.5 text-violet-600 dark:text-violet-300">✓</span>
+									<span>{item}</span>
+								</li>
+							))}
+						</ul>
+					</section>
 
 					{/* Dynamic Quiz */}
 					<PostQuiz postTitle={post.title} postContent={post.content.markdown} />
@@ -1477,9 +1718,9 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 										{upNextPost.readTimeInMinutes} min · {upNextPost.tags?.[0]?.name ? `${formatTagName(upNextPost.tags[0].name)} · ` : ''}best next step
 									</p>
 								</Link>
-								<Link href="/progress" className="rounded-lg border border-neutral-200 px-3 py-2 text-center text-xs font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-600 dark:hover:text-blue-300">
+								<CTALink href={getContextHref('roadmap')} level={2} size="sm">
 									View roadmap
-								</Link>
+								</CTALink>
 							</div>
 						) : (
 							<p className="text-xs text-neutral-500 dark:text-neutral-400">Complete this article to unlock your next recommendation.</p>
@@ -1568,15 +1809,8 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 
 				</div>
 
-				{/* Right: reading context sidebar (xl+) */}
-				<ReadingContextSidebar
-					tocItems={tocItems}
-					readTimeInMinutes={post.readTimeInMinutes}
-					glossaryTerms={glossaryTerms}
-					conceptDependencies={conceptDependencies}
-					aiSummaryBullets={aiSummaryBullets}
-					morePosts={morePosts}
-				/>
+				{/* Right sidebar intentionally removed from page view */}
+				<ReadingContextSidebar />
 			</div>
 
 			{/* Floating AI Chatbot */}
@@ -1589,6 +1823,9 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 				onAiExplain={handleAiExplain}
 				onBookmark={() => setIsBookmarked((prev) => !prev)}
 				isBookmarked={isBookmarked}
+				interviewHref={interviewAssistantHref}
+				whiteboardHref={whiteboardHref}
+				mockHref={mockDiscussionHref}
 			/>
 
 			{showQuizDrawer ? (

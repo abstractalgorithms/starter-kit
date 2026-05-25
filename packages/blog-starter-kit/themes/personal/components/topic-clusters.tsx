@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PostFragment } from '../generated/graphql';
+import { isInterviewPrepEnabled } from '../lib/features';
 import { formatTagName } from '../utils/format';
 
 export type ClusterColor = 'blue' | 'emerald' | 'purple' | 'orange' | 'teal';
@@ -46,7 +47,7 @@ export function buildTopicClusters(
 
 	// Add Interview Prep as a special cluster if not already present
 	const hasInterviewPrep = clusters.some(c => c.slug === 'interview-prep');
-	if (!hasInterviewPrep) {
+	if (isInterviewPrepEnabled && !hasInterviewPrep) {
 		const interviewPosts = allPosts.filter(p => 
 			(p.tags ?? []).some(t => t?.slug?.toLowerCase().includes('interview'))
 		);

@@ -755,6 +755,16 @@
   color: inherit;
 }
 
+.article-doc .hashnode-content-style > blockquote:first-child {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.article-doc .hashnode-content-style > blockquote:first-child p {
+  max-width: none;
+}
+
 .article-doc :where(div[data-node-type='callout']) {
   max-width: 70ch;
   margin: 1.4rem 0;
@@ -826,7 +836,7 @@
 .article-doc pre:not(.mermaid) {
   margin: 0 !important;
   border: 1px solid rgba(124, 58, 237, 0.18) !important;
-  border-left: 0 !important;
+  border-left: 3px solid var(--doc-accent) !important;
   border-radius: 1rem !important;
   background: #111827 !important;
 }
@@ -896,8 +906,8 @@
 }
 
 .dark .article-doc .mermaid {
-  background: #ffffff;
-  border-color: #ddd6fe;
+  background: #1e293b;
+  border-color: #334155;
 }
 
 .article-doc .quiz-container {

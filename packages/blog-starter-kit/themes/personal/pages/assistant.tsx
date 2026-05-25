@@ -24,14 +24,16 @@ import {
 import { getFooterPosts } from '../lib/api/footerData';
 import { getHoverLift, getRevealVariants, getTapScale } from '../components/motion-system';
 import { PremiumSkeleton } from '../components/premium-skeleton';
+import { useLearningContext } from '../components/learning-context-provider';
+import { CTAButton, CTALink } from '../components/cta-system';
 import type { AssistantResponse } from './api/learning-assistant';
+import { isVisualizationLabEnabled } from '../lib/features';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const MEMORY_KEY = 'aa-learning-assistant-memory';
 const PROFILE_KEY = 'aa-learning-assistant-profile';
 const TAB_KEY = 'aa-learning-assistant-tab';
 const META_KEY = 'aa-learning-assistant-meta';
-const isVisualizationLabEnabled = process.env.NEXT_PUBLIC_ENABLE_VISUALIZATION_LAB === 'true';
 
 const INPUT_PLACEHOLDERS = [
 	'Ask about any article, concept, or architecture tradeoff',
@@ -90,6 +92,25 @@ type LearningProfile = {
 	favoriteDomains: string[];
 	weakAreas: string[];
 	feedbackMode: 'default' | 'too-advanced' | 'too-simplified' | 'need-visuals';
+};
+
+type MentorAction = {
+	id: string;
+	level: 1 | 2 | 3;
+	title: string;
+	description: string;
+	intent:
+		| 'continue'
+		| 'prerequisite'
+		| 'simulation'
+		| 'interview'
+		| 'roadmap'
+		| 'follow-up'
+		| 'mastery';
+	prompt: string;
+	tab?: AssistantTab;
+	href?: string;
+	score: number;
 };
 
 const STREAM_SECTION_ORDER = [
@@ -290,10 +311,159 @@ const defaultProfile: LearningProfile = {
 	feedbackMode: 'default',
 };
 
+const uniqueMentorActions = (actions: MentorAction[]) => {
+	const seen = new Set<string>();
+	return actions
+		.sort((a, b) => b.score - a.score)
+		.filter((action) => {
+			const key = normalizeSuggestionKey(`${action.intent} ${action.title}`);
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+};
+
+const buildMentorActions = ({
+	currentTurn,
+	learningContext,
+	learningHistory,
+	profile,
+	simulationHref,
+	roadmapHref,
+}: {
+	currentTurn: Turn | null;
+	learningContext: ReturnType<typeof useLearningContext>['context'];
+	learningHistory: ReturnType<typeof useLearningContext>['history'];
+	profile: LearningProfile;
+	simulationHref: string;
+	roadmapHref: string;
+}): MentorAction[] => {
+	const contextTopic =
+		learningContext.sectionTitle ||
+		learningContext.roadmapNode ||
+		learningContext.concept ||
+		learningContext.topic ||
+		learningContext.title ||
+		'distributed systems';
+	const recentArticle = learningHistory.find((item) => item.source === 'article');
+	const recentTopic = recentArticle?.sectionTitle || recentArticle?.concept || recentArticle?.topic || contextTopic;
+	const weakArea = profile.weakAreas[0] || currentTurn?.response.prerequisites[0];
+	const nextRoadmapStep = profile.currentRoadmap.find(
+		(item) => !profile.completedConcepts.some((done) => normalizeSuggestionKey(done) === normalizeSuggestionKey(item)),
+	);
+	const firstFollowUp = currentTurn?.response.interviewQuestions[0];
+	const firstRecommendation = currentTurn?.response.adaptiveRecommendations[0];
+	const difficultyScore = currentTurn?.response.difficultyEstimate.score ?? 48;
+
+	const actions: MentorAction[] = [
+		{
+			id: 'continue-context',
+			level: 1,
+			intent: 'continue',
+			title: `Continue into ${recentTopic}?`,
+			description: 'Pick up from the latest article, section, or roadmap node instead of starting a fresh search.',
+			prompt: `Continue coaching me from ${recentTopic}. Give me the next concept, a short explanation, and one practice task.`,
+			tab: 'answer',
+			score: recentArticle ? 96 : 76,
+		},
+		{
+			id: 'roadmap-next',
+			level: 2,
+			intent: 'roadmap',
+			title: nextRoadmapStep ? `Advance to ${nextRoadmapStep}` : `Build a path for ${contextTopic}`,
+			description: nextRoadmapStep
+				? 'Resume the next planned module from your current roadmap.'
+				: 'Turn the current context into a sequenced learning path.',
+			prompt: nextRoadmapStep
+				? `/roadmap ${nextRoadmapStep}`
+				: `/roadmap ${contextTopic}`,
+			tab: 'roadmap',
+			href: roadmapHref,
+			score: nextRoadmapStep ? 88 : 66,
+		},
+		{
+			id: 'interview-readiness',
+			level: difficultyScore > 62 ? 1 : 2,
+			intent: 'interview',
+			title: difficultyScore > 62 ? `Practice interview follow-ups for ${contextTopic}` : `Warm up with interview basics`,
+			description:
+				difficultyScore > 62
+					? 'You are in a higher-complexity topic, so pressure-test tradeoffs and communication.'
+					: 'Convert the current concept into a simple interview-ready explanation.',
+			prompt: firstFollowUp ? `/quiz ${firstFollowUp}` : `/quiz ${contextTopic}`,
+			tab: 'interview',
+			score: difficultyScore > 62 ? 84 : 58,
+		},
+	];
+
+	if (weakArea) {
+		actions.push({
+			id: 'weak-area',
+			level: 2,
+			intent: 'prerequisite',
+			title: `You may need ${weakArea} first`,
+			description: 'This prerequisite is appearing as a weak area in your recent AI plans.',
+			prompt: `Explain ${weakArea} as a prerequisite for ${contextTopic}. Include a quick diagnostic question.`,
+			tab: 'answer',
+			score: 92,
+		});
+	}
+
+	if (isVisualizationLabEnabled) {
+		actions.push({
+			id: 'simulation',
+			level: 2,
+			intent: 'simulation',
+			title: `Try ${contextTopic} simulation`,
+			description: 'Move from explanation to step-through system behavior.',
+			prompt: `/simulate ${contextTopic}`,
+			tab: 'simulations',
+			href: simulationHref,
+			score: learningContext.source === 'article' || currentTurn ? 86 : 54,
+		});
+	}
+
+	if (firstRecommendation) {
+		actions.push({
+			id: 'adaptive-recommendation',
+			level: 2,
+			intent: 'follow-up',
+			title: firstRecommendation.title,
+			description: firstRecommendation.why,
+			prompt: `Continue with ${firstRecommendation.title}. Explain why it is the right next step after ${contextTopic}.`,
+			tab: 'answer',
+			href: `/${firstRecommendation.slug}`,
+			score: 82,
+		});
+	}
+
+	if (profile.completedConcepts.length > 0) {
+		actions.push({
+			id: 'mastery-check',
+			level: 3,
+			intent: 'mastery',
+			title: `Check mastery across ${profile.completedConcepts.length} concepts`,
+			description: 'Ask the mentor to find gaps across completed topics before you advance.',
+			prompt: `Assess my mastery across these completed concepts: ${profile.completedConcepts.join(', ')}. Identify weak links and next drills.`,
+			tab: 'interview',
+			score: 68,
+		});
+	}
+
+	return uniqueMentorActions(actions).slice(0, 6);
+};
+
 export default function LearningAssistantPage({ publication, posts = [], footerPosts }: Props) {
 	const router = useRouter();
 	const reduceMotion = useReducedMotion();
 	const reveal = getRevealVariants(reduceMotion);
+	const {
+		context: learningContext,
+		history: learningHistory,
+		setContext,
+		buildPrompt,
+		getContextHref,
+	} = useLearningContext();
 	const [query, setQuery] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [turns, setTurns] = useState<Turn[]>([]);
@@ -304,6 +474,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 	const [takeawaysCollapsed, setTakeawaysCollapsed] = useState(false);
 	const [conversationMeta, setConversationMeta] = useState<Record<number, ConversationMeta>>({});
 	const [profile, setProfile] = useState<LearningProfile>(defaultProfile);
+	const [mobileMentorTrayOpen, setMobileMentorTrayOpen] = useState(false);
 
 	useEffect(() => {
 		const interval = window.setInterval(
@@ -312,6 +483,23 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		);
 		return () => window.clearInterval(interval);
 	}, []);
+
+	useEffect(() => {
+		setContext({
+			source: 'assistant',
+			pathname: '/assistant',
+			title: 'AI Learning Copilot',
+			domain: learningContext.domain ?? 'Engineering',
+			topic: learningContext.topic,
+			subtopic: learningContext.subtopic,
+			concept: learningContext.concept,
+			roadmapNode: learningContext.roadmapNode,
+			roadmapHref: learningContext.roadmapHref,
+			simulationTopic: learningContext.simulationTopic,
+		});
+	// Preserve the incoming learning context while marking the active route as assistant.
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [setContext]);
 
 	useEffect(() => {
 		try {
@@ -503,6 +691,19 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 			difficulty: currentTurn.response.difficultyEstimate,
 		};
 	}, [currentTurn]);
+	const mentorActions = useMemo(
+		() =>
+			buildMentorActions({
+				currentTurn,
+				learningContext,
+				learningHistory,
+				profile,
+				simulationHref: getContextHref('simulation'),
+				roadmapHref: getContextHref('roadmap'),
+			}),
+		[currentTurn, getContextHref, learningContext, learningHistory, profile],
+	);
+	const primaryMentorAction = mentorActions[0] ?? null;
 
 	const runAssistant = async (inputValue: string) => {
 		const parsed = parseSlashCommand(inputValue);
@@ -617,6 +818,22 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		runAssistant(value);
 	};
 
+	const runMentorAction = (action: MentorAction) => {
+		if (action.href && action.intent === 'simulation') {
+			router.push(action.href);
+			return;
+		}
+		setQuery(action.prompt);
+		if (action.tab) setActiveTab(action.tab);
+		runAssistant(action.prompt);
+	};
+
+	const startFromLearningContext = () => {
+		const prompt = buildPrompt('Continue coaching me from my current learning context.');
+		setQuery(prompt);
+		runAssistant(prompt);
+	};
+
 	const runInterviewAction = (mode: 'deep-dive' | 'compare', question: string) => {
 		const baseTopic = currentTurn?.query?.trim();
 		const contextualPrompt =
@@ -666,15 +883,27 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 						<div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)_320px] gap-4 md:gap-5 items-start">
 							<aside className="hidden xl:block sticky top-24">
 								<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-									<button
+									<CTAButton
+										type="button"
+										level={2}
+										size="md"
 										onClick={() => {
 											setQuery('');
 											setActiveTab('answer');
 										}}
-										className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:border-neutral-700 dark:bg-neutral-950 dark:text-violet-300"
+										className="w-full"
 									>
 										+ New conversation
-									</button>
+									</CTAButton>
+									<CTAButton
+										type="button"
+										level={1}
+										size="md"
+										onClick={startFromLearningContext}
+										className="mt-2 w-full"
+									>
+										Use current learning context
+									</CTAButton>
 
 									<div className="mt-4">
 										<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Recent conversations</p>
@@ -740,6 +969,75 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 							</aside>
 
 							<main>
+								<section className="mb-4 overflow-hidden rounded-3xl border border-violet-200 bg-gradient-to-br from-white via-violet-50/70 to-blue-50/70 p-5 shadow-sm dark:border-violet-900 dark:from-neutral-950 dark:via-violet-950/20 dark:to-blue-950/20">
+									<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+										<div>
+											<p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">
+												Adaptive mentor
+											</p>
+											<h1 className="mt-2 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50 md:text-4xl">
+												Your next best engineering move.
+											</h1>
+											<p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+												The Copilot now uses your current article, roadmap node, recent conversations, weak areas, and interview readiness to suggest what to do next.
+											</p>
+										</div>
+										{primaryMentorAction ? (
+											<div className="min-w-0 rounded-2xl border border-white/80 bg-white/85 p-4 shadow-lg shadow-violet-500/10 dark:border-neutral-800 dark:bg-neutral-950/70">
+												<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Recommended now</p>
+												<p className="mt-2 text-sm font-extrabold text-neutral-950 dark:text-neutral-50">{primaryMentorAction.title}</p>
+												<p className="mt-1 max-w-sm text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{primaryMentorAction.description}</p>
+												<CTAButton
+													type="button"
+													level={1}
+													size="sm"
+													className="mt-3"
+													onClick={() => runMentorAction(primaryMentorAction)}
+												>
+													Start Mentor Step
+												</CTAButton>
+											</div>
+										) : null}
+									</div>
+
+									<div className="mt-4 hidden gap-2 md:grid md:grid-cols-2 xl:grid-cols-3">
+										{mentorActions.slice(1, 6).map((action) => (
+											<button
+												key={action.id}
+												onClick={() => runMentorAction(action)}
+												className="group rounded-2xl border border-white/80 bg-white/75 p-3 text-left transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950/60 dark:hover:border-violet-800"
+											>
+												<div className="flex items-center justify-between gap-3">
+													<span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:bg-violet-950 dark:text-violet-200">
+														{action.intent.replace('-', ' ')}
+													</span>
+													<span className="text-xs text-violet-600 opacity-0 transition group-hover:opacity-100 dark:text-violet-300">Open</span>
+												</div>
+												<p className="mt-2 text-sm font-bold text-neutral-950 dark:text-neutral-50">{action.title}</p>
+												<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{action.description}</p>
+											</button>
+										))}
+									</div>
+									<details className="group mt-4 md:hidden">
+										<summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm font-bold text-neutral-900 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-neutral-100">
+											<span>Show mentor options</span>
+											<span className="text-neutral-400 transition group-open:rotate-180">⌄</span>
+										</summary>
+										<div className="mt-2 space-y-2">
+											{mentorActions.slice(1, 4).map((action) => (
+												<button
+													key={`mobile-mentor-${action.id}`}
+													onClick={() => runMentorAction(action)}
+													className="w-full rounded-2xl border border-white/80 bg-white/80 p-3 text-left dark:border-neutral-800 dark:bg-neutral-950/70"
+												>
+													<p className="text-sm font-bold text-neutral-950 dark:text-neutral-50">{action.title}</p>
+													<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{action.description}</p>
+												</button>
+											))}
+										</div>
+									</details>
+								</section>
+
 								<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:p-5">
 									<div className="rounded-2xl border border-violet-200/70 bg-white p-3 shadow-[0_0_0_1px_rgba(59,130,246,0.04)] dark:border-violet-800/70 dark:bg-neutral-950/40 md:p-4">
 										<div className="flex items-start gap-2">
@@ -768,7 +1066,24 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 												)}
 											</motion.button>
 										</div>
-										<div className="mt-2 flex flex-wrap gap-2">
+										<details className="group mt-2 md:hidden">
+											<summary className="flex cursor-pointer list-none items-center justify-between rounded-xl bg-neutral-50 px-3 py-2 text-xs font-semibold text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">
+												<span>Commands and prompt chips</span>
+												<span className="transition group-open:rotate-180">⌄</span>
+											</summary>
+											<div className="mt-2 flex flex-wrap gap-2">
+												{SLASH_COMMANDS.map((command) => (
+													<button
+														key={`mobile-${command}`}
+														onClick={() => setQuery(`${command} `)}
+														className="rounded-full border border-neutral-200 px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
+													>
+														{command}
+													</button>
+												))}
+											</div>
+										</details>
+										<div className="mt-2 hidden flex-wrap gap-2 md:flex">
 											{SLASH_COMMANDS.map((command) => (
 												<button
 													key={command}
@@ -779,7 +1094,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 												</button>
 											))}
 										</div>
-										<div className="mt-2 flex flex-wrap gap-2">
+										<div className="mt-2 hidden flex-wrap gap-2 md:flex">
 											{composerSuggestions.map((topic) => (
 												<button
 													key={topic}
@@ -911,6 +1226,34 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 														)}
 													</section>
 												) : null}
+
+												<section className="rounded-xl border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-900 dark:bg-violet-950/20">
+													<div className="flex flex-wrap items-center justify-between gap-2">
+														<div>
+															<p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-300">Mentor follow-ups</p>
+															<p className="mt-1 text-xs text-neutral-600 dark:text-neutral-300">
+																Generated from your current answer, weak areas, and learning continuity.
+															</p>
+														</div>
+														{primaryMentorAction ? (
+															<CTAButton type="button" level={1} size="sm" onClick={() => runMentorAction(primaryMentorAction)}>
+																{primaryMentorAction.intent === 'interview' ? 'Practice Now' : 'Continue'}
+															</CTAButton>
+														) : null}
+													</div>
+													<div className="mt-3 grid gap-2 md:grid-cols-2">
+														{mentorActions.slice(0, 4).map((action) => (
+															<button
+																key={`inline-${action.id}`}
+																onClick={() => runMentorAction(action)}
+																className="rounded-xl border border-violet-100 bg-white p-3 text-left transition hover:border-violet-300 dark:border-violet-900 dark:bg-neutral-950/70 dark:hover:border-violet-700"
+															>
+																<p className="text-sm font-bold text-neutral-950 dark:text-neutral-50">{action.title}</p>
+																<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{action.description}</p>
+															</button>
+														))}
+													</div>
+												</section>
 											</>
 										) : null}
 
@@ -926,9 +1269,9 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 														</div>
 													))}
 												</div>
-												<Link href="/guided-topics" className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700">
+												<CTALink href="/guided-topics" level={2} size="sm" className="mt-3">
 													Open Full Roadmap
-												</Link>
+												</CTALink>
 											</section>
 										) : null}
 
@@ -1087,6 +1430,54 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 									</div>
 
 									<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+										<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Mentor signals</p>
+										<div className="mt-3 space-y-3">
+											<div>
+												<div className="flex items-center justify-between text-xs">
+													<span className="text-neutral-500 dark:text-neutral-400">Continuity</span>
+													<span className="font-semibold text-neutral-800 dark:text-neutral-100">{learningHistory.length}/8</span>
+												</div>
+												<div className="mt-1 h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+													<div className="h-full rounded-full bg-violet-500" style={{ width: `${Math.min(100, learningHistory.length * 12.5)}%` }} />
+												</div>
+											</div>
+											<div>
+												<div className="flex items-center justify-between text-xs">
+													<span className="text-neutral-500 dark:text-neutral-400">Weak areas</span>
+													<span className="font-semibold text-neutral-800 dark:text-neutral-100">{profile.weakAreas.length}</span>
+												</div>
+												<div className="mt-2 flex flex-wrap gap-1">
+													{(profile.weakAreas.length > 0 ? profile.weakAreas : ['No weak areas yet']).slice(0, 3).map((area) => (
+														<span key={area} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+															{area}
+														</span>
+													))}
+												</div>
+											</div>
+											<div>
+												<div className="flex items-center justify-between text-xs">
+													<span className="text-neutral-500 dark:text-neutral-400">Completed</span>
+													<span className="font-semibold text-neutral-800 dark:text-neutral-100">{profile.completedConcepts.length}</span>
+												</div>
+												<button
+													type="button"
+													onClick={() => {
+														if (!currentTurn) return;
+														const topic = getTurnTopic(currentTurn);
+														setProfile((prev) => ({
+															...prev,
+															completedConcepts: [...new Set([...prev.completedConcepts, topic])].slice(-20),
+														}));
+													}}
+													className="mt-2 w-full rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold text-neutral-700 hover:border-violet-300 hover:text-violet-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-violet-700 dark:hover:text-violet-300"
+												>
+													Mark current concept mastered
+												</button>
+											</div>
+										</div>
+									</div>
+
+									<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
 										<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Current steps</p>
 										<div className="mt-2 space-y-2 text-xs">
 											{currentTurn?.response.recommendedSequence.slice(0, 4).map((step, index) => (
@@ -1104,21 +1495,58 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 						</div>
 					</div>
 
-					<nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur px-2 py-2">
-						<div className={`grid ${isVisualizationLabEnabled ? 'grid-cols-5' : 'grid-cols-4'} items-center text-[10px] font-semibold text-neutral-600 dark:text-neutral-300`}>
-							<Link href="/" className="text-center">Home</Link>
-							<Link href="/posts" className="text-center">Roadmaps</Link>
+					<nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-neutral-200 bg-white/95 px-3 py-3 shadow-[0_-16px_40px_rgba(15,23,42,0.08)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
+						{mobileMentorTrayOpen ? (
+							<div className="fixed inset-0 z-[-1] bg-black/20" onClick={() => setMobileMentorTrayOpen(false)} aria-hidden="true" />
+						) : null}
+						{mobileMentorTrayOpen ? (
+							<div className="mx-auto mb-3 max-w-xl rounded-3xl border border-neutral-200 bg-white p-3 shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
+								<div className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+								<p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Mentor action tray</p>
+								<div className="mt-2 space-y-2">
+									{mentorActions.slice(1, 5).map((action) => (
+										<button
+											key={`mobile-tray-${action.id}`}
+											onClick={() => {
+												setMobileMentorTrayOpen(false);
+												runMentorAction(action);
+											}}
+											className="w-full rounded-2xl border border-neutral-200 p-3 text-left dark:border-neutral-800"
+										>
+											<p className="text-sm font-bold text-neutral-950 dark:text-neutral-50">{action.title}</p>
+											<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{action.description}</p>
+										</button>
+									))}
+								</div>
+								<div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px] font-semibold">
+									<Link href="/" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Home</Link>
+									<Link href="/guided-topics" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Roadmaps</Link>
+									<Link href="/posts" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Library</Link>
+								</div>
+							</div>
+						) : null}
+						<div className="mx-auto grid max-w-xl grid-cols-[44px_minmax(0,1fr)] gap-2">
 							<button
-								onClick={() => {
-									window.scrollTo({ top: 0, behavior: 'smooth' });
-								}}
-								className="mx-auto -mt-6 h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/30"
-								aria-label="Ask AI"
+								type="button"
+								onClick={() => setMobileMentorTrayOpen((prev) => !prev)}
+								className="rounded-2xl border border-neutral-200 px-3 py-3 text-lg font-black text-neutral-700 dark:border-neutral-700 dark:text-neutral-300"
+								aria-expanded={mobileMentorTrayOpen}
+								aria-label="Open mentor action tray"
 							>
-								AI
+								⋯
 							</button>
-							{isVisualizationLabEnabled ? <Link href="/visualizations" className="text-center">Simulations</Link> : null}
-							<Link href="/posts" className="text-center">Library</Link>
+							<button
+								type="button"
+								onClick={() => {
+									if (primaryMentorAction) runMentorAction(primaryMentorAction);
+									else window.scrollTo({ top: 0, behavior: 'smooth' });
+								}}
+								className="min-w-0 rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-3 py-3 text-xs font-bold text-white shadow-lg shadow-violet-500/20"
+							>
+								<span className="block truncate">
+									{primaryMentorAction?.title ?? 'Ask AI'}
+								</span>
+							</button>
 						</div>
 					</nav>
 
