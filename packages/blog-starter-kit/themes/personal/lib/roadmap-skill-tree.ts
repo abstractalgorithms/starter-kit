@@ -35,15 +35,15 @@ export type SkillTreeProgress = Record<string, {
 
 const PATHS: Array<Omit<SkillTreePath, 'nodes'>> = [
 	{
-		title: 'System Design Interview Prep',
-		description: 'Build intuition for designing scalable distributed systems from scratch.',
+		title: 'Systems Architect',
+		description: 'Build architecture judgment across scale, reliability, tradeoffs, and operating constraints.',
 		tagSlug: 'system-design',
 		color: 'blue',
-		specializations: ['FAANG system design', 'Staff+ architecture', 'Startup scaling'],
+		specializations: ['Architecture judgment', 'Platform evolution', 'Scaling constraints'],
 	},
 	{
-		title: 'Distributed Systems',
-		description: 'Master consensus, replication, fault tolerance, streams, and operational correctness.',
+		title: 'Infrastructure Engineer',
+		description: 'Build reliable distributed platforms across consensus, replication, streams, and operational correctness.',
 		tagSlug: 'distributed-systems',
 		color: 'purple',
 		specializations: ['Kafka internals', 'Consistency models', 'Reliable data platforms'],
@@ -65,7 +65,7 @@ const PATHS: Array<Omit<SkillTreePath, 'nodes'>> = [
 ];
 
 const FALLBACK_STEPS: Record<string, string[]> = {
-	'system-design': ['System design fundamentals', 'Load balancing and caching', 'Database sharding', 'Microservices patterns', 'Interview case studies'],
+	'system-design': ['System design fundamentals', 'Load balancing and caching', 'Database sharding', 'Microservices patterns', 'Architecture review'],
 	'distributed-systems': ['Consensus algorithms', 'Replication strategies', 'Fault tolerance', 'Stream processing', 'CDC and event sourcing'],
 	python: ['Python fundamentals', 'Data structures and algorithms', 'Async and concurrency', 'Testing and tooling', 'Performance optimization'],
 	'machine-learning': ['ML fundamentals', 'Model evaluation', 'LLM engineering', 'MLOps deployment', 'Advanced AI systems'],
@@ -73,7 +73,7 @@ const FALLBACK_STEPS: Record<string, string[]> = {
 
 const branchFor = (title: string, path: Omit<SkillTreePath, 'nodes'>) => {
 	const lower = title.toLowerCase();
-	if (/interview|design|case|staff|faang/.test(lower)) return path.specializations[0] ?? 'Core';
+	if (/design|case|architecture|scaling/.test(lower)) return path.specializations[0] ?? 'Core';
 	if (/kafka|stream|event|cdc|queue/.test(lower)) return 'Streaming systems';
 	if (/replication|consensus|quorum|cap|partition|clock/.test(lower)) return 'Consistency and reliability';
 	if (/llm|rag|retrieval|embedding|vector|model/.test(lower)) return 'AI systems';
@@ -83,7 +83,7 @@ const branchFor = (title: string, path: Omit<SkillTreePath, 'nodes'>) => {
 
 const difficultyFor = (index: number, title: string): SkillTreeNode['difficulty'] => {
 	const lower = title.toLowerCase();
-	if (/interview|staff|faang/.test(lower)) return 'interview';
+	if (/interview/.test(lower)) return 'interview';
 	if (index <= 1) return 'foundation';
 	if (index <= 3) return 'applied';
 	return 'advanced';
@@ -144,4 +144,3 @@ export const getNodeStatus = (
 export const getAdaptiveNode = (path: SkillTreePath, progress: SkillTreeProgress) =>
 	path.nodes.find((node) => ['weak', 'in-progress', 'available'].includes(getNodeStatus(node, progress, path.nodes))) ??
 	path.nodes[0];
-

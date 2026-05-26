@@ -61,26 +61,26 @@ const LEARNING_PATHS: LearningPathCard[] = [
 		icon: '🤖',
 	},
 	{
-		id: 'distributed-systems',
-		title: 'Distributed Systems',
-		description: 'Master consistency, replication, consensus, and failure-aware architecture.',
-		query: 'Distributed systems learning graph from foundations to internals',
+		id: 'infrastructure-engineer',
+		title: 'Infrastructure Engineer',
+		description: 'Build reliable distributed platforms across consistency, replication, consensus, and failure recovery.',
+		query: 'Infrastructure engineer role-based track for distributed systems reliability and platform internals',
 		tagHints: ['distributed', 'consensus', 'replication', 'kafka'],
 		icon: '🌐',
 	},
 	{
-		id: 'system-design-interview',
-		title: 'System Design Interview Prep',
-		description: 'Practice architecture communication, tradeoffs, and interview-ready design depth.',
-		query: 'System design interview prep track',
-		tagHints: ['interview', 'system-design', 'architecture'],
+		id: 'systems-architect',
+		title: 'Systems Architect',
+		description: 'Develop architecture judgment across scale, reliability, tradeoffs, and operating constraints.',
+		query: 'Systems architect role-based track from system design foundations to production tradeoffs',
+		tagHints: ['system-design', 'architecture', 'reliability'],
 		icon: '🎯',
 	},
 	{
-		id: 'staff-architect',
-		title: 'Staff+ Architect',
-		description: 'Develop platform strategy, org-level design thinking, and long-horizon tradeoff judgment.',
-		query: 'Staff engineer architect role-based track for platform strategy',
+		id: 'principal-engineer',
+		title: 'Principal Engineer',
+		description: 'Develop cross-system judgment, platform strategy, and long-horizon technical decision-making.',
+		query: 'Principal engineer role-based track for platform strategy architecture judgment and technical leadership',
 		tagHints: ['architecture', 'platform', 'staff'],
 		icon: '🏗️',
 	},
@@ -578,7 +578,7 @@ export const HomepageRedesign = ({
 						<p className="mt-2 text-2xl font-black text-neutral-950 dark:text-neutral-50">{selectedPath.title}</p>
 						<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">{selectedPath.description}</p>
 						<CTALink href={`/assistant?q=${encodeURIComponent(selectedPath.query)}`} level={1} size="md" className="mt-5 w-full">
-							Begin Roadmap
+							Begin Path
 						</CTALink>
 						<Link href="/topic/distributed-systems" className="mt-3 block text-center text-xs font-bold text-neutral-500 hover:text-blue-700 dark:text-neutral-400 dark:hover:text-blue-300">
 							Explore Concepts
@@ -680,7 +680,7 @@ export const HomepageRedesign = ({
 						<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">The mentor targets weak areas, communication gaps, and tradeoff mistakes from your learning memory.</p>
 					</div>
 					<CTALink href={isInterviewPrepEnabled ? '/interview-prep' : '/assistant?q=interview%20coaching'} level={1} size="md" className="mt-5 md:mt-0">
-						Begin Interview Prep
+						Practice Reasoning
 					</CTALink>
 				</div>
 			</SectionShell>

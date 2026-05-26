@@ -7,7 +7,7 @@ import { EmbeddedAIMentor } from '../embedded-ai-mentor';
 import { getHoverLift, getRevealVariants, getTapScale } from '../motion-system';
 import { useLearningMemoryStore } from '../../lib/learning-memory';
 import { DiagramAffordanceBar, PedagogyCanvas } from './pedagogy-canvas';
-import { getEdgeSemantics, getHealthSemantics, getNodeSemantics } from './semantics';
+import { getHealthSemantics, getNodeSemantics } from './semantics';
 import { VIS_SCENARIOS } from './scenarios';
 import { useVisualizationEngine } from './use-visualization-engine';
 import { VizScenario } from './types';
@@ -91,7 +91,6 @@ export const VisualizationStudio = ({
 	const hoveredNode = scenario.nodes.find((node) => node.id === hoveredNodeId) ?? null;
 	const activeNode = selectedNode ?? hoveredNode;
 	const activeNodeSemantics = activeNode ? getNodeSemantics(activeNode.kind) : null;
-	const activeFailureEdgeSemantics = activeFailure ? getEdgeSemantics('fallback') : null;
 	const replayAndRemember = () => {
 		recordSimulationAttempt({ topic: scenario.title, scenarioId: scenario.id, completed: true });
 		replayFlow();
@@ -250,11 +249,6 @@ export const VisualizationStudio = ({
 							<p className="mt-2 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
 								Recovery: {activeFailure.recovery}
 							</p>
-							{activeFailureEdgeSemantics ? (
-								<p className="mt-2 text-[11px] font-semibold text-rose-700 dark:text-rose-300">
-									Visual grammar: {activeFailureEdgeSemantics.label} paths use rose dashed strokes.
-								</p>
-							) : null}
 						</div>
 					) : null}
 

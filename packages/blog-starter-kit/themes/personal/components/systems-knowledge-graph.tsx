@@ -69,11 +69,11 @@ const relationshipClass: Record<ConceptRelationship['type'], string> = {
 };
 
 const relationshipLabel: Record<ConceptRelationship['type'], string> = {
-	prerequisite: 'Prerequisite',
-	'depends-on': 'Depends on',
-	extends: 'Extends',
+	prerequisite: 'Learn before',
+	'depends-on': 'Needs',
+	extends: 'Builds toward',
 	tradeoff: 'Tradeoff',
-	adjacent: 'Adjacent',
+	adjacent: 'Related idea',
 };
 
 const normalize = (value?: string) =>
@@ -189,13 +189,13 @@ export const SystemsKnowledgeGraph = ({
 			<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 				<div>
 					<p className="text-[10px] font-mono uppercase tracking-[0.24em] text-blue-600 dark:text-blue-300">
-						Systems knowledge graph
+						Relationships
 					</p>
 					<h2 className="mt-2 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50 md:text-3xl">
-						Navigate by relationship, not category
+						Follow the shape of the system
 					</h2>
 					<p className="mt-2 max-w-3xl text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
-						Move through prerequisites, dependencies, tradeoffs, and adjacent concepts while preserving article routes and learning state.
+						Move through prerequisites, dependencies, tradeoffs, and adjacent concepts without losing the thread.
 					</p>
 				</div>
 				<div className="flex flex-wrap gap-2">
@@ -305,27 +305,27 @@ export const SystemsKnowledgeGraph = ({
 
 					<div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
 						<div className="rounded-xl bg-neutral-50 p-2 dark:bg-neutral-900">
-							<p className="text-neutral-500 dark:text-neutral-400">Prereqs</p>
+							<p className="text-neutral-500 dark:text-neutral-400">Before</p>
 							<p className="mt-1 font-black text-neutral-950 dark:text-neutral-50">{activeNode.prerequisiteIds.length}</p>
 						</div>
 						<div className="rounded-xl bg-neutral-50 p-2 dark:bg-neutral-900">
-							<p className="text-neutral-500 dark:text-neutral-400">Edges</p>
+							<p className="text-neutral-500 dark:text-neutral-400">Related</p>
 							<p className="mt-1 font-black text-neutral-950 dark:text-neutral-50">{activeRelationships.length}</p>
 						</div>
 						<div className="rounded-xl bg-neutral-50 p-2 dark:bg-neutral-900">
-							<p className="text-neutral-500 dark:text-neutral-400">Articles</p>
+							<p className="text-neutral-500 dark:text-neutral-400">Reads</p>
 							<p className="mt-1 font-black text-neutral-950 dark:text-neutral-50">{activeNode.articleCount}</p>
 						</div>
 					</div>
 
 					<div className="mt-4 rounded-xl border border-dashed border-neutral-200 p-3 dark:border-neutral-800">
-						<p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Relationship preview</p>
+						<p className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Why it connects</p>
 						<p className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
 							{hoveredRelationship
 								? getRelationshipSummary(hoveredRelationship, graph.nodes)
 								: detailRelationships[0]
 									? getRelationshipSummary(detailRelationships[0].relationship, graph.nodes)
-									: 'Hover an edge or select another node to preview why two concepts are connected.'}
+									: 'Choose a nearby idea to see how it changes the way you should reason about this one.'}
 						</p>
 					</div>
 
@@ -354,26 +354,26 @@ export const SystemsKnowledgeGraph = ({
 
 					<div className="mt-5 grid gap-2">
 						<CTALink href={getConceptHref(activeNode)} level={1} size="md" className="w-full">
-							Open Concept
+							Open Reading
 						</CTALink>
 						<CTAButton type="button" level={2} size="md" className="w-full" onClick={() => toggleExpand(activeNode)}>
-							{expandedIds.includes(activeNode.id) ? 'Collapse Dependencies' : 'Expand Dependencies'}
+							{expandedIds.includes(activeNode.id) ? 'Show Less' : 'Show What Comes Before'}
 						</CTAButton>
 						<CTALink
-							href={`/assistant?q=${encodeURIComponent(`Explain the relationship graph around ${activeNode.label}`)}`}
+							href={`/assistant?q=${encodeURIComponent(`Explain how ${activeNode.label} connects to the nearby concepts in this topic`)}`}
 							level={3}
 							size="md"
 							className="w-full"
 						>
-							Ask AI
+							Explain This
 						</CTALink>
 						<CTALink
-							href={`/assistant?q=${encodeURIComponent(`Generate an interview tradeoff question about ${activeNode.label} and its dependencies`)}`}
+							href={`/assistant?q=${encodeURIComponent(`Give me a tradeoff reasoning question about ${activeNode.label} and the concepts around it`)}`}
 							level={3}
 							size="md"
 							className="w-full"
 						>
-							Interview Tradeoff
+							Tradeoff Question
 						</CTALink>
 					</div>
 				</aside>

@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { CTAButton } from '../cta-system';
 import { useLearningMemoryStore } from '../../lib/learning-memory';
 import { DiagramAffordanceBar, PedagogyCanvas } from './pedagogy-canvas';
-import { getEdgeSemantics, getHealthSemantics, getNodeSemantics } from './semantics';
+import { getHealthSemantics, getNodeSemantics } from './semantics';
 import { VIS_SCENARIOS } from './scenarios';
 import { VizScenario } from './types';
 import { useVisualizationEngine } from './use-visualization-engine';
@@ -30,7 +30,7 @@ const getScenarioForTopic = (topic?: string) => {
 export const InlineSimulation = ({
 	topic,
 	node,
-	source = 'inline',
+	source: _source = 'inline',
 	compact = false,
 	className = '',
 }: {
@@ -75,7 +75,6 @@ export const InlineSimulation = ({
 	const hoveredNode = scenario.nodes.find((item) => item.id === hoveredNodeId) ?? null;
 	const activeNode = selectedNode ?? hoveredNode;
 	const activeNodeSemantics = activeNode ? getNodeSemantics(activeNode.kind) : null;
-	const activeFailureEdgeSemantics = activeFailure ? getEdgeSemantics('fallback') : null;
 
 	const replayAndRemember = () => {
 		recordSimulationAttempt({ topic: topic ?? scenario.title, scenarioId: scenario.id, completed: true });
@@ -103,7 +102,7 @@ export const InlineSimulation = ({
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div className="min-w-0">
 					<p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600 dark:text-blue-300">
-						System Simulation
+						System behavior
 					</p>
 					<h2 className={`${compact ? 'text-lg' : 'text-2xl'} mt-1 font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50`}>
 						{scenario.title}
@@ -111,18 +110,12 @@ export const InlineSimulation = ({
 					<p className="mt-1 max-w-3xl text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
 						{scenario.summary}
 					</p>
-					<div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">
-						<span>{source}</span>
-						<span>Step-through reasoning</span>
-						<span>Topology evolution</span>
-						<span>Failure replay</span>
-					</div>
 				</div>
 				<Link
 					href={`/visualizations?q=${encodeURIComponent(topic ?? scenario.title)}${node ? `&node=${encodeURIComponent(node)}` : ''}`}
 					className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:border-blue-300 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200"
 				>
-					Open Lab
+					Open
 				</Link>
 			</div>
 
@@ -196,7 +189,7 @@ export const InlineSimulation = ({
 				<aside className="space-y-3">
 					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
 						<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-							Step reasoning
+							What changes
 						</p>
 						<p className="mt-1 text-sm font-bold text-neutral-950 dark:text-neutral-50">{activeStep.title}</p>
 						<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{activeStep.description}</p>
@@ -218,17 +211,12 @@ export const InlineSimulation = ({
 							<p className="mt-2 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">{activeFailure.description}</p>
 							<p className="mt-2 text-xs leading-relaxed text-rose-800 dark:text-rose-200">Blast radius: {activeFailure.blastRadius}</p>
 							<p className="mt-2 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">Recovery: {activeFailure.recovery}</p>
-							{activeFailureEdgeSemantics ? (
-								<p className="mt-2 text-[11px] font-semibold text-rose-700 dark:text-rose-300">
-									Visual grammar: {activeFailureEdgeSemantics.label} paths use rose dashed strokes.
-								</p>
-							) : null}
 						</div>
 					) : null}
 
 					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
 						<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-							Topology node
+							Node
 						</p>
 						{activeNode && activeNodeSemantics ? (
 							<div className="mt-2">
@@ -252,7 +240,7 @@ export const InlineSimulation = ({
 
 					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
 						<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-							Layered explanation
+							Reasoning
 						</p>
 						<div className="mt-2 flex flex-wrap gap-2">
 							{(['overview', 'deepDive', 'tradeoffs'] as const).map((item) => (

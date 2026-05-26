@@ -213,31 +213,30 @@ export const PersonalHeader = () => {
 			label: 'Learn',
 			href: '/posts',
 			items: [
-				{ label: 'Articles', href: '/posts', description: 'All engineering deep dives' },
-				{ label: 'Topic Journeys', href: '/topic/distributed-systems', description: 'Multi-article learning units' },
-				{ label: 'Series', href: '/series', description: 'Editorial reading collections' },
-				{ label: 'Learning Graphs', href: '/guided-topics', description: 'Dependency-aware concept maps' },
-				{ label: 'Role-based Tracks', href: '/assistant?q=role-based%20engineering%20tracks', description: 'Backend, AI, and Staff paths' },
+				{ label: 'Topic Journeys', href: '/topic/distributed-systems', description: 'Learn through connected concepts and articles' },
+				{ label: 'Articles', href: '/posts', description: 'Canonical engineering deep dives' },
+				{ label: 'Series', href: '/series', description: 'Author-curated reading sequences' },
+				{ label: 'Learning Graphs', href: '/guided-topics', description: 'Prerequisites, dependencies, and next steps' },
 			],
 		},
 		{
 			label: 'Practice',
 			href: isInterviewPrepEnabled ? '/interview-prep' : '/visualizations',
 			items: [
-				{ label: 'Simulations', href: '/visualizations', description: 'Operational system walkthroughs' },
-				...(isInterviewPrepEnabled ? [{ label: 'Interview Prep', href: '/interview-prep', description: 'Question bank and coaching' }] : []),
-				{ label: 'Architecture Drills', href: '/assistant?q=architecture%20drill', description: 'Tradeoff and design practice' },
-				{ label: 'Whiteboarding', href: '/assistant?q=whiteboarding%20system%20design%20practice', description: 'Explain designs out loud' },
+				{ label: 'System Behavior', href: '/visualizations', description: 'Observe systems under changing constraints' },
+				{ label: 'Pressure Tests', href: '/visualizations', description: 'Replay failures and tradeoff consequences' },
+				{ label: 'Architecture Drills', href: '/assistant?q=architecture%20drill', description: 'Practice design choices and constraints' },
+				...(isInterviewPrepEnabled ? [{ label: 'Interview Practice', href: '/interview-prep', description: 'Reason through follow-up pressure' }] : []),
 			],
 		},
 		{
 			label: 'AI Mentor',
 			href: '/assistant',
 			items: [
-				{ label: 'Recommendations', href: '/assistant?q=recommend%20what%20I%20should%20learn%20next', description: 'Next-step guidance' },
+				{ label: 'Next Step', href: '/assistant?q=recommend%20what%20I%20should%20learn%20next', description: 'Continue from your current context' },
 				{ label: 'Weak Areas', href: '/assistant?q=identify%20my%20weak%20engineering%20concepts', description: 'Find gaps and prerequisites' },
-				{ label: 'Concept Explanation', href: '/assistant', description: 'Ask for adaptive explanations' },
-				{ label: 'Interview Coaching', href: '/assistant?q=interview%20coaching', description: 'Practice with follow-ups' },
+				{ label: 'Explain a Concept', href: '/assistant', description: 'Get a clearer model at your depth' },
+				{ label: 'Compare Tradeoffs', href: '/assistant?q=compare%20architecture%20tradeoffs', description: 'Reason through competing designs' },
 			],
 		},
 		{
@@ -245,16 +244,18 @@ export const PersonalHeader = () => {
 			href: '/discover',
 			items: [
 				{ label: 'Concept Graph', href: '/discover', description: 'Explore connected systems ideas' },
-				{ label: 'Trending Deep Dives', href: '/posts?sort=popular-desc', description: 'Popular articles' },
-				{ label: 'Emerging Systems', href: '/posts?sort=updated-desc', description: 'Recently updated topics' },
-				{ label: 'Architecture Collections', href: '/series', description: 'Curated collections' },
+				{ label: 'Topic Collections', href: '/topic/probabilistic-data-structures', description: 'Enter a connected concept area' },
+				{ label: 'Popular Deep Dives', href: '/posts?sort=popular-desc', description: 'What engineers are reading most' },
+				{ label: 'Recently Updated', href: '/posts?sort=updated-desc', description: 'Freshly revised engineering ideas' },
 			],
 		},
 	] as const;
 	const trackLinks = [
 		{ label: 'Backend Engineer', href: '/assistant?q=backend%20engineering%20role-based%20track' },
 		{ label: 'AI Engineer', href: '/assistant?q=AI%20engineer%20role-based%20track' },
-		{ label: 'Staff Architect', href: '/assistant?q=staff%20architect%20role-based%20track' },
+		{ label: 'Infrastructure Engineer', href: '/assistant?q=infrastructure%20engineer%20role-based%20track' },
+		{ label: 'Systems Architect', href: '/assistant?q=systems%20architect%20role-based%20track' },
+		{ label: 'Principal Engineer', href: '/assistant?q=principal%20engineer%20role-based%20track' },
 	];
 
 	useEffect(() => {
@@ -450,18 +451,18 @@ export const PersonalHeader = () => {
 						) : null}
 					</div>
 					<div className="mt-8">
-						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Recent learning shortcuts</p>
+						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Continue</p>
 						<div className="mt-2 space-y-2">
 							<Link href="/progress" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg bg-neutral-100 dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
 								Open Progress
 							</Link>
-							<Link href="/assistant?q=How%20does%20Kafka%20transactions%20work%20internally%3F" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg bg-neutral-100 dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
-								Ask AI about Kafka transactions
+							<Link href="/assistant?q=recommend%20what%20I%20should%20learn%20next" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg bg-neutral-100 dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
+								Get Next Step
 							</Link>
 						</div>
 					</div>
 					<div className="mt-8">
-						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Track quick links</p>
+						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Role paths</p>
 						<div className="mt-2 space-y-2">
 							{trackLinks.map((item) => (
 								<Link key={item.label} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">

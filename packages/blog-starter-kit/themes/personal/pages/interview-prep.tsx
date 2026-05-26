@@ -86,7 +86,7 @@ const DEFAULT_PREP_STATE: PrepState = {
 };
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
-	{ id: 'dashboard', label: 'Dashboard', href: '#dashboard', group: 'Prep OS' },
+	{ id: 'dashboard', label: 'Overview', href: '#dashboard', group: 'Practice' },
 	{ id: 'question-bank', label: 'Question Bank', href: '#question-bank', group: 'Practice' },
 	{ id: 'mock-interviews', label: 'Mock Interviews', href: '#mock-interviews', group: 'Practice' },
 	{ id: 'system-design', label: 'System Design', href: '#whiteboard', group: 'Practice' },

@@ -38,10 +38,12 @@ export default function MyApp({ Component, pageProps }: AppProps) {
 		<ThemeProvider attribute="class">
 			<AuthProvider>
 				<LearningContextProvider>
-					<main className={`${plusJakartaSans.variable} font-sans`}>
-						<Component {...pageProps} />
-					</main>
-					<StickyLearningContextRail />
+					<div className={`${plusJakartaSans.variable} font-sans`}>
+						<main className="font-sans">
+							<Component {...pageProps} />
+						</main>
+						<StickyLearningContextRail />
+					</div>
 				</LearningContextProvider>
 			</AuthProvider>
 		</ThemeProvider>

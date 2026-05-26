@@ -378,7 +378,7 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 						</div>
 
 						<div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
-							<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Skill progression dashboard</p>
+							<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Skill progression</p>
 							<div className="mt-3 space-y-2">
 								{skillProgress.map((skill) => (
 									<div key={skill.slug}>

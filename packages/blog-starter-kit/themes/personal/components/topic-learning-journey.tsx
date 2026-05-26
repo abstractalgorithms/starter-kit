@@ -32,6 +32,14 @@ const stageTint: Record<TopicLearningJourney['stages'][number]['id'], string> = 
 	continue: 'border-neutral-200 bg-white text-neutral-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200',
 };
 
+const quietStageCopy: Record<TopicLearningJourney['stages'][number]['id'], { label: string; line: string }> = {
+	concept: { label: 'Grounding', line: 'Build the mental model.' },
+	visual: { label: 'Shape', line: 'See how the pieces depend on each other.' },
+	tradeoff: { label: 'Consequence', line: 'Compare what improves and what breaks.' },
+	challenge: { label: 'Stress', line: 'Change constraints and watch behavior.' },
+	continue: { label: 'Next', line: 'Move to the next useful edge.' },
+};
+
 const SemanticTopicSearch = ({ journey, posts }: Props) => {
 	const [query, setQuery] = useState(journey.semanticQuery);
 	const [results, setResults] = useState<SemanticSearchResult[]>([]);
@@ -60,10 +68,10 @@ const SemanticTopicSearch = ({ journey, posts }: Props) => {
 			<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
 				<div>
 					<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">
-						Semantic retrieval
+						Related threads
 					</p>
 					<label className="mt-2 block text-sm font-bold text-neutral-900 dark:text-neutral-50" htmlFor="topic-semantic-search">
-						Search this topic across articles and llm-wiki
+						Find the idea you are trying to connect
 					</label>
 					<input
 						id="topic-semantic-search"
@@ -92,7 +100,7 @@ const SemanticTopicSearch = ({ journey, posts }: Props) => {
 							<div className="flex items-center justify-between gap-3">
 								<p className="text-sm font-bold text-neutral-900 dark:text-neutral-50">{result.title}</p>
 								<span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold uppercase text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
-									{result.source}
+									{result.source === 'hashnode' ? 'article' : 'reference'}
 								</span>
 							</div>
 							{result.snippet ? (
@@ -105,7 +113,7 @@ const SemanticTopicSearch = ({ journey, posts }: Props) => {
 				</div>
 			) : status === 'done' ? (
 				<p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-					No semantic matches yet. The Hashnode article set remains the fallback source of truth.
+					No close matches yet. Try a more specific concept or failure mode.
 				</p>
 			) : null}
 		</section>
@@ -151,7 +159,7 @@ export const TopicLearningJourneyView = ({ journey, posts }: Props) => {
 			<section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
 				<div>
 					<p className="text-[10px] font-mono uppercase tracking-[0.24em] text-blue-600 dark:text-blue-300">
-						Topic learning journey
+						Start here
 					</p>
 					<h1 className="mt-3 max-w-4xl text-4xl font-black tracking-tight text-neutral-950 dark:text-neutral-50 md:text-6xl">
 						{journey.label}
@@ -171,11 +179,11 @@ export const TopicLearningJourneyView = ({ journey, posts }: Props) => {
 					</div>
 				</div>
 				<div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/20">
-					<p className="text-sm font-black text-neutral-950 dark:text-neutral-50">Learning unit</p>
+					<p className="text-sm font-black text-neutral-950 dark:text-neutral-50">Begin with</p>
 					<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
-						This topic uses {journey.articles.length || posts.length} canonical article
-						{(journey.articles.length || posts.length) === 1 ? '' : 's'} as source material, then adds graph traversal,
-						simulation, semantic search, and AI mentoring on top.
+						{primaryArticle
+							? `${primaryArticle.primaryConcept} gives you the cleanest entry point before branching into constraints, failures, and related systems.`
+							: `Start with the core concepts, then branch into constraints, failures, and related systems.`}
 					</p>
 					<div className="mt-4 grid grid-cols-2 gap-2 text-center">
 						<div className="rounded-xl bg-white p-3 dark:bg-neutral-950">
@@ -198,8 +206,8 @@ export const TopicLearningJourneyView = ({ journey, posts }: Props) => {
 			<section className="grid gap-3 md:grid-cols-5">
 				{journey.stages.map((stage) => (
 					<div key={stage.id} className={`rounded-2xl border p-4 ${stageTint[stage.id]}`}>
-						<p className="text-[10px] font-black uppercase tracking-[0.18em] opacity-70">{stage.label}</p>
-						<p className="mt-2 min-h-[52px] text-sm font-semibold leading-snug">{stage.intent}</p>
+						<p className="text-[10px] font-black uppercase tracking-[0.18em] opacity-70">{quietStageCopy[stage.id].label}</p>
+						<p className="mt-2 min-h-[52px] text-sm font-semibold leading-snug">{quietStageCopy[stage.id].line}</p>
 						{stage.articleSlugs[0] ? (
 							<Link href={`/${stage.articleSlugs[0]}`} className="mt-3 inline-flex text-xs font-black underline underline-offset-4">
 								{stage.primaryCta}
@@ -226,6 +234,8 @@ export const TopicLearningJourneyView = ({ journey, posts }: Props) => {
 						concept={journey.concepts[0]}
 						posts={mentorPosts}
 						compact
+						label="Guidance"
+						helperText="Continues from what you have already explored."
 					/>
 					<InlineSimulation topic={journey.label} node={journey.concepts[0]} source="learning-graph" />
 				</div>
@@ -234,7 +244,7 @@ export const TopicLearningJourneyView = ({ journey, posts }: Props) => {
 			<section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
 				<div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
 					<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">
-						Canonical source material
+						Read in sequence
 					</p>
 					<div className="mt-4 grid gap-3">
 						{journey.articles.map((article, index) => (

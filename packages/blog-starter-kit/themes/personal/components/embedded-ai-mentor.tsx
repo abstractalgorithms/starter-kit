@@ -23,6 +23,8 @@ type Props = {
 	posts?: MentorPost[];
 	compact?: boolean;
 	className?: string;
+	label?: string;
+	helperText?: string;
 };
 
 export const EmbeddedAIMentor = ({
@@ -32,6 +34,8 @@ export const EmbeddedAIMentor = ({
 	posts = [],
 	compact = false,
 	className = '',
+	label = 'AI Mentor',
+	helperText = 'Uses your learning memory, current context, weak areas, and prior sessions.',
 }: Props) => {
 	const memory = useLearningMemoryStore();
 	const recommendations = buildAdaptiveRecommendations(memory, posts);
@@ -72,18 +76,18 @@ export const EmbeddedAIMentor = ({
 	return (
 		<section
 			className={`rounded-2xl border border-violet-200 bg-violet-50/70 p-4 font-sans shadow-sm dark:border-violet-900 dark:bg-violet-950/20 ${className}`}
-			aria-label="Embedded AI Mentor"
+			aria-label={label}
 		>
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div className="min-w-0">
 					<p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-700 dark:text-violet-300">
-						AI Mentor
+						{label}
 					</p>
 					<h2 className={`${compact ? 'text-base' : 'text-lg'} mt-1 font-extrabold tracking-normal text-neutral-950 dark:text-neutral-50`}>
 						{target}
 					</h2>
 					<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
-						Uses your learning memory, current context, weak areas, and prior sessions.
+						{helperText}
 					</p>
 				</div>
 				<CTAButton type="button" level={1} size="sm" onClick={openInlineMentor}>
