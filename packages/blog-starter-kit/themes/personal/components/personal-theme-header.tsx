@@ -214,6 +214,7 @@ export const PersonalHeader = () => {
 			href: '/posts',
 			items: [
 				{ label: 'Articles', href: '/posts', description: 'All engineering deep dives' },
+				{ label: 'Topic Journeys', href: '/topic/distributed-systems', description: 'Multi-article learning units' },
 				{ label: 'Series', href: '/series', description: 'Editorial reading collections' },
 				{ label: 'Learning Graphs', href: '/guided-topics', description: 'Dependency-aware concept maps' },
 				{ label: 'Role-based Tracks', href: '/assistant?q=role-based%20engineering%20tracks', description: 'Backend, AI, and Staff paths' },

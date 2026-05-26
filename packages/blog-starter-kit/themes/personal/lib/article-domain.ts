@@ -1,4 +1,4 @@
-import { PostFullFragment, PostFragment } from '../generated/graphql';
+import { PostFragment } from '../generated/graphql';
 import { formatTagName } from '../utils/format';
 
 type ArticleLike = Pick<PostFragment, 'title' | 'brief' | 'tags'> & {
@@ -71,7 +71,7 @@ export const inferPrimaryArticleConcept = (post: ArticleLike) => {
 	return preciseTag ? formatTagName(preciseTag.name) : post.title;
 };
 
-export const getArticleConceptSeeds = (post: PostFullFragment): string[] => {
+export const getArticleConceptSeeds = (post: ArticleLike): string[] => {
 	const domain = inferArticleDomain(post);
 	const primary = inferPrimaryArticleConcept(post);
 	const seedsByDomain: Record<ArticleDomain, string[]> = {

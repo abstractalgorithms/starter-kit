@@ -8,7 +8,7 @@ Primary navigation has four destinations:
 
 | Area | Purpose | Primary route | Includes |
 | --- | --- | --- | --- |
-| Learn | Structured engineering understanding | `/posts` | Articles, Series, Learning Graphs, Role-based Tracks |
+| Learn | Structured engineering understanding | `/posts` | Topic Journeys, Articles, Series, Learning Graphs, Role-based Tracks |
 | Practice | Validation and operational reasoning | `/interview-prep` or `/visualizations` | Simulations, Interview Prep, Architecture Drills, Whiteboarding |
 | AI Mentor | Adaptive engineering mentor | `/assistant` | Recommendations, weak-area guidance, progression, explanations, coaching |
 | Discover | Systems-thinking exploration | `/discover` | Concept graph, trending deep dives, emerging systems, architecture collections |
@@ -20,6 +20,14 @@ The removed term is `Guided Topics`. Do not reintroduce it in navigation, page h
 ### Articles
 
 Articles are the atomic content unit. Preserve article slugs, SEO metadata, canonical rendering, MDX support, and Hashnode GraphQL fetching.
+
+### Topic Journeys
+
+Topic Journeys are the primary learner-facing unit. A topic can contain many canonical articles plus graph traversal, simulation, AI mentoring, interview prompts, and semantic retrieval. Topics do not create a new CMS hierarchy; they are generated from existing Hashnode posts, tags, series metadata, and optional `llm-wiki` search.
+
+Route:
+
+- `/topic/[slug]`
 
 ### Series
 
@@ -51,6 +59,7 @@ Keep existing Hashnode routes stable:
 | User-facing concept | Route | Notes |
 | --- | --- | --- |
 | Articles | `/posts`, `/[slug]` | Article-first architecture and SEO stay unchanged |
+| Topic Journeys | `/topic/[slug]` | Multi-article learning unit over canonical articles |
 | Series | `/series`, `/series/[slug]` | Uses Hashnode series APIs |
 | Learning Graphs | `/guided-topics` | Compatibility URL; relabeled in UI |
 | Role-based Tracks | `/assistant?q=role-based...` | AI Mentor generates or resumes progression |

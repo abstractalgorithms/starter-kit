@@ -55,6 +55,7 @@ import { CTAButton, CTALink } from '../components/cta-system';
 import { isInterviewPrepEnabled } from '../lib/features';
 import { useLearningMemoryStore } from '../lib/learning-memory';
 import { getArticleConceptSeeds, inferArticleDomain, inferPrimaryArticleConcept } from '../lib/article-domain';
+import { inferTopicSlugForPost } from '../lib/topic-learning';
 
 // ─── Reading Progress Bar ─────────────────────────────────────────────────────
 const ReadingProgressBar = () => {
@@ -1241,6 +1242,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 	const tags = post.tags ?? [];
 	const primaryArticleConcept = useMemo(() => inferPrimaryArticleConcept(post), [post]);
 	const articleConceptSeeds = useMemo(() => getArticleConceptSeeds(post), [post]);
+	const topicLearningSlug = useMemo(() => inferTopicSlugForPost(post), [post]);
 
 	useEffect(() => {
 		const primaryTag = tags[0] ? formatTagName(tags[0].name) : undefined;
@@ -1255,7 +1257,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			subtopic: post.series?.name ?? secondaryTag,
 			concept: primaryArticleConcept,
 			roadmapNode: primaryArticleConcept,
-			roadmapHref: post.series?.slug ? `/series/${post.series.slug}` : '/guided-topics',
+			roadmapHref: `/topic/${topicLearningSlug}`,
 			simulationTopic: primaryArticleConcept,
 		});
 		recordConceptSeen({
@@ -1263,7 +1265,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			domain: primaryTag ?? post.series?.name,
 			slug: post.slug,
 		});
-	}, [post.series?.name, post.series?.slug, post.slug, post.title, primaryArticleConcept, recordConceptSeen, setContext, tags]);
+	}, [post.series?.name, post.slug, post.title, primaryArticleConcept, recordConceptSeen, setContext, tags, topicLearningSlug]);
 
 	useEffect(() => {
 		completedMemoryRef.current = false;
@@ -1602,16 +1604,16 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 							</summary>
 							<div className="mt-2 grid grid-cols-2 gap-2">
 								<Link
-									href={interviewAssistantHref}
-									className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-3 text-center text-xs font-semibold text-violet-700 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-300"
+									href={`/topic/${topicLearningSlug}`}
+									className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-center text-xs font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
 								>
-									Practice Interview
+									Topic Journey
 								</Link>
 								<Link
-									href={mockDiscussionHref}
+									href={interviewAssistantHref}
 									className="rounded-xl border border-violet-200 bg-white px-3 py-3 text-center text-xs font-semibold text-violet-700 dark:border-violet-800 dark:bg-neutral-950 dark:text-violet-300"
 								>
-									Mock Discussion
+									Practice Interview
 								</Link>
 								<button
 									onClick={() => setIsBookmarked((prev) => !prev)}
@@ -1737,6 +1739,12 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 								>
 									<span aria-hidden="true">✦</span> Ask AI
 								</button>
+								<Link
+									href={`/topic/${topicLearningSlug}`}
+									className="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
+								>
+									<span aria-hidden="true">◎</span> Topic journey
+								</Link>
 								<Link
 									href={interviewAssistantHref}
 									className="inline-flex items-center gap-2 text-xs font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200"
@@ -1992,7 +2000,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 
 					<section className="mt-8 rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
 						<p className="text-[10px] font-mono uppercase tracking-widest text-blue-600 dark:text-blue-300 mb-2">
-							Continue learning
+							Continue topic learning
 						</p>
 						{upNextPost ? (
 							<div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
@@ -2002,12 +2010,17 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 										{upNextPost.readTimeInMinutes} min · {upNextPost.tags?.[0]?.name ? `${formatTagName(upNextPost.tags[0].name)} · ` : ''}best next step
 									</p>
 								</Link>
-								<CTALink href={getContextHref('roadmap')} level={1} size="sm">
-									View Learning Graph
+								<CTALink href={`/topic/${topicLearningSlug}`} level={1} size="sm">
+									Open Topic Journey
 								</CTALink>
 							</div>
 						) : (
-							<p className="text-xs text-neutral-500 dark:text-neutral-400">Complete this article to unlock your next recommendation.</p>
+							<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+								<p className="text-xs text-neutral-500 dark:text-neutral-400">Continue through the broader topic instead of stopping at this article.</p>
+								<CTALink href={`/topic/${topicLearningSlug}`} level={1} size="sm">
+									Open Topic Journey
+								</CTALink>
+							</div>
 						)}
 					</section>
 

@@ -528,8 +528,8 @@ export const HomepageRedesign = ({
 							Choose the engineer you want to become, enter with AI guidance, then move through concepts, topology, simulations, pressure tests, and interview readiness.
 						</p>
 						<div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
-							<CTALink href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : '/guided-topics'} level={1} size="lg">
-								{savedPath ? 'Continue Learning' : 'Begin Roadmap'}
+							<CTALink href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : '/topic/distributed-systems'} level={1} size="lg">
+								{savedPath ? 'Continue Learning' : 'Begin Topic'}
 							</CTALink>
 							<button type="button" onClick={() => setMentorOpen(true)} className="text-sm font-bold text-neutral-600 hover:text-blue-700 dark:text-neutral-300 dark:hover:text-blue-300">
 								Ask AI Mentor
@@ -580,7 +580,7 @@ export const HomepageRedesign = ({
 						<CTALink href={`/assistant?q=${encodeURIComponent(selectedPath.query)}`} level={1} size="md" className="mt-5 w-full">
 							Begin Roadmap
 						</CTALink>
-						<Link href="/guided-topics" className="mt-3 block text-center text-xs font-bold text-neutral-500 hover:text-blue-700 dark:text-neutral-400 dark:hover:text-blue-300">
+						<Link href="/topic/distributed-systems" className="mt-3 block text-center text-xs font-bold text-neutral-500 hover:text-blue-700 dark:text-neutral-400 dark:hover:text-blue-300">
 							Explore Concepts
 						</Link>
 					</div>
@@ -614,7 +614,7 @@ export const HomepageRedesign = ({
 			<SectionShell>
 				<SectionHeading
 					title="Continue learning"
-					description="Resume from the exact cognition state, or start from the next article the mentor thinks you are ready for."
+					description="Resume from the exact cognition state, or start inside a topic journey that can span many canonical articles."
 				/>
 				<div className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 md:grid md:grid-cols-[minmax(0,1fr)_260px] md:items-center md:gap-5">
 					<div>
@@ -627,7 +627,7 @@ export const HomepageRedesign = ({
 						<div className="mt-4 h-2 max-w-md overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
 							<motion.div animate={{ width: `${completionPercent}%` }} transition={{ duration: reduceMotion ? 0 : 0.35 }} className="h-full rounded-full bg-gradient-to-r from-violet-600 to-blue-500" />
 						</div>
-						<CTALink href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : nextRecommendation ? `/${nextRecommendation.slug}` : '/posts'} level={1} size="md" className="mt-5">
+						<CTALink href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : nextRecommendation?.tags?.[0]?.slug ? `/topic/${nextRecommendation.tags[0].slug}` : '/topic/distributed-systems'} level={1} size="md" className="mt-5">
 							Continue Learning
 						</CTALink>
 					</div>
@@ -689,7 +689,7 @@ export const HomepageRedesign = ({
 				<div className="rounded-3xl border border-neutral-200 bg-neutral-950 p-6 text-white dark:border-neutral-800">
 					<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-blue-200">Continue your journey</p>
 					<p className="mt-2 max-w-3xl text-3xl font-black tracking-tight">One path. Articles, graphs, simulations, mentor guidance, and interviews all keep the same learning state.</p>
-					<CTALink href="/guided-topics" level={1} size="lg" className="mt-6">Continue Your Journey</CTALink>
+					<CTALink href="/topic/distributed-systems" level={1} size="lg" className="mt-6">Continue Your Journey</CTALink>
 				</div>
 			</SectionShell>
 

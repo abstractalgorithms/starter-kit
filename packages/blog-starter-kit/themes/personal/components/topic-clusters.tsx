@@ -110,7 +110,7 @@ const ClusterCard = ({ cluster }: { cluster: TopicCluster }) => {
 	const c = COLORS[cluster.color];
 	return (
 		<Link
-			href={`/tag/${cluster.slug}`}
+			href={`/topic/${cluster.slug}`}
 			className={`group rounded-xl border border-l-4 border-neutral-200 dark:border-neutral-800 ${c.border} bg-white dark:bg-neutral-900 overflow-hidden flex items-center justify-between px-5 py-4 hover:shadow-md transition-all duration-150`}
 		>
 			<div className="flex items-center gap-2">

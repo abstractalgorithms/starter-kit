@@ -114,7 +114,7 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 			topic: activePath.title,
 			concept: activeNode.title,
 			roadmapNode: activeNode.title,
-			roadmapHref: `/guided-topics?node=${encodeURIComponent(activeNode.title)}`,
+			roadmapHref: `/topic/${activePath.tagSlug}`,
 			simulationTopic: activeNode.simulationTopic,
 		});
 	}, [activeNode, activePath, setContext]);
@@ -152,6 +152,7 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 	};
 
 	const resumeHref = activeNode?.postSlug ? `/${activeNode.postSlug}` : `/posts?tag=${activePath.tagSlug}&sort=created-asc`;
+	const topicHref = `/topic/${activePath.tagSlug}`;
 	const simulationHref = `/visualizations?q=${encodeURIComponent(activeNode?.simulationTopic ?? activePath.title)}&node=${encodeURIComponent(activeNode?.title ?? activePath.title)}&from=/guided-topics`;
 	const interviewHref = isInterviewPrepEnabled
 		? `/interview-prep`
@@ -215,7 +216,7 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 							: adaptiveNode?.description ?? 'Select a node to see the next recommended move.'}
 					</p>
 					<div className="mt-4 flex flex-wrap gap-2">
-						<CTALink href={resumeHref} level={1} size="sm">Resume Learning</CTALink>
+						<CTALink href={topicHref} level={1} size="sm">Open Topic Journey</CTALink>
 						<CTAButton type="button" level={2} size="sm" onClick={() => activeNode && updateNode(activeNode, { attempts: (progress[activeNode.id]?.attempts ?? 0) + 1, mastery: Math.max(progress[activeNode.id]?.mastery ?? 0, 45) })}>
 							Continue Practice
 						</CTAButton>
@@ -296,6 +297,7 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 
 							<div className="mt-5 space-y-2">
 								<CTALink href={resumeHref} level={1} size="md" className="w-full">Resume Learning</CTALink>
+								<CTALink href={topicHref} level={2} size="md" className="w-full">Open Topic Journey</CTALink>
 								<CTAButton type="button" level={2} size="md" className="w-full" onClick={() => updateNode(activeNode, { attempts: (progress[activeNode.id]?.attempts ?? 0) + 1, mastery: Math.min(84, Math.max(progress[activeNode.id]?.mastery ?? 0, 55)), weak: false })}>
 									Continue Practice
 								</CTAButton>
