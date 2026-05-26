@@ -4,7 +4,7 @@
 	"scripts": {
 		"build": "next build",
 		"codegen": "graphql-codegen --config codegen.yml",
-		"dev": "concurrently \"next\" \"pnpm codegen --watch\" --names next,codegen",
+		"dev": "pnpm codegen && concurrently \"next -p 3000\" \"pnpm codegen --watch\" --names next,codegen",
 		"format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,json}\" --ignore-path ../../../../.prettierignore",
 		"lint": "next lint",
 		"start": "next start",
@@ -31,7 +31,8 @@
 		"react-waypoint": "^10.3.0",
 		"remark": "^14.0.2",
 		"remark-html": "^15.0.1",
-		"uuid": "^9.0.1"
+		"uuid": "^9.0.1",
+		"zustand": "^4.5.7"
 	},
 	"devDependencies": {
 		"@graphql-codegen/cli": "^5.0.0",

@@ -4,6 +4,60 @@
 
 @import './docs-article.css';
 
+@layer components {
+    .aa-nav-dropdown {
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+    }
+
+    .aa-learning-context-rail,
+    .aa-learning-context-rail * {
+        font-family: 'Plus Jakarta Sans', var(--font-plus-jakarta-sans), Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+        letter-spacing: 0;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+    }
+
+    .aa-learning-context-rail [aria-haspopup="menu"] {
+        width: 100%;
+        justify-content: center;
+        border-radius: 0.75rem;
+        font-size: 0.8125rem;
+        line-height: 1.25rem;
+    }
+
+    .aa-learning-context-rail [role="menu"] {
+        width: 100%;
+        min-width: 100%;
+        border-radius: 0.875rem;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.14);
+    }
+
+    .aa-global-busy-bar {
+        animation: aa-global-busy-slide 1.1s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+        transform-origin: left center;
+    }
+}
+
+@keyframes aa-global-busy-slide {
+    0% {
+        transform: translateX(-110%) scaleX(0.55);
+    }
+    45% {
+        transform: translateX(45%) scaleX(0.95);
+    }
+    100% {
+        transform: translateX(210%) scaleX(0.55);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aa-global-busy-bar {
+        animation-duration: 2s;
+    }
+}
+
 /* Smooth anchor scrolling */
 html {
     scroll-behavior: smooth;
@@ -11,6 +65,29 @@ html {
 
 .hashnode-content-style{
     @apply prose prose-base break-words text-neutral-800 first:prose-p:mt-0 prose-p:leading-[1.8] prose-a:text-blue-600 prose-a:underline prose-a:underline-offset-2 prose-a:decoration-blue-300 hover:prose-a:decoration-blue-600 dark:prose-a:text-blue-400 dark:prose-a:decoration-blue-700 dark:hover:prose-a:decoration-blue-400 dark:text-neutral-200 prose-blockquote:text-neutral-600 dark:prose-blockquote:text-neutral-300 prose-blockquote:border-l-4 prose-blockquote:border-l-blue-400 prose-blockquote:italic prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:bg-blue-50/40 dark:prose-blockquote:bg-blue-950/20 prose-blockquote:my-8 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:font-normal prose-img:max-w-full prose-a:leading-relaxed prose-figure:leading-relaxed prose-figcaption:leading-relaxed prose-figcaption:text-center prose-figcaption:text-sm prose-figcaption:text-neutral-500 dark:prose-figcaption:text-neutral-400 prose-pre:leading-relaxed prose-li:leading-[1.75] prose-ul:leading-relaxed prose-ol:leading-relaxed prose-th:leading-relaxed prose-td:leading-relaxed prose-li:my-1.5 prose-h1:text-3xl prose-h1:font-bold prose-h1:tracking-tight prose-h1:my-8 prose-h2:text-2xl prose-h2:font-bold prose-h2:tracking-tight prose-h2:mt-12 prose-h2:mb-4 prose-h3:text-xl prose-h3:font-semibold prose-h3:mt-10 prose-h3:mb-3 prose-h4:text-lg prose-h4:font-semibold prose-h4:mt-8 prose-h4:mb-2 dark:prose-invert dark:prose-code:bg-neutral-800 first:prose-h1:mt-0 first:prose-h2:mt-0 first:prose-h3:mt-0 first:prose-h4:mt-0 first:prose-h5:mt-0;
+}
+
+.aa-assistant-answer .hashnode-content-style {
+    font-size: 16px;
+    line-height: 1.85;
+    color: rgb(30 41 59);
+}
+
+.dark .aa-assistant-answer .hashnode-content-style {
+    color: rgb(226 232 240);
+}
+
+.aa-assistant-answer .hashnode-content-style :where(p, li):not(:where([class~="not-prose"],[class~="not-prose"] *)) {
+    font-size: 16px;
+    line-height: 1.85;
+}
+
+.aa-assistant-answer .hashnode-content-style :where(h1, h2, h3):not(:where([class~="not-prose"],[class~="not-prose"] *)) {
+    color: rgb(15 23 42);
+}
+
+.dark .aa-assistant-answer .hashnode-content-style :where(h1, h2, h3):not(:where([class~="not-prose"],[class~="not-prose"] *)) {
+    color: rgb(248 250 252);
 }
 
 .hashnode-content-style :where(code):not(:where([class~="not-prose"],[class~="not-prose"] *))::before, .hashnode-content-style :where(code):not(:where([class~="not-prose"],[class~="not-prose"] *))::after  {
@@ -388,14 +465,33 @@ html {
     content: none;
 }
 
+.prose .hn-table {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    margin: 1.5rem 0;
+    background-color: #ffffff;
+}
+
+.dark .prose .hn-table {
+    border-color: #374151;
+    background-color: #111827;
+}
+
+.prose .hn-table table {
+    margin: 0;
+    min-width: 640px;
+    width: 100%;
+}
+
 .prose table {
-    display: block;
     width: 100%;
     max-width: 100%;
     border-collapse: collapse;
     margin: 1.5rem 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
 }
 
 .prose thead {
@@ -927,6 +1023,16 @@ html {
     color: inherit;
 }
 
+.article-doc .hashnode-content-style > blockquote:first-child {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.article-doc .hashnode-content-style > blockquote:first-child p {
+    max-width: none;
+}
+
 .article-doc :where(div[data-node-type='callout']) {
     max-width: 70ch;
     margin: 1.4rem 0;
@@ -1072,4 +1178,68 @@ html {
         display: block;
         overflow-x: auto;
     }
+}
+
+/* Editorial storytelling extensions for authored markdown/MDX-like article blocks. */
+.article-doc .aa-story-block,
+.article-doc .aa-story-immersive-diagram {
+    max-width: min(100%, 980px) !important;
+}
+
+.article-doc .aa-story-full-bleed {
+    position: relative;
+    left: 50%;
+    width: 100vw;
+    max-width: 100vw !important;
+    transform: translateX(-50%);
+    border-top: 1px solid rgba(139, 92, 246, 0.16);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.14);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(245, 243, 255, 0.8), rgba(239, 246, 255, 0.84));
+    padding: clamp(1.5rem, 4vw, 3rem) max(1rem, calc((100vw - 1120px) / 2));
+}
+
+.dark .article-doc .aa-story-full-bleed {
+    background: linear-gradient(135deg, rgba(10, 10, 10, 0.98), rgba(46, 16, 101, 0.22), rgba(23, 37, 84, 0.24));
+    border-color: rgba(139, 92, 246, 0.22);
+}
+
+.article-doc .aa-story-immersive-diagram {
+    border-radius: 1.5rem !important;
+    border: 1px solid rgba(139, 92, 246, 0.16) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96)) !important;
+    box-shadow: 0 24px 70px rgba(79, 70, 229, 0.1);
+    padding: clamp(1rem, 2.5vw, 1.5rem) !important;
+}
+
+.dark .article-doc .aa-story-immersive-diagram {
+    border-color: rgba(99, 102, 241, 0.28) !important;
+    background: linear-gradient(180deg, rgba(23, 23, 23, 0.98), rgba(10, 10, 10, 0.98)) !important;
+    box-shadow: 0 24px 70px rgba(30, 27, 75, 0.38);
+}
+
+.article-doc .aa-story-asymmetric {
+    display: grid;
+    gap: 1rem;
+}
+
+@media (min-width: 768px) {
+    .article-doc .aa-story-asymmetric {
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        align-items: center;
+    }
+}
+
+.article-doc .aa-story-transition {
+    border-left: 0 !important;
+    border-radius: 1.5rem !important;
+    border: 1px solid rgba(59, 130, 246, 0.18) !important;
+    background: linear-gradient(135deg, rgba(239, 246, 255, 0.78), rgba(245, 243, 255, 0.82)) !important;
+    color: rgb(38, 38, 38) !important;
+    padding: 1rem 1.25rem !important;
+}
+
+.dark .article-doc .aa-story-transition {
+    border-color: rgba(59, 130, 246, 0.24) !important;
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.2), rgba(76, 29, 149, 0.2)) !important;
+    color: rgb(229, 229, 229) !important;
 }

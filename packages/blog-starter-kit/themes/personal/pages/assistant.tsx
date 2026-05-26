@@ -7,13 +7,14 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useState } from 'react';
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { AppProvider } from '../components/contexts/appContext';
 import { Container } from '../components/container';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { MarkdownToHtml } from '../components/markdown-to-html';
 import { PersonalHeader } from '../components/personal-theme-header';
+import { InlineSimulation } from '../components/visualization/inline-simulation';
 import {
 	PostFragment,
 	PublicationByHostDocument,
@@ -24,30 +25,23 @@ import {
 import { getFooterPosts } from '../lib/api/footerData';
 import { getHoverLift, getRevealVariants, getTapScale } from '../components/motion-system';
 import { PremiumSkeleton } from '../components/premium-skeleton';
+import { useLearningContext } from '../components/learning-context-provider';
+import { CTAButton, CTALink } from '../components/cta-system';
 import type { AssistantResponse } from './api/learning-assistant';
+import { buildMemoryPromptContext, useLearningMemoryStore } from '../lib/learning-memory';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const MEMORY_KEY = 'aa-learning-assistant-memory';
 const PROFILE_KEY = 'aa-learning-assistant-profile';
 const TAB_KEY = 'aa-learning-assistant-tab';
 const META_KEY = 'aa-learning-assistant-meta';
-const isVisualizationLabEnabled = process.env.NEXT_PUBLIC_ENABLE_VISUALIZATION_LAB === 'true';
 
 const INPUT_PLACEHOLDERS = [
 	'Ask about any article, concept, or architecture tradeoff',
-	'Build a roadmap from the posts in this blog',
+	'Build a progression from the posts in this blog',
 	'Compare two engineering approaches',
 	'Generate interview questions for a topic',
 ];
-
-const SLASH_COMMANDS = [
-	'/roadmap',
-	'/visualize',
-	...(isVisualizationLabEnabled ? (['/simulate'] as const) : []),
-	'/quiz',
-	'/compare',
-	'/deep-dive',
-] as const;
 
 type AssistantPost = {
 	id: string;
@@ -75,6 +69,7 @@ type Props = {
 };
 
 type AssistantTab = 'answer' | 'roadmap' | 'concept-map' | 'simulations' | 'articles' | 'code' | 'interview';
+const ASSISTANT_TAB_IDS = new Set<AssistantTab>(['answer', 'roadmap', 'concept-map', 'simulations', 'articles', 'code', 'interview']);
 
 type ConversationMeta = {
 	id: number;
@@ -92,6 +87,25 @@ type LearningProfile = {
 	feedbackMode: 'default' | 'too-advanced' | 'too-simplified' | 'need-visuals';
 };
 
+type MentorAction = {
+	id: string;
+	level: 1 | 2 | 3;
+	title: string;
+	description: string;
+	intent:
+		| 'continue'
+		| 'prerequisite'
+		| 'simulation'
+		| 'interview'
+		| 'roadmap'
+		| 'follow-up'
+		| 'mastery';
+	prompt: string;
+	tab?: AssistantTab;
+	href?: string;
+	score: number;
+};
+
 const STREAM_SECTION_ORDER = [
 	'overview',
 	'prerequisites',
@@ -102,16 +116,6 @@ const STREAM_SECTION_ORDER = [
 	'conceptGraph',
 	'adaptiveRecommendations',
 ] as const;
-
-const TABS: Array<{ id: AssistantTab; label: string }> = [
-	{ id: 'answer', label: 'Answer' },
-	{ id: 'roadmap', label: 'Learning path' },
-	{ id: 'concept-map', label: 'Concept map' },
-	...(isVisualizationLabEnabled ? ([{ id: 'simulations', label: 'Simulations' }] as const) : []),
-	{ id: 'articles', label: 'Articles' },
-	{ id: 'code', label: 'Code' },
-	{ id: 'interview', label: 'Interview' },
-];
 
 const sectionVisible = (turn: Turn, section: (typeof STREAM_SECTION_ORDER)[number]) => {
 	const index = STREAM_SECTION_ORDER.indexOf(section);
@@ -207,6 +211,32 @@ const getTakeawayHeading = (turn: Turn) => `What to remember about ${getTurnTopi
 
 const toMarkdownBullets = (items: string[]) => items.map((item) => `- ${item}`).join('\n');
 
+const stripAnswerHeading = (markdown: string) =>
+	markdown.replace(/^\s*(?:#{1,6}\s*)?(?:\*\*)?Answer(?:\*\*)?\s*[:\n-]*/i, '').trim();
+
+const mentorIntentLabel: Record<MentorAction['intent'], string> = {
+	continue: 'Continue',
+	prerequisite: 'Review',
+	simulation: 'Behavior',
+	interview: 'Reasoning',
+	roadmap: 'Path',
+	'follow-up': 'Next',
+	mastery: 'Mastery',
+};
+
+const scheduleAfterHydration = (callback: () => void) => {
+	let firstFrame = 0;
+	let secondFrame = 0;
+	firstFrame = window.requestAnimationFrame(() => {
+		secondFrame = window.requestAnimationFrame(callback);
+	});
+
+	return () => {
+		window.cancelAnimationFrame(firstFrame);
+		window.cancelAnimationFrame(secondFrame);
+	};
+};
+
 const escapeCodeString = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
 const buildImplementationSnippet = (turn: Turn) => {
@@ -267,8 +297,8 @@ const parseSlashCommand = (value: string): { query: string; tab?: AssistantTab; 
 		case '/simulate':
 			return {
 				query: topic,
-				tab: isVisualizationLabEnabled ? 'simulations' : 'concept-map',
-				personaBoost: isVisualizationLabEnabled ? 'simulation-first' : 'visual-learning',
+				tab: 'simulations',
+				personaBoost: 'simulation-first',
 			};
 		case '/quiz':
 			return { query: topic, tab: 'interview', personaBoost: 'quiz-mode' };
@@ -290,10 +320,173 @@ const defaultProfile: LearningProfile = {
 	feedbackMode: 'default',
 };
 
+const uniqueMentorActions = (actions: MentorAction[]) => {
+	const seen = new Set<string>();
+	return actions
+		.sort((a, b) => b.score - a.score)
+		.filter((action) => {
+			const key = normalizeSuggestionKey(`${action.intent} ${action.title}`);
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+};
+
+const buildMentorActions = ({
+	currentTurn,
+	pendingQuery,
+	learningContext,
+	learningHistory,
+	profile,
+	simulationHref,
+	roadmapHref,
+}: {
+	currentTurn: Turn | null;
+	pendingQuery?: string;
+	learningContext: ReturnType<typeof useLearningContext>['context'];
+	learningHistory: ReturnType<typeof useLearningContext>['history'];
+	profile: LearningProfile;
+	simulationHref: string;
+	roadmapHref: string;
+}): MentorAction[] => {
+	const contextTopic =
+		pendingQuery?.trim() ||
+		currentTurn?.query?.trim() ||
+		currentTurn?.response.relatedArchitectureTopics[0] ||
+		learningContext.sectionTitle ||
+		learningContext.roadmapNode ||
+		learningContext.concept ||
+		learningContext.topic ||
+		learningContext.title ||
+		'distributed systems';
+	const recentArticle = learningHistory.find((item) => item.source === 'article');
+	const recentTopic = recentArticle?.sectionTitle || recentArticle?.concept || recentArticle?.topic || contextTopic;
+	const weakArea = profile.weakAreas[0] || currentTurn?.response.prerequisites[0];
+	const nextRoadmapStep =
+		currentTurn?.response.recommendedSequence[0]?.title ||
+		(!pendingQuery?.trim()
+			? profile.currentRoadmap.find(
+					(item) => !profile.completedConcepts.some((done) => normalizeSuggestionKey(done) === normalizeSuggestionKey(item)),
+			  )
+			: undefined);
+	const firstFollowUp = currentTurn?.response.interviewQuestions[0];
+	const firstRecommendation = currentTurn?.response.adaptiveRecommendations[0];
+	const difficultyScore = currentTurn?.response.difficultyEstimate.score ?? 48;
+
+	const actions: MentorAction[] = [
+		{
+			id: 'roadmap-next',
+			level: 2,
+			intent: 'roadmap',
+			title: nextRoadmapStep ? `Continue with ${nextRoadmapStep}` : `Build a progression for ${contextTopic}`,
+			description: nextRoadmapStep
+				? 'Use the strongest current-question match as the next reading step.'
+				: 'Turn the current context into a sequenced progression.',
+			prompt: nextRoadmapStep
+				? `/roadmap ${nextRoadmapStep}`
+				: `/roadmap ${contextTopic}`,
+			tab: 'roadmap',
+			href: roadmapHref,
+			score: nextRoadmapStep ? 88 : 66,
+		},
+		{
+			id: 'interview-readiness',
+			level: difficultyScore > 62 ? 1 : 2,
+			intent: 'interview',
+			title: difficultyScore > 62 ? `Practice interview follow-ups for ${contextTopic}` : `Warm up with interview basics`,
+			description:
+				difficultyScore > 62
+					? 'You are in a higher-complexity topic, so pressure-test tradeoffs and communication.'
+					: 'Convert the current concept into a simple interview-ready explanation.',
+			prompt: firstFollowUp ? `/quiz ${firstFollowUp}` : `/quiz ${contextTopic}`,
+			tab: 'interview',
+			score: difficultyScore > 62 ? 84 : 58,
+		},
+	];
+
+	if (!currentTurn && recentArticle && !pendingQuery?.trim()) {
+		actions.push({
+			id: 'continue-context',
+			level: 1,
+			intent: 'continue',
+			title: `Continue into ${recentTopic}?`,
+			description: 'Pick up from the latest article, section, or graph node instead of starting a fresh search.',
+			prompt: `Continue coaching me from ${recentTopic}. Give me the next concept, a short explanation, and one practice task.`,
+			tab: 'answer',
+			score: 96,
+		});
+	}
+
+	if (weakArea) {
+		actions.push({
+			id: 'weak-area',
+			level: currentTurn ? 3 : 2,
+			intent: 'prerequisite',
+			title: `You may need ${weakArea} first`,
+			description: 'This prerequisite is appearing as a weak area in your recent AI plans.',
+			prompt: `Explain ${weakArea} as a prerequisite for ${contextTopic}. Include a quick diagnostic question.`,
+			tab: 'answer',
+			score: currentTurn ? 64 : 92,
+		});
+	}
+
+	actions.push({
+		id: 'simulation',
+		level: 2,
+		intent: 'simulation',
+		title: `Try ${contextTopic} simulation`,
+		description: 'Move from explanation to step-through system behavior.',
+		prompt: `/simulate ${contextTopic}`,
+		tab: 'simulations',
+		href: simulationHref,
+		score: learningContext.source === 'article' || currentTurn ? 86 : 54,
+	});
+
+	if (firstRecommendation && firstRecommendation.slug !== currentTurn?.response.recommendedSequence[0]?.slug) {
+		actions.push({
+			id: 'adaptive-recommendation',
+			level: 2,
+			intent: 'follow-up',
+			title: firstRecommendation.title,
+			description: firstRecommendation.why,
+			prompt: `Continue with ${firstRecommendation.title}. Explain why it is the right next step after ${contextTopic}.`,
+			tab: 'answer',
+			href: `/${firstRecommendation.slug}`,
+			score: 82,
+		});
+	}
+
+	if (profile.completedConcepts.length > 0) {
+		actions.push({
+			id: 'mastery-check',
+			level: 3,
+			intent: 'mastery',
+			title: `Check mastery across ${profile.completedConcepts.length} concepts`,
+			description: 'Ask the mentor to find gaps across completed topics before you advance.',
+			prompt: `Assess my mastery across these completed concepts: ${profile.completedConcepts.join(', ')}. Identify weak links and next drills.`,
+			tab: 'interview',
+			score: 68,
+		});
+	}
+
+	return uniqueMentorActions(actions).slice(0, 6);
+};
+
 export default function LearningAssistantPage({ publication, posts = [], footerPosts }: Props) {
 	const router = useRouter();
 	const reduceMotion = useReducedMotion();
 	const reveal = getRevealVariants(reduceMotion);
+	const {
+		context: learningContext,
+		history: learningHistory,
+		setContext,
+		buildPrompt,
+		getContextHref,
+	} = useLearningContext();
+	const learningMemory = useLearningMemoryStore();
+	const recordConceptSeen = useLearningMemoryStore((state) => state.recordConceptSeen);
+	const recordWeakArea = useLearningMemoryStore((state) => state.recordWeakArea);
+	const recordInterviewPractice = useLearningMemoryStore((state) => state.recordInterviewPractice);
 	const [query, setQuery] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [turns, setTurns] = useState<Turn[]>([]);
@@ -304,65 +497,118 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 	const [takeawaysCollapsed, setTakeawaysCollapsed] = useState(false);
 	const [conversationMeta, setConversationMeta] = useState<Record<number, ConversationMeta>>({});
 	const [profile, setProfile] = useState<LearningProfile>(defaultProfile);
+	const [mobileMentorTrayOpen, setMobileMentorTrayOpen] = useState(false);
+	const [clientReady, setClientReady] = useState(false);
+	const initialQueryRef = useRef<string | null>(null);
 
 	useEffect(() => {
+		const timer = window.setTimeout(() => {
+			startTransition(() => setClientReady(true));
+		}, 800);
+		return () => window.clearTimeout(timer);
+	}, []);
+
+	useEffect(() => {
+		if (!clientReady) return;
 		const interval = window.setInterval(
 			() => setPlaceholderIndex((prev) => (prev + 1) % INPUT_PLACEHOLDERS.length),
 			2400,
 		);
 		return () => window.clearInterval(interval);
-	}, []);
+	}, [clientReady]);
 
 	useEffect(() => {
-		try {
-			const savedTurns = sessionStorage.getItem(MEMORY_KEY);
-			if (savedTurns) setTurns(JSON.parse(savedTurns) as Turn[]);
-			const savedTab = localStorage.getItem(TAB_KEY);
-			if (savedTab && TABS.some((tab) => tab.id === savedTab)) {
-				setActiveTab(savedTab as AssistantTab);
+		if (!clientReady) return;
+		return scheduleAfterHydration(() => {
+			startTransition(() => {
+				setContext({
+					source: 'assistant',
+					pathname: '/assistant',
+					title: 'AI Mentor',
+					domain: learningContext.domain ?? 'Engineering',
+					topic: learningContext.topic,
+					subtopic: learningContext.subtopic,
+					concept: learningContext.concept,
+					roadmapNode: learningContext.roadmapNode,
+					roadmapHref: learningContext.roadmapHref,
+					simulationTopic: learningContext.simulationTopic,
+				});
+			});
+	});
+	// Preserve the incoming learning context while marking the active route as assistant.
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [clientReady, setContext]);
+
+	useEffect(() => {
+		if (!clientReady) return;
+		if (!router.isReady) return;
+		return scheduleAfterHydration(() => {
+			try {
+				const hasUrlQuery = typeof router.query.q === 'string' && router.query.q.trim().length > 0;
+				const savedTurns = sessionStorage.getItem(MEMORY_KEY);
+				const savedTab = localStorage.getItem(TAB_KEY);
+				const savedMeta = localStorage.getItem(META_KEY);
+				const savedProfile = localStorage.getItem(PROFILE_KEY);
+
+				startTransition(() => {
+					if (!hasUrlQuery && savedTurns) setTurns(JSON.parse(savedTurns) as Turn[]);
+					if (!hasUrlQuery && savedTab && ASSISTANT_TAB_IDS.has(savedTab as AssistantTab)) {
+						setActiveTab(savedTab as AssistantTab);
+					}
+					if (savedMeta) setConversationMeta(JSON.parse(savedMeta) as Record<number, ConversationMeta>);
+					if (!hasUrlQuery && savedProfile) setProfile(JSON.parse(savedProfile) as LearningProfile);
+				});
+			} catch {
+				startTransition(() => {
+					setTurns([]);
+					setProfile(defaultProfile);
+				});
 			}
-			const savedMeta = localStorage.getItem(META_KEY);
-			if (savedMeta) setConversationMeta(JSON.parse(savedMeta) as Record<number, ConversationMeta>);
-			const savedProfile = localStorage.getItem(PROFILE_KEY);
-			if (savedProfile) setProfile(JSON.parse(savedProfile) as LearningProfile);
-		} catch {
-			setTurns([]);
-			setProfile(defaultProfile);
-		}
-	}, []);
+		});
+	}, [clientReady, router.isReady, router.query.q]);
 
 	useEffect(() => {
+		if (!clientReady) return;
+		if (!router.isReady) return;
 		const q = typeof router.query.q === 'string' ? router.query.q : '';
 		if (!q?.trim()) return;
-		setQuery(q);
-		runAssistant(q);
+		return scheduleAfterHydration(() => {
+			if (initialQueryRef.current === q) return;
+			initialQueryRef.current = q;
+			startTransition(() => setQuery(q));
+			runAssistant(q, { replaceCurrent: true });
+		});
 		// run once when query param becomes available
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [router.query.q]);
+	}, [clientReady, router.isReady, router.query.q]);
 
 	useEffect(() => {
+		if (!clientReady) return;
 		try {
 			sessionStorage.setItem(MEMORY_KEY, JSON.stringify(turns.slice(-20)));
 		} catch {}
-	}, [turns]);
+	}, [clientReady, turns]);
 
 	useEffect(() => {
+		if (!clientReady) return;
 		try {
 			localStorage.setItem(TAB_KEY, activeTab);
 		} catch {}
-	}, [activeTab]);
+	}, [activeTab, clientReady]);
 
 	useEffect(() => {
+		if (!clientReady) return;
 		try {
 			localStorage.setItem(META_KEY, JSON.stringify(conversationMeta));
 		} catch {}
-	}, [conversationMeta]);
+	}, [clientReady, conversationMeta]);
 
 	useEffect(() => {
+		if (!clientReady) return;
 		try {
 			localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
 		} catch {}
-	}, [profile]);
+	}, [clientReady, profile]);
 
 	const coverImageBySlug = useMemo(() => {
 		const map = new Map<string, string>();
@@ -375,6 +621,12 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 	const resolveCoverImage = (slug: string) => coverImageBySlug.get(slug) ?? null;
 
 	const currentTurn = turns[turns.length - 1] ?? null;
+	const pendingQuestion = query.trim() || (typeof router.query.q === 'string' ? router.query.q.trim() : '');
+	const normalizedPendingQuestion = pendingQuestion ? normalizeSuggestionKey(parseSlashCommand(pendingQuestion).query) : '';
+	const currentTurnForQuestion =
+		currentTurn && (!normalizedPendingQuestion || normalizeSuggestionKey(currentTurn.query) === normalizedPendingQuestion)
+			? currentTurn
+			: null;
 	const topPosts = useMemo(
 		() => [...posts].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 8),
 		[posts],
@@ -392,7 +644,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 	const placeholderOptions = useMemo(() => {
 		const dynamic = [
 			...topPosts.slice(0, 2).map((post) => `Explain ${post.title}`),
-			...popularTopics.slice(0, 2).map((topic) => `Build a roadmap for ${topic}`),
+			...popularTopics.slice(0, 2).map((topic) => `Build a progression for ${topic}`),
 		];
 		return dynamic.length > 0 ? dynamic : INPUT_PLACEHOLDERS;
 	}, [popularTopics, topPosts]);
@@ -411,7 +663,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 	const promptSuggestions = useMemo(() => {
 		const fromRecent = recentTopics.slice(0, 3);
 		const fromPosts = topPosts.slice(0, 4).map((post) => `Explain ${post.title}`);
-		const fromTags = popularTopics.slice(0, 4).map((topic) => `Create a roadmap for ${topic}`);
+		const fromTags = popularTopics.slice(0, 4).map((topic) => `Create a progression for ${topic}`);
 		return [...new Set([...fromRecent, ...fromPosts, ...fromTags])].slice(0, 6);
 	}, [popularTopics, recentTopics, topPosts]);
 	const composerSuggestions = useMemo(() => {
@@ -503,18 +755,44 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 			difficulty: currentTurn.response.difficultyEstimate,
 		};
 	}, [currentTurn]);
+	const mentorActions = useMemo(
+		() =>
+			buildMentorActions({
+				currentTurn: currentTurnForQuestion,
+				pendingQuery: pendingQuestion,
+				learningContext,
+				learningHistory,
+				profile,
+				simulationHref: getContextHref('simulation'),
+				roadmapHref: getContextHref('roadmap'),
+			}),
+		[currentTurnForQuestion, getContextHref, learningContext, learningHistory, pendingQuestion, profile],
+	);
+	const primaryMentorAction = mentorActions[0] ?? null;
+	const memoryPromptContext = useMemo(
+		() => buildMemoryPromptContext(learningMemory),
+		[learningMemory],
+	);
+	const shouldShowInitialQuestionComposer = !currentTurn && !loading && !query.trim();
 
-	const runAssistant = async (inputValue: string) => {
+	const runAssistant = async (inputValue: string, options?: { replaceCurrent?: boolean }) => {
 		const parsed = parseSlashCommand(inputValue);
 		const normalizedQuery = parsed.query.trim();
 		if (!normalizedQuery) {
-			setError('Please ask a technical question or use a slash command with a topic.');
+			startTransition(() => {
+				setError('Please ask a technical question or use a slash command with a topic.');
+			});
 			return;
 		}
 
-		setActiveTab(parsed.tab ?? 'answer');
-		setLoading(true);
-		setError(null);
+		startTransition(() => {
+			setActiveTab(parsed.tab ?? 'answer');
+			setLoading(true);
+			setError(null);
+			if (options?.replaceCurrent) {
+				setTurns([]);
+			}
+		});
 
 		try {
 			const res = await fetch('/api/learning-assistant', {
@@ -531,53 +809,75 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 					]
 						.filter(Boolean)
 						.join('|'),
+					memoryContext: memoryPromptContext,
 				}),
 			});
 			if (!res.ok) throw new Error(`Assistant error ${res.status}`);
 			const payload = (await res.json()) as AssistantResponse;
 
 			const turnId = Date.now();
-			setTurns((prev) => [
-				...prev,
-				{
-					id: turnId,
-					query: normalizedQuery,
-					response: payload,
-					visibleSections: 1,
-					createdAt: new Date().toISOString(),
-				},
-			]);
+			startTransition(() => {
+				setTurns((prev) => [
+					...(options?.replaceCurrent ? [] : prev),
+					{
+						id: turnId,
+						query: normalizedQuery,
+						response: payload,
+						visibleSections: 1,
+						createdAt: new Date().toISOString(),
+					},
+				]);
 
-			setConversationMeta((prev) => ({
-				...prev,
-				[turnId]: { ...(prev[turnId] ?? {}), title: prev[turnId]?.title || normalizedQuery },
-			}));
+				setConversationMeta((prev) => ({
+					...prev,
+					[turnId]: { ...(prev[turnId] ?? {}), title: prev[turnId]?.title || normalizedQuery },
+				}));
 
-			setProfile((prev) => ({
-				...prev,
-				currentRoadmap: payload.recommendedSequence.map((step) => step.title),
-				favoriteDomains: [...new Set([...prev.favoriteDomains, ...payload.relatedArchitectureTopics])].slice(0, 8),
-				weakAreas: payload.prerequisites.slice(0, 4),
-			}));
+				setProfile((prev) => ({
+					...prev,
+					currentRoadmap: payload.recommendedSequence.map((step) => step.title),
+					favoriteDomains: [...new Set([...prev.favoriteDomains, ...payload.relatedArchitectureTopics])].slice(0, 8),
+					weakAreas: payload.prerequisites.slice(0, 4),
+				}));
+			});
+			payload.relatedArchitectureTopics.forEach((topic) => {
+				recordConceptSeen({ label: topic, domain: topic });
+			});
+			payload.prerequisites.slice(0, 4).forEach((weakArea) => {
+				recordWeakArea({ label: weakArea, domain: payload.relatedArchitectureTopics[0] });
+			});
+			if (parsed.tab === 'interview') {
+				recordInterviewPractice({
+					topic: payload.relatedArchitectureTopics[0] ?? normalizedQuery,
+					weakness: payload.prerequisites[0] ?? 'interview follow-up depth',
+					communicationDelta: 1,
+				});
+			}
 
 			let revealed = 1;
 			const interval = window.setInterval(() => {
 				revealed += 1;
-				setTurns((prev) =>
-					prev.map((turn) =>
-						turn.id === turnId
-							? { ...turn, visibleSections: Math.min(STREAM_SECTION_ORDER.length, revealed) }
-							: turn,
-					),
-				);
+				startTransition(() => {
+					setTurns((prev) =>
+						prev.map((turn) =>
+							turn.id === turnId
+								? { ...turn, visibleSections: Math.min(STREAM_SECTION_ORDER.length, revealed) }
+								: turn,
+						),
+					);
+				});
 				if (revealed >= STREAM_SECTION_ORDER.length) {
 					window.clearInterval(interval);
 				}
 			}, 260);
 		} catch (e) {
-			setError(e instanceof Error ? e.message : 'Failed to run assistant');
+			startTransition(() => {
+				setError(e instanceof Error ? e.message : 'Failed to run assistant');
+			});
 		} finally {
-			setLoading(false);
+			startTransition(() => {
+				setLoading(false);
+			});
 		}
 	};
 
@@ -617,6 +917,22 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		runAssistant(value);
 	};
 
+	const runMentorAction = (action: MentorAction) => {
+		if (action.href && action.intent === 'simulation') {
+			router.push(action.href);
+			return;
+		}
+		setQuery(action.prompt);
+		if (action.tab) setActiveTab(action.tab);
+		runAssistant(action.prompt);
+	};
+
+	const startFromLearningContext = () => {
+		const prompt = buildPrompt('Continue coaching me from my current learning context.');
+		setQuery(prompt);
+		runAssistant(prompt);
+	};
+
 	const runInterviewAction = (mode: 'deep-dive' | 'compare', question: string) => {
 		const baseTopic = currentTurn?.query?.trim();
 		const contextualPrompt =
@@ -628,20 +944,82 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		runAssistant(contextualPrompt);
 	};
 
+	const questionComposer = (
+		<div className="rounded-2xl border border-violet-200/70 bg-white p-3 shadow-[0_0_0_1px_rgba(59,130,246,0.04)] dark:border-violet-800/70 dark:bg-neutral-950/40 md:p-4">
+			<div className="flex items-start gap-2">
+				<textarea
+					value={query}
+					onChange={(e) => setQuery(e.target.value)}
+					placeholder={`${placeholderOptions[placeholderIndex % placeholderOptions.length]} ▌`}
+					rows={2}
+					className="w-full resize-none rounded-xl border-0 bg-transparent px-2 py-3 text-base text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-100 md:px-4"
+					aria-label="Ask the engineering AI Mentor"
+				/>
+				<motion.button
+					onClick={() => runAssistant(query)}
+					disabled={loading}
+					whileTap={getTapScale(reduceMotion)}
+					className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 text-white shadow-lg shadow-blue-500/20 disabled:opacity-50 inline-flex items-center justify-center"
+					aria-label="Run AI Mentor query"
+					aria-busy={loading}
+				>
+					{loading ? (
+						<span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+					) : (
+						<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M5 12h14m-7-7 7 7-7 7" />
+						</svg>
+					)}
+				</motion.button>
+			</div>
+		</div>
+	);
+
+	const continueFromHereSurface = (
+		<section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:p-5">
+			<div>
+				<p className="text-xs font-semibold text-neutral-900 dark:text-neutral-50">Continue from here</p>
+				<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+					Use a suggested move, or open a question box when the next thing is not listed.
+				</p>
+			</div>
+
+			<details className="group mt-3">
+				<summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-bold text-neutral-700 transition hover:border-violet-300 hover:text-violet-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-neutral-200 dark:hover:border-violet-700 dark:hover:text-violet-300">
+					<span>Ask something else</span>
+					<span className="text-neutral-400 transition group-open:rotate-180">⌄</span>
+				</summary>
+				<div className="mt-3 hidden group-open:block">{questionComposer}</div>
+			</details>
+
+			{composerSuggestions.length > 0 ? (
+				<div className="mt-3 flex flex-wrap gap-2">
+					{composerSuggestions.slice(0, 5).map((topic) => (
+						<button
+							key={topic}
+							onClick={() => {
+								startPrompt(topic);
+							}}
+							className="rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 px-3 py-1.5 text-[11px] font-semibold text-blue-700 dark:text-blue-300"
+						>
+							{topic}
+						</button>
+					))}
+				</div>
+			) : null}
+		</section>
+	);
+
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
 				<Head>
-					<title>AI Learning Copilot - {publication.title}</title>
+					<title>AI Mentor - {publication.title}</title>
 					<meta
 						name="description"
-						content={
-							isVisualizationLabEnabled
-								? 'AI-native engineering learning copilot with conversational roadmaping, concept maps, simulations, and adaptive progression guidance.'
-								: 'AI-native engineering learning copilot with conversational roadmaping, concept maps, and adaptive progression guidance.'
-						}
+						content="AI-native engineering mentor with conversational progression, concept maps, simulations, and adaptive guidance."
 					/>
-					<meta property="og:title" content={`AI Learning Copilot - ${publication.title}`} />
+					<meta property="og:title" content={`AI Mentor - ${publication.title}`} />
 					<meta property="og:description" content="Adaptive engineering mentor with visual systems guidance and interactive learning flow." />
 					<meta property="og:image" content={publication.ogMetaData?.image || getAutogeneratedPublicationOG(publication)} />
 					<script
@@ -656,9 +1034,9 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 					<div className="mx-auto w-full max-w-[1440px] px-4 py-4 md:px-5 md:py-6">
 						<div className="mb-3 flex items-center justify-between xl:hidden">
 							<div>
-								<p className="text-xs font-semibold text-violet-600 dark:text-violet-300">✣ AI Copilot</p>
+								<p className="text-xs font-semibold text-violet-600 dark:text-violet-300">AI Mentor</p>
 								<h1 className="mt-1 text-xl font-bold text-neutral-950 dark:text-neutral-50">
-									{isVisualizationLabEnabled ? 'Ask, map, simulate, and continue.' : 'Ask, and learn'}
+									Ask, map, simulate, and continue.
 								</h1>
 							</div>
 						</div>
@@ -666,15 +1044,27 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 						<div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)_320px] gap-4 md:gap-5 items-start">
 							<aside className="hidden xl:block sticky top-24">
 								<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-									<button
+									<CTAButton
+										type="button"
+										level={2}
+										size="md"
 										onClick={() => {
 											setQuery('');
 											setActiveTab('answer');
 										}}
-										className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-violet-700 hover:border-violet-300 hover:bg-violet-50 dark:border-neutral-700 dark:bg-neutral-950 dark:text-violet-300"
+										className="w-full"
 									>
 										+ New conversation
-									</button>
+									</CTAButton>
+									<CTAButton
+										type="button"
+										level={1}
+										size="md"
+										onClick={startFromLearningContext}
+										className="mt-2 w-full"
+									>
+										Use current learning context
+									</CTAButton>
 
 									<div className="mt-4">
 										<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Recent conversations</p>
@@ -707,16 +1097,32 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 										</div>
 									</div>
 
-									{profile.currentRoadmap.length > 0 ? (
+									{currentTurn ? (
 										<div className="mt-4">
-											<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Current roadmap</p>
-											<div className="mt-2 space-y-2 text-xs">
-												{profile.currentRoadmap.slice(0, 4).map((title, index) => (
-													<button key={title} onClick={() => startPrompt(title)} className="w-full text-left rounded-lg border border-neutral-200 dark:border-neutral-700 p-2 hover:border-blue-300 dark:hover:border-blue-600">
-														<p className="font-semibold text-neutral-800 dark:text-neutral-100">{title}</p>
-														<p className="mt-1 text-neutral-500 dark:text-neutral-400">Step {index + 1} from your latest AI plan</p>
+											<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Session focus</p>
+											<div className="mt-2 rounded-xl border border-neutral-200 bg-neutral-50/80 p-3 text-xs dark:border-neutral-800 dark:bg-neutral-950/40">
+												<p className="font-semibold leading-snug text-neutral-900 dark:text-neutral-50">
+													{getTurnTopic(currentTurn)}
+												</p>
+												<p className="mt-1 leading-relaxed text-neutral-500 dark:text-neutral-400">
+													{metadata?.difficulty.label ?? 'Adaptive'} · {metadata?.estimatedMinutes ?? deriveLearningTime(currentTurn.response)} min path
+												</p>
+												<div className="mt-3 grid grid-cols-2 gap-2">
+													<button
+														type="button"
+														onClick={() => setActiveTab('roadmap')}
+														className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 font-semibold text-neutral-700 hover:border-violet-300 hover:text-violet-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-violet-700 dark:hover:text-violet-300"
+													>
+														View path
 													</button>
-												))}
+													<button
+														type="button"
+														onClick={() => setActiveTab('simulations')}
+														className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 font-semibold text-neutral-700 hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300"
+													>
+														Test it
+													</button>
+												</div>
 											</div>
 										</div>
 									) : null}
@@ -740,78 +1146,60 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 							</aside>
 
 							<main>
-								<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:p-5">
-									<div className="rounded-2xl border border-violet-200/70 bg-white p-3 shadow-[0_0_0_1px_rgba(59,130,246,0.04)] dark:border-violet-800/70 dark:bg-neutral-950/40 md:p-4">
-										<div className="flex items-start gap-2">
-											<textarea
-												value={query}
-												onChange={(e) => setQuery(e.target.value)}
-												placeholder={`${placeholderOptions[placeholderIndex % placeholderOptions.length]} ▌`}
-												rows={2}
-												className="w-full resize-none rounded-xl border-0 bg-transparent px-2 py-3 text-base text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-100 md:px-4"
-												aria-label="Ask the engineering learning copilot"
-											/>
-											<motion.button
-												onClick={() => runAssistant(query)}
-												disabled={loading}
-												whileTap={getTapScale(reduceMotion)}
-												className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 text-white shadow-lg shadow-blue-500/20 disabled:opacity-50 inline-flex items-center justify-center"
-												aria-label="Run AI copilot query"
-												aria-busy={loading}
-											>
-												{loading ? (
-													<span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-												) : (
-													<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M5 12h14m-7-7 7 7-7 7" />
-													</svg>
-												)}
-											</motion.button>
+								<details className="group mb-3 overflow-hidden rounded-2xl border border-sky-200 bg-sky-50/70 shadow-sm dark:border-sky-900 dark:bg-sky-950/20">
+									<summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-3">
+										<div className="flex min-w-0 items-start gap-3">
+											<span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-600 text-xs font-extrabold text-white shadow-sm shadow-sky-500/20">
+												?
+											</span>
+											<p className="line-clamp-2 min-w-0 text-base font-extrabold leading-snug text-slate-950 dark:text-sky-50 md:text-lg">
+												{currentTurn?.query || query || 'Ask a systems question to begin.'}
+											</p>
 										</div>
-										<div className="mt-2 flex flex-wrap gap-2">
-											{SLASH_COMMANDS.map((command) => (
-												<button
-													key={command}
-													onClick={() => setQuery(`${command} `)}
-													className="rounded-full border border-neutral-200 dark:border-neutral-700 px-2.5 py-1 text-[11px] text-neutral-600 dark:text-neutral-300 hover:border-blue-300 dark:hover:border-blue-600"
+										<span className="mt-0.5 shrink-0 text-neutral-400 transition group-open:rotate-180">⌄</span>
+									</summary>
+									<div className="border-t border-sky-100 bg-white/70 p-3 dark:border-sky-900/70 dark:bg-neutral-950/30">
+										{primaryMentorAction ? (
+											<div className="rounded-xl border border-violet-100 bg-violet-50/70 p-3 dark:border-violet-900 dark:bg-violet-950/20">
+												<p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-300">Next</p>
+												<p className="mt-1 text-sm font-bold leading-snug text-neutral-950 dark:text-neutral-50">{primaryMentorAction.title}</p>
+												<CTAButton
+													type="button"
+													level={1}
+													size="sm"
+													className="mt-2"
+													onClick={() => runMentorAction(primaryMentorAction)}
 												>
-													{command}
-												</button>
-											))}
-										</div>
-										<div className="mt-2 flex flex-wrap gap-2">
-											{composerSuggestions.map((topic) => (
+													Start
+												</CTAButton>
+											</div>
+										) : null}
+										<div className="mt-3 flex flex-wrap gap-2">
+											{mentorActions.slice(1, 6).map((action) => (
 												<button
-													key={topic}
-													onClick={() => {
-														startPrompt(topic);
-													}}
-													className="rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 px-2.5 py-1 text-[11px] text-blue-700 dark:text-blue-300"
+													key={action.id}
+													onClick={() => runMentorAction(action)}
+													className="group rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-left transition hover:border-violet-200 hover:bg-violet-50 dark:border-neutral-800 dark:bg-neutral-950/60 dark:hover:border-violet-800 dark:hover:bg-violet-950/20"
 												>
-													{topic}
+													<span className="text-[11px] font-bold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+														{mentorIntentLabel[action.intent]}
+													</span>
+													<span className="ml-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200">{action.title}</span>
 												</button>
 											))}
 										</div>
 									</div>
+								</details>
 
-									<div className="mt-4 overflow-x-auto no-scrollbar">
-										<div className="inline-flex min-w-full gap-2">
-											{TABS.map((tab) => (
-												<button
-													key={tab.id}
-													onClick={() => setActiveTab(tab.id)}
-													className={`relative whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold transition ${
-														activeTab === tab.id
-															? 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-300'
-															: 'border-neutral-200 text-neutral-600 hover:border-blue-200 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-300 dark:hover:text-blue-300'
-													}`}
-												>
-													{tab.label}
-												</button>
-											))}
-										</div>
+								{shouldShowInitialQuestionComposer ? (
+									<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:p-5">
+										<p className="text-xs font-semibold text-neutral-900 dark:text-neutral-50">Ask a systems question</p>
+										<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+											Start with the thing you want to understand; the next actions will appear after the answer.
+										</p>
+										<div className="mt-3">{questionComposer}</div>
 									</div>
-								</div>
+								) : null}
 
 								{loading ? (
 									<div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -830,7 +1218,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 									<div className="mt-4 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6">
 										<p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Start your first learning conversation</p>
 										<p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-											Use natural language or slash commands for roadmaping, concept maps, and deep-dive explanations.
+											Ask a systems question, then continue through the actions that appear.
 										</p>
 										<div className="mt-3 flex flex-wrap gap-2">
 											{(semanticSuggestions.length > 0 ? semanticSuggestions : topPosts).slice(0, 4).map((item) => (
@@ -861,9 +1249,9 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 										{activeTab === 'answer' ? (
 											<>
 												{sectionVisible(currentTurn, 'overview') ? (
-													<motion.section key={`overview-${currentTurn.id}`} variants={reveal} initial="hidden" animate="show" className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-														<div className="text-sm text-neutral-700 dark:text-neutral-300">
-															<MarkdownToHtml contentMarkdown={currentTurn.response.overview} />
+													<motion.section key={`overview-${currentTurn.id}`} variants={reveal} initial="hidden" animate="show" className="aa-assistant-answer rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:p-6">
+														<div className="text-neutral-800 dark:text-neutral-200">
+															<MarkdownToHtml contentMarkdown={stripAnswerHeading(currentTurn.response.overview)} />
 														</div>
 													</motion.section>
 												) : null}
@@ -884,7 +1272,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 															</div>
 														</div>
 														{!takeawaysCollapsed ? (
-															<div className="mt-2 text-sm text-neutral-700 dark:text-neutral-300">
+															<div className="mt-2 text-[13px] leading-6 text-neutral-600 dark:text-neutral-300">
 																<MarkdownToHtml
 																	contentMarkdown={
 																		getTurnTakeaways(currentTurn).length > 0
@@ -911,24 +1299,45 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 														)}
 													</section>
 												) : null}
+
+												{sectionVisible(currentTurn, 'overview') ? continueFromHereSurface : null}
+
 											</>
 										) : null}
 
 										{activeTab === 'roadmap' ? (
 											<section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-												<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Roadmap navigator</p>
+												<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Progression navigator</p>
 												<div className="mt-3 space-y-3">
 													{currentTurn.response.recommendedSequence.map((step, index) => (
-														<div key={`roadmap-${step.slug}`} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3">
-															<p className="text-xs font-semibold text-blue-600 dark:text-blue-400">Module {index + 1}</p>
-															<p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-50">{step.title}</p>
-															<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{step.reason}</p>
+														<div key={`roadmap-${step.slug}`} className="rounded-xl border border-neutral-200 p-3 transition hover:border-violet-200 hover:bg-violet-50/40 dark:border-neutral-700 dark:hover:border-violet-800 dark:hover:bg-violet-950/20">
+															<div className="flex flex-wrap items-start justify-between gap-3">
+																<div className="min-w-0 flex-1">
+																	<p className="text-xs font-semibold text-blue-600 dark:text-blue-400">Step {index + 1}</p>
+																	<Link href={`/${step.slug}`} className="mt-1 block text-sm font-semibold text-neutral-900 hover:text-violet-700 dark:text-neutral-50 dark:hover:text-violet-300">
+																		{step.title}
+																	</Link>
+																	<p className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">{step.reason}</p>
+																</div>
+																<div className="flex shrink-0 gap-2">
+																	<Link href={`/${step.slug}`} className="rounded-md border border-neutral-200 px-2.5 py-1.5 text-[11px] font-semibold text-neutral-700 hover:border-violet-300 hover:text-violet-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-violet-700 dark:hover:text-violet-300">
+																		Read
+																	</Link>
+																	<button
+																		type="button"
+																		onClick={() => startPrompt(`Explain why ${step.title} comes next after ${currentTurn.query}`)}
+																		className="rounded-md border border-neutral-200 px-2.5 py-1.5 text-[11px] font-semibold text-neutral-700 hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300"
+																	>
+																		Why next?
+																	</button>
+																</div>
+															</div>
 														</div>
 													))}
 												</div>
-												<Link href="/guided-topics" className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700">
-													Open Full Roadmap
-												</Link>
+												<CTALink href="/guided-topics" level={2} size="sm" className="mt-3">
+													Open Learning Graph
+												</CTALink>
 											</section>
 										) : null}
 
@@ -970,9 +1379,13 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 											</section>
 										) : null}
 
-										{isVisualizationLabEnabled && activeTab === 'simulations' ? (
-											<section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-												<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Simulation studio</p>
+										{activeTab === 'simulations' ? (
+											<section className="space-y-4">
+												<InlineSimulation
+													topic={currentTurn.query}
+													node={currentTurn.response.conceptGraph[0]?.concept ?? currentTurn.response.relatedArchitectureTopics[0]}
+													source="ai-mentor"
+												/>
 												<div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
 													{simulationPrompts.map((item) => (
 														<Link key={item} href={`/visualizations?q=${encodeURIComponent(`${currentTurn.query} ${item}`)}`} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 hover:border-blue-300 dark:hover:border-blue-600">
@@ -1074,7 +1487,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 							<aside className="hidden xl:block sticky top-24">
 								<div className="space-y-3">
 									<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-										<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Roadmap at a glance</p>
+										<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Progression at a glance</p>
 										{metadata ? (
 											<div className="mt-2 space-y-2 text-xs">
 												<div className="flex items-center justify-between"><span className="text-neutral-500 dark:text-neutral-400">Difficulty</span><span className="font-semibold text-neutral-800 dark:text-neutral-100">{metadata.difficulty.label}</span></div>
@@ -1082,16 +1495,90 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 												<div className="flex items-center justify-between"><span className="text-neutral-500 dark:text-neutral-400">Domain</span><span className="font-semibold text-neutral-800 dark:text-neutral-100">{metadata.domain}</span></div>
 											</div>
 										) : (
-											<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Ask a question to generate a roadmap.</p>
+											<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Ask a question to generate a progression.</p>
 										)}
 									</div>
 
 									<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+										<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Mentor signals</p>
+										<div className="mt-3 space-y-3">
+											<div>
+												<div className="flex items-center justify-between text-xs">
+													<span className="text-neutral-500 dark:text-neutral-400">Continuity</span>
+													<span className="font-semibold text-neutral-800 dark:text-neutral-100">{learningHistory.length}/8</span>
+												</div>
+												<div className="mt-1 h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+													<div className="h-full rounded-full bg-violet-500" style={{ width: `${Math.min(100, learningHistory.length * 12.5)}%` }} />
+												</div>
+											</div>
+											<div>
+												<div className="flex items-center justify-between text-xs">
+													<span className="text-neutral-500 dark:text-neutral-400">Weak areas</span>
+													<span className="font-semibold text-neutral-800 dark:text-neutral-100">{profile.weakAreas.length}</span>
+												</div>
+												<div className="mt-2 flex flex-wrap gap-1">
+													{(profile.weakAreas.length > 0 ? profile.weakAreas : ['No weak areas yet']).slice(0, 3).map((area) => (
+														<span key={area} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+															{area}
+														</span>
+													))}
+												</div>
+											</div>
+											<div>
+												<div className="flex items-center justify-between text-xs">
+													<span className="text-neutral-500 dark:text-neutral-400">Completed</span>
+													<span className="font-semibold text-neutral-800 dark:text-neutral-100">{profile.completedConcepts.length}</span>
+												</div>
+												<button
+													type="button"
+													onClick={() => {
+														if (!currentTurn) return;
+														const topic = getTurnTopic(currentTurn);
+														setProfile((prev) => ({
+															...prev,
+															completedConcepts: [...new Set([...prev.completedConcepts, topic])].slice(-20),
+														}));
+													}}
+													className="mt-2 w-full rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold text-neutral-700 hover:border-violet-300 hover:text-violet-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-violet-700 dark:hover:text-violet-300"
+												>
+													Mark current concept mastered
+												</button>
+											</div>
+										</div>
+									</div>
+
+									<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
 										<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Current steps</p>
-										<div className="mt-2 space-y-2 text-xs">
+										<div className="mt-3 space-y-2 text-xs">
 											{currentTurn?.response.recommendedSequence.slice(0, 4).map((step, index) => (
-												<div key={`aside-step-${step.slug}`} className="rounded-lg bg-neutral-50 dark:bg-neutral-800/50 p-2">
-													<p className="font-semibold text-neutral-800 dark:text-neutral-100">{index + 1}. {step.title}</p>
+												<div key={`aside-step-${step.slug}`} className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-2.5 transition hover:border-violet-200 hover:bg-violet-50/50 dark:border-neutral-800 dark:bg-neutral-800/50 dark:hover:border-violet-800 dark:hover:bg-violet-950/20">
+													<div className="flex items-start gap-2.5">
+														<span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+															index === 0
+																? 'bg-violet-600 text-white'
+																: 'bg-white text-neutral-600 ring-1 ring-neutral-200 dark:bg-neutral-950 dark:text-neutral-300 dark:ring-neutral-700'
+														}`}>
+															{index + 1}
+														</span>
+														<div className="min-w-0 flex-1">
+															<Link href={`/${step.slug}`} className="block text-xs font-semibold leading-snug text-neutral-900 hover:text-violet-700 dark:text-neutral-50 dark:hover:text-violet-300">
+																{step.title}
+															</Link>
+															<p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">{step.reason}</p>
+															<div className="mt-2 flex items-center gap-2">
+																<Link href={`/${step.slug}`} className="rounded-md bg-white px-2 py-1 text-[10px] font-semibold text-neutral-700 ring-1 ring-neutral-200 hover:text-violet-700 dark:bg-neutral-950 dark:text-neutral-200 dark:ring-neutral-700 dark:hover:text-violet-300">
+																	Open
+																</Link>
+																<button
+																	type="button"
+																	onClick={() => startPrompt(`Help me understand ${step.title} in this progression`)}
+																	className="rounded-md bg-white px-2 py-1 text-[10px] font-semibold text-neutral-700 ring-1 ring-neutral-200 hover:text-blue-700 dark:bg-neutral-950 dark:text-neutral-200 dark:ring-neutral-700 dark:hover:text-blue-300"
+																>
+																	Ask
+																</button>
+															</div>
+														</div>
+													</div>
 												</div>
 											))}
 											{!currentTurn ? (
@@ -1104,21 +1591,58 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 						</div>
 					</div>
 
-					<nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur px-2 py-2">
-						<div className={`grid ${isVisualizationLabEnabled ? 'grid-cols-5' : 'grid-cols-4'} items-center text-[10px] font-semibold text-neutral-600 dark:text-neutral-300`}>
-							<Link href="/" className="text-center">Home</Link>
-							<Link href="/posts" className="text-center">Roadmaps</Link>
+					<nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-neutral-200 bg-white/95 px-3 py-3 shadow-[0_-16px_40px_rgba(15,23,42,0.08)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
+						{mobileMentorTrayOpen ? (
+							<div className="fixed inset-0 z-[-1] bg-black/20" onClick={() => setMobileMentorTrayOpen(false)} aria-hidden="true" />
+						) : null}
+						{mobileMentorTrayOpen ? (
+							<div className="mx-auto mb-3 max-w-xl rounded-3xl border border-neutral-200 bg-white p-3 shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
+								<div className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-200 dark:bg-neutral-700" />
+								<p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Mentor action tray</p>
+								<div className="mt-2 space-y-2">
+									{mentorActions.slice(1, 5).map((action) => (
+										<button
+											key={`mobile-tray-${action.id}`}
+											onClick={() => {
+												setMobileMentorTrayOpen(false);
+												runMentorAction(action);
+											}}
+											className="w-full rounded-2xl border border-neutral-200 p-3 text-left dark:border-neutral-800"
+										>
+											<p className="text-sm font-bold text-neutral-950 dark:text-neutral-50">{action.title}</p>
+											<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{action.description}</p>
+										</button>
+									))}
+								</div>
+								<div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px] font-semibold">
+									<Link href="/" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Home</Link>
+									<Link href="/guided-topics" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Learning Graphs</Link>
+									<Link href="/posts" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Learn</Link>
+								</div>
+							</div>
+						) : null}
+						<div className="mx-auto grid max-w-xl grid-cols-[44px_minmax(0,1fr)] gap-2">
 							<button
-								onClick={() => {
-									window.scrollTo({ top: 0, behavior: 'smooth' });
-								}}
-								className="mx-auto -mt-6 h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/30"
-								aria-label="Ask AI"
+								type="button"
+								onClick={() => setMobileMentorTrayOpen((prev) => !prev)}
+								className="rounded-2xl border border-neutral-200 px-3 py-3 text-lg font-black text-neutral-700 dark:border-neutral-700 dark:text-neutral-300"
+								aria-expanded={mobileMentorTrayOpen}
+								aria-label="Open mentor action tray"
 							>
-								AI
+								⋯
 							</button>
-							{isVisualizationLabEnabled ? <Link href="/visualizations" className="text-center">Simulations</Link> : null}
-							<Link href="/posts" className="text-center">Library</Link>
+							<button
+								type="button"
+								onClick={() => {
+									if (primaryMentorAction) runMentorAction(primaryMentorAction);
+									else window.scrollTo({ top: 0, behavior: 'smooth' });
+								}}
+								className="min-w-0 rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-3 py-3 text-xs font-bold text-white shadow-lg shadow-violet-500/20"
+							>
+								<span className="block truncate">
+									{primaryMentorAction?.title ?? 'Ask AI'}
+								</span>
+							</button>
 						</div>
 					</nav>
 

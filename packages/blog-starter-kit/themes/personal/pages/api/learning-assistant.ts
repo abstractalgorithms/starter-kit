@@ -25,6 +25,7 @@ type AssistantRequest = {
 	posts?: AssistantPost[];
 	history?: Array<{ role: 'user' | 'assistant'; content: string }>;
 	persona?: string;
+	memoryContext?: string;
 };
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
@@ -172,7 +173,7 @@ const expandKeywords = (tokens: string[]) => {
 	return [...expanded];
 };
 
-const scorePost = (post: AssistantPost, keywords: string[], signalTokens: string[]) => {
+const scorePost = (post: AssistantPost, keywords: string[], signalTokens: string[], dominantKey?: string) => {
 	const corpus = `${post.title} ${post.brief} ${(post.tags ?? []).map((tag) => `${tag.name} ${tag.slug}`).join(' ')}`.toLowerCase();
 	const title = post.title.toLowerCase();
 	const tags = (post.tags ?? []).map((tag) => `${tag.name} ${tag.slug}`.toLowerCase()).join(' ');
@@ -185,20 +186,42 @@ const scorePost = (post: AssistantPost, keywords: string[], signalTokens: string
 	for (const token of signalTokens) {
 		if (!token.trim()) continue;
 		if (title.includes(token)) {
-			score += 10;
+			score += 18;
 			signalOverlap += 1;
 		} else if (tags.includes(token)) {
-			score += 8;
+			score += 7;
 			signalOverlap += 1;
 		} else if (corpus.includes(token)) {
-			score += 4;
+			score += 3;
 			signalOverlap += 1;
 		}
 	}
+	if (dominantKey && title.includes(dominantKey)) score += 20;
 	if (signalTokens.length > 0 && signalOverlap === 0) score -= 5;
 	score += Math.min(5, (post.views ?? 0) / 5000);
 	score += Math.min(3, (post.readTimeInMinutes ?? 0) / 8);
 	return score;
+};
+
+const countSignalOverlap = (post: AssistantPost, signalTokens: string[]) => {
+	const corpus = `${post.title} ${post.brief} ${(post.tags ?? []).map((tag) => `${tag.name} ${tag.slug}`).join(' ')}`.toLowerCase();
+	const title = post.title.toLowerCase();
+	const tags = (post.tags ?? []).map((tag) => `${tag.name} ${tag.slug}`.toLowerCase()).join(' ');
+
+	return signalTokens.reduce((count, token) => {
+		if (!token.trim()) return count;
+		if (title.includes(token) || tags.includes(token) || corpus.includes(token)) return count + 1;
+		return count;
+	}, 0);
+};
+
+const isQueryRelevantPost = (post: AssistantPost, signalTokens: string[], dominantKey: string) => {
+	if (signalTokens.length === 0) return true;
+	const overlap = countSignalOverlap(post, signalTokens);
+	if (overlap >= Math.min(2, signalTokens.length)) return true;
+
+	const corpus = `${post.title} ${post.brief} ${(post.tags ?? []).map((tag) => `${tag.name} ${tag.slug}`).join(' ')}`.toLowerCase();
+	return Boolean(dominantKey && corpus.includes(dominantKey));
 };
 
 const pickDominantKey = (tokens: string[]) =>
@@ -389,7 +412,7 @@ export default async function handler(
 		return res.status(405).json({ error: 'Method Not Allowed' });
 	}
 
-	const { query, posts: clientPosts, history = [], persona } = req.body as AssistantRequest;
+	const { query, posts: clientPosts, history = [], persona, memoryContext = '' } = req.body as AssistantRequest;
 	if (!query?.trim()) {
 		return res.status(400).json({ error: 'query is required' });
 	}
@@ -401,14 +424,15 @@ export default async function handler(
 
 	const focusQuery = normalizeRetrievalQuery(query);
 	const baseTokens = tokenize(focusQuery);
+	const memoryTokens = tokenize(memoryContext).filter((token) => !GENERIC_TOKENS.has(token)).slice(0, 8);
 	const signalTokens = baseTokens.filter((token) => !GENERIC_TOKENS.has(token));
 	const retrievalTokens = signalTokens.length > 0 ? signalTokens : baseTokens;
-	const keywords = expandKeywords(retrievalTokens);
+	const keywords = expandKeywords([...retrievalTokens, ...memoryTokens.slice(0, 3)]);
 	const dominantKey = pickDominantKey(retrievalTokens);
 
 	const ranked = posts
-		.map((post) => ({ post, score: scorePost(post, keywords, signalTokens) }))
-		.filter((item) => item.score >= (signalTokens.length > 0 ? 8 : 4))
+		.map((post) => ({ post, score: scorePost(post, keywords, signalTokens, dominantKey) }))
+		.filter((item) => item.score >= (signalTokens.length > 0 ? 8 : 4) && isQueryRelevantPost(item.post, signalTokens, dominantKey))
 		.sort((a, b) => b.score - a.score);
 
 	const top = ranked.slice(0, 8).map((item) => item.post);
@@ -441,6 +465,7 @@ export default async function handler(
 	const prerequisites = dedupeStrings([
 		...(PREREQ_HINTS[dominantKey] ?? FALLBACK_PREREQUISITES),
 		...(persona?.toLowerCase().includes('interview') ? ['System design interview framing'] : []),
+		...(memoryContext.toLowerCase().includes('weak areas') ? ['Review weak areas before advancing'] : []),
 	], 5);
 
 	const relatedArchitectureTopics = dedupeStrings(ARCH_TOPICS[dominantKey] ?? FALLBACK_ARCH_TOPICS, 5);
@@ -472,21 +497,24 @@ export default async function handler(
 			slug: post.slug,
 			why:
 				idx === 0
-					? 'Highest semantic match for your current question'
+					? memoryContext
+						? 'Highest semantic match for your question and adaptive learning memory'
+						: 'Highest semantic match for your current question'
 					: 'Complements your current learning sequence and fills prerequisite gaps',
 		})),
 		(item) => item.slug || item.title,
 		4,
 	);
 
-	const retrievalQuery = `${focusQuery} ${relatedArchitectureTopics.join(' ')} ${prerequisites.join(' ')}`.slice(0, 300);
+	const retrievalQuery = `${focusQuery} ${relatedArchitectureTopics.join(' ')} ${prerequisites.join(' ')} ${memoryTokens.join(' ')}`.slice(0, 300);
 	const orchestrationSteps = [
 		`Identify ${retrievalTokens.slice(0, 3).join(', ') || focusQuery} in the question`,
+		memoryContext ? 'Adjust sequencing with persisted learning memory signals' : '',
 		top[0] ? `Use "${top[0].title}" as the strongest matching article` : `Search the publication for ${dominantKey}`,
 		prerequisites[0] ? `Check prerequisite: ${prerequisites[0]}` : `Infer missing prerequisite context`,
 		sequence[0] ? `Rank next reading step: ${sequence[0].title}` : `Build a reading path from available posts`,
 		interviewQuestions[0] ? `Generate follow-up: ${interviewQuestions[0]}` : `Prepare follow-up questions from the topic`,
-	].slice(0, 5);
+	].filter(Boolean).slice(0, 5);
 
 	const aiOverview = await fetchAIOverview(focusQuery, relatedArchitectureTopics);
 	const rawOverview =

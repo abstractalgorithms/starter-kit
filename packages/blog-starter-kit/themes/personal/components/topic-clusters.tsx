@@ -44,21 +44,6 @@ export function buildTopicClusters(
 			posts: posts.slice(0, postsPerCluster),
 		}));
 
-	// Add Interview Prep as a special cluster if not already present
-	const hasInterviewPrep = clusters.some(c => c.slug === 'interview-prep');
-	if (!hasInterviewPrep) {
-		const interviewPosts = allPosts.filter(p => 
-			(p.tags ?? []).some(t => t?.slug?.toLowerCase().includes('interview'))
-		);
-		clusters.push({
-			label: 'Interview Prep',
-			slug: 'interview-prep',
-			color: 'purple' as const,
-			postCount: interviewPosts.length,
-			posts: interviewPosts.slice(0, postsPerCluster),
-		});
-	}
-
 	return clusters;
 }
 
@@ -109,7 +94,7 @@ const ClusterCard = ({ cluster }: { cluster: TopicCluster }) => {
 	const c = COLORS[cluster.color];
 	return (
 		<Link
-			href={`/tag/${cluster.slug}`}
+			href={`/topic/${cluster.slug}`}
 			className={`group rounded-xl border border-l-4 border-neutral-200 dark:border-neutral-800 ${c.border} bg-white dark:bg-neutral-900 overflow-hidden flex items-center justify-between px-5 py-4 hover:shadow-md transition-all duration-150`}
 		>
 			<div className="flex items-center gap-2">

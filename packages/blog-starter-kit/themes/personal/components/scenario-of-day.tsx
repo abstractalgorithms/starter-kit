@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import type { ScenarioOfDay } from '../pages/api/scenario-of-day';
+import { isInterviewPrepEnabled } from '../lib/features';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -321,10 +322,10 @@ export function ScenarioOfDayCard({ posts }: { posts: ScenarioPost[] }) {
 						{relatedPosts.length === 0 && (
 							<div className="text-center py-2">
 								<Link
-									href="/interview-prep"
+									href={isInterviewPrepEnabled ? '/interview-prep' : '/posts'}
 									className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
 								>
-									Explore all interview topics →
+									Explore all {isInterviewPrepEnabled ? 'interview topics' : 'learning topics'} →
 								</Link>
 							</div>
 						)}

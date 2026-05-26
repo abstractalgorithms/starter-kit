@@ -574,12 +574,12 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 							}
 							className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
 						>
-							Resume path
+							Resume track
 						</Link>
 					</div>
 				) : (
 					<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-						Start a guided path to unlock adaptive recommendations.
+						Start a role-based track to unlock adaptive recommendations.
 					</p>
 				)}
 			</div>

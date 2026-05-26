@@ -1,20 +1,91 @@
 import { VizScenario } from './types';
 
 const BASE_NODES = [
-	{ id: 'client', label: 'Client', kind: 'client' as const, x: 60, y: 170 },
-	{ id: 'api', label: 'API Gateway', kind: 'service' as const, x: 220, y: 170 },
-	{ id: 'core', label: 'Core Service', kind: 'compute' as const, x: 400, y: 110 },
-	{ id: 'store', label: 'State Store', kind: 'storage' as const, x: 610, y: 110 },
-	{ id: 'queue', label: 'Event Stream', kind: 'queue' as const, x: 400, y: 245 },
-	{ id: 'consumer', label: 'Consumer', kind: 'service' as const, x: 610, y: 245 },
+	{
+		id: 'client',
+		label: 'Client',
+		kind: 'client' as const,
+		x: 60,
+		y: 170,
+		description: 'External actor entering the system.',
+		semantics: {
+			responsibility: 'Creates demand and defines latency expectations.',
+			interviewPrompt: 'Clarify traffic shape, retry behavior, and user-visible latency.',
+		},
+	},
+	{
+		id: 'api',
+		label: 'API Gateway',
+		kind: 'gateway' as const,
+		x: 220,
+		y: 170,
+		description: 'Trust and routing boundary.',
+		semantics: {
+			responsibility: 'Authenticates, routes, rate-limits, and normalizes requests.',
+			interviewPrompt: 'Explain where you enforce idempotency, auth, throttling, and backpressure.',
+			failureHint: 'Gateway overload can amplify retries into downstream saturation.',
+		},
+	},
+	{
+		id: 'core',
+		label: 'Core Service',
+		kind: 'coordinator' as const,
+		x: 400,
+		y: 110,
+		description: 'Decision and coordination point.',
+		health: 'hot' as const,
+		semantics: {
+			responsibility: 'Turns commands into ordered state transitions.',
+			interviewPrompt: 'Name the consistency boundary and the conflict-resolution rule.',
+			failureHint: 'Coordinator failure tests leader election, retries, and duplicate suppression.',
+		},
+	},
+	{
+		id: 'store',
+		label: 'State Store',
+		kind: 'storage' as const,
+		x: 610,
+		y: 110,
+		description: 'Durable system of record.',
+		semantics: {
+			responsibility: 'Persists source-of-truth state and exposes read consistency semantics.',
+			interviewPrompt: 'Discuss write acknowledgement, indexing, compaction, and recovery.',
+			failureHint: 'Storage latency changes the whole system tail.',
+		},
+	},
+	{
+		id: 'queue',
+		label: 'Event Stream',
+		kind: 'queue' as const,
+		x: 400,
+		y: 245,
+		description: 'Temporal decoupling layer.',
+		semantics: {
+			responsibility: 'Buffers facts and enables replay, fan-out, and async recovery.',
+			interviewPrompt: 'Explain ordering, retention, consumer lag, and poison-message handling.',
+			failureHint: 'Consumer lag creates freshness and memory-pressure failures.',
+		},
+	},
+	{
+		id: 'consumer',
+		label: 'Consumer',
+		kind: 'worker' as const,
+		x: 610,
+		y: 245,
+		description: 'Derived state processor.',
+		semantics: {
+			responsibility: 'Consumes events and updates projections or side effects.',
+			interviewPrompt: 'State how the worker handles duplicates, retries, and partial failures.',
+		},
+	},
 ];
 
 const BASE_EDGES = [
-	{ id: 'e1', from: 'client', to: 'api', label: 'request' },
-	{ id: 'e2', from: 'api', to: 'core', label: 'command' },
-	{ id: 'e3', from: 'core', to: 'store', label: 'persist' },
-	{ id: 'e4', from: 'core', to: 'queue', label: 'publish' },
-	{ id: 'e5', from: 'queue', to: 'consumer', label: 'consume' },
+	{ id: 'e1', from: 'client', to: 'api', label: 'request', semantic: 'request' as const },
+	{ id: 'e2', from: 'api', to: 'core', label: 'command', semantic: 'command' as const },
+	{ id: 'e3', from: 'core', to: 'store', label: 'persist', semantic: 'write' as const },
+	{ id: 'e4', from: 'core', to: 'queue', label: 'publish', semantic: 'event' as const },
+	{ id: 'e5', from: 'queue', to: 'consumer', label: 'consume', semantic: 'event' as const },
 ];
 
 const createScenario = (
@@ -67,9 +138,183 @@ const createScenario = (
 			},
 		},
 	],
+	failureModes: [
+		{
+			id: `${id}-coordinator-failure`,
+			title: 'Coordinator stalls under pressure',
+			nodeId: 'core',
+			edgeId: 'e2',
+			description: 'The command boundary stops making progress while upstream retries continue.',
+			blastRadius: 'Writes slow down first, then queue lag and client retries create cascading pressure.',
+			recovery: 'Apply backpressure, fail over leadership, dedupe retries, and replay from durable state.',
+			severity: 'high',
+		},
+		{
+			id: `${id}-stream-lag`,
+			title: 'Event stream lag grows',
+			nodeId: 'queue',
+			edgeId: 'e5',
+			description: 'Consumers cannot keep up with published work.',
+			blastRadius: 'Read models become stale and storage pressure increases.',
+			recovery: 'Scale consumers, isolate hot partitions, pause low-priority publishers, and replay safely.',
+			severity: 'medium',
+		},
+	],
 });
 
 export const VIS_SCENARIOS: VizScenario[] = [
+	{
+		id: 'hyperloglog-cardinality',
+		title: 'HyperLogLog Cardinality Estimation',
+		category: 'probabilistic-data-structure',
+		summary: 'Hash values route into registers, leading-zero runs update maxima, and the harmonic mean estimates unique cardinality with bounded error.',
+		nodes: [
+			{
+				id: 'stream',
+				label: 'Input Stream',
+				kind: 'client',
+				x: 60,
+				y: 170,
+				semantics: {
+					responsibility: 'Represents billions of repeated user, event, or object identifiers.',
+					interviewPrompt: 'Clarify whether approximate unique counts are acceptable.',
+				},
+			},
+			{
+				id: 'hash',
+				label: 'Hash Function',
+				kind: 'compute',
+				x: 220,
+				y: 170,
+				semantics: {
+					responsibility: 'Turns each item into a uniform bit string so leading-zero probability becomes useful.',
+					failureHint: 'Biased hashing breaks the estimator assumption.',
+				},
+			},
+			{
+				id: 'router',
+				label: 'Prefix Router',
+				kind: 'gateway',
+				x: 385,
+				y: 110,
+				semantics: {
+					responsibility: 'Uses prefix bits to choose which register observes this item.',
+				},
+			},
+			{
+				id: 'registers',
+				label: 'm Registers',
+				kind: 'storage',
+				x: 565,
+				y: 110,
+				health: 'hot',
+				semantics: {
+					responsibility: 'Stores the maximum leading-zero run seen for each bucket.',
+					interviewPrompt: 'Explain why max leading-zero observations correlate with cardinality.',
+				},
+			},
+			{
+				id: 'estimator',
+				label: 'Harmonic Mean',
+				kind: 'coordinator',
+				x: 385,
+				y: 255,
+				semantics: {
+					responsibility: 'Combines register values while damping outlier registers.',
+				},
+			},
+			{
+				id: 'answer',
+				label: 'Cardinality Estimate',
+				kind: 'service',
+				x: 565,
+				y: 255,
+				semantics: {
+					responsibility: 'Returns an approximate unique count with known error bounds.',
+					interviewPrompt: 'State when approximate answers beat exact sets.',
+				},
+			},
+		],
+		edges: [
+			{ id: 'h1', from: 'stream', to: 'hash', label: 'item', semantic: 'request' },
+			{ id: 'h2', from: 'hash', to: 'router', label: 'prefix', semantic: 'control' },
+			{ id: 'h3', from: 'router', to: 'registers', label: 'bucket', semantic: 'write' },
+			{ id: 'h4', from: 'registers', to: 'estimator', label: 'max rho', semantic: 'read' },
+			{ id: 'h5', from: 'estimator', to: 'answer', label: 'estimate', semantic: 'read' },
+		],
+		steps: [
+			{
+				id: 'hll-step-1',
+				title: 'Hash each item uniformly',
+				description: 'Every identifier becomes a bit string so rare leading-zero patterns can signal larger unseen cardinality.',
+				durationMs: 2200,
+				highlightNodeIds: ['stream', 'hash'],
+				highlightEdgeIds: ['h1'],
+				messages: [{ id: 'hll-m1', edgeId: 'h1', label: 'user id', progress: 0 }],
+				layers: {
+					overview: 'HyperLogLog starts by making the input distribution uniform through hashing.',
+					deepDive: 'Uniform hashes make the probability of seeing k leading zeros roughly 1 / 2^k.',
+					tradeoffs: 'The estimator is only as trustworthy as the hash distribution.',
+				},
+			},
+			{
+				id: 'hll-step-2',
+				title: 'Route to a register and update max rho',
+				description: 'Prefix bits choose a register; suffix leading zeros update that register only if the new run is larger.',
+				durationMs: 2600,
+				highlightNodeIds: ['hash', 'router', 'registers'],
+				highlightEdgeIds: ['h2', 'h3'],
+				messages: [
+					{ id: 'hll-m2', edgeId: 'h2', label: 'prefix', progress: 0, color: '#8b5cf6' },
+					{ id: 'hll-m3', edgeId: 'h3', label: 'rho', progress: 0, color: '#0ea5e9' },
+				],
+				layers: {
+					overview: 'Registers preserve compact evidence of how many distinct items likely passed through.',
+					deepDive: 'A 12 KB sketch can hold thousands of small counters instead of storing every unique item.',
+					tradeoffs: 'More registers reduce error but increase memory. Fewer registers save memory but increase variance.',
+				},
+			},
+			{
+				id: 'hll-step-3',
+				title: 'Estimate with harmonic mean and correction',
+				description: 'Register maxima are combined into a cardinality estimate, then corrected for small or large range bias.',
+				durationMs: 2600,
+				highlightNodeIds: ['registers', 'estimator', 'answer'],
+				highlightEdgeIds: ['h4', 'h5'],
+				messages: [
+					{ id: 'hll-m4', edgeId: 'h4', label: 'registers', progress: 0, color: '#10b981' },
+					{ id: 'hll-m5', edgeId: 'h5', label: 'count', progress: 0, color: '#f59e0b' },
+				],
+				layers: {
+					overview: 'The answer is approximate, compact, and mergeable across streams.',
+					deepDive: 'The harmonic mean reduces the influence of unusually large leading-zero observations.',
+					tradeoffs: 'HyperLogLog is excellent for dashboards and analytics, but not for exact billing or deduplication.',
+				},
+			},
+		],
+		failureModes: [
+			{
+				id: 'hll-biased-hash',
+				title: 'Biased hash distribution',
+				nodeId: 'hash',
+				edgeId: 'h2',
+				description: 'The leading-zero distribution no longer matches the estimator assumption.',
+				blastRadius: 'All downstream estimates can become systematically wrong.',
+				recovery: 'Use a stronger hash function and validate estimate error against sampled exact counts.',
+				severity: 'high',
+			},
+			{
+				id: 'hll-wrong-use-case',
+				title: 'Approximation used where exactness is required',
+				nodeId: 'answer',
+				edgeId: 'h5',
+				description: 'A bounded error estimate is treated like a precise set cardinality.',
+				blastRadius: 'Billing, quota, or security decisions can become incorrect.',
+				recovery: 'Use exact sets for correctness-critical flows; reserve HLL for analytics and monitoring.',
+				severity: 'medium',
+			},
+		],
+	},
 	createScenario(
 		'kafka-flow',
 		'Kafka Topic Replication Flow',

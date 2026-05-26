@@ -8,7 +8,9 @@ type Props = {
 };
 
 const getFollowUrl = (publication: PublicationFragment) =>
-	publication.links?.hashnode || `https://hashnode.com/@${publication.author.username}`;
+	publication.links?.linkedin ||
+	publication.links?.hashnode ||
+	`https://hashnode.com/@${publication.author.username}`;
 
 const getNewsletterUrl = (publication: PublicationFragment) =>
 	publication.url ? `${publication.url.replace(/\/$/, '')}/newsletter` : null;

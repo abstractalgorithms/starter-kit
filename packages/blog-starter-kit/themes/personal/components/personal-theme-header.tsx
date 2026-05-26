@@ -16,7 +16,7 @@ import { useAppContext } from './contexts/appContext';
 import { ToggleTheme } from './toggle-theme';
 import { UserProfile } from './user-profile';
 import { AuthModal } from './auth-modal';
-import { isNewsletterSubscribeEnabled } from '../lib/features';
+import { isInterviewPrepEnabled, isNewsletterSubscribeEnabled } from '../lib/features';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const NO_OF_SEARCH_RESULTS = 5;
@@ -203,20 +203,59 @@ export const PersonalHeader = () => {
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
-	const isVisualizationLabEnabled = process.env.NEXT_PUBLIC_ENABLE_VISUALIZATION_LAB === 'true';
-	const followUrl = publication.links?.hashnode || `https://hashnode.com/@${publication.author.username}`;
+	const followUrl =
+		publication.links?.linkedin ||
+		publication.links?.hashnode ||
+		`https://hashnode.com/@${publication.author.username}`;
 	const newsletterUrl = publication.url ? `${publication.url.replace(/\/$/, '')}/newsletter` : null;
 	const navItems = [
-		{ label: 'Learn', href: '/assistant' },
-		{ label: 'Roadmaps', href: '/guided-topics' },
-		...(isVisualizationLabEnabled ? [{ label: 'Simulations', href: '/visualizations' }] : []),
-		{ label: 'Explore', href: '/series' },
-		{ label: 'Library', href: '/posts' },
+		{
+			label: 'Learn',
+			href: '/posts',
+			items: [
+				{ label: 'Topic Journeys', href: '/topic/distributed-systems', description: 'Learn through connected concepts and articles' },
+				{ label: 'Articles', href: '/posts', description: 'Canonical engineering deep dives' },
+				{ label: 'Series', href: '/series', description: 'Author-curated reading sequences' },
+				{ label: 'Learning Graphs', href: '/guided-topics', description: 'Prerequisites, dependencies, and next steps' },
+			],
+		},
+		{
+			label: 'Practice',
+			href: isInterviewPrepEnabled ? '/interview-prep' : '/visualizations',
+			items: [
+				{ label: 'System Behavior', href: '/visualizations', description: 'Observe systems under changing constraints' },
+				{ label: 'Pressure Tests', href: '/visualizations', description: 'Replay failures and tradeoff consequences' },
+				{ label: 'Architecture Drills', href: '/assistant?q=architecture%20drill', description: 'Practice design choices and constraints' },
+				...(isInterviewPrepEnabled ? [{ label: 'Interview Practice', href: '/interview-prep', description: 'Reason through follow-up pressure' }] : []),
+			],
+		},
+		{
+			label: 'AI Mentor',
+			href: '/assistant',
+			items: [
+				{ label: 'Next Step', href: '/assistant?q=recommend%20what%20I%20should%20learn%20next', description: 'Continue from your current context' },
+				{ label: 'Weak Areas', href: '/assistant?q=identify%20my%20weak%20engineering%20concepts', description: 'Find gaps and prerequisites' },
+				{ label: 'Explain a Concept', href: '/assistant', description: 'Get a clearer model at your depth' },
+				{ label: 'Compare Tradeoffs', href: '/assistant?q=compare%20architecture%20tradeoffs', description: 'Reason through competing designs' },
+			],
+		},
+		{
+			label: 'Discover',
+			href: '/discover',
+			items: [
+				{ label: 'Concept Graph', href: '/discover', description: 'Explore connected systems ideas' },
+				{ label: 'Topic Collections', href: '/topic/probabilistic-data-structures', description: 'Enter a connected concept area' },
+				{ label: 'Popular Deep Dives', href: '/posts?sort=popular-desc', description: 'What engineers are reading most' },
+				{ label: 'Recently Updated', href: '/posts?sort=updated-desc', description: 'Freshly revised engineering ideas' },
+			],
+		},
 	] as const;
-	const roadmapLinks = [
-		{ label: 'Backend Engineer', href: '/assistant?q=backend%20engineering%20learning%20path' },
-		{ label: 'AI Engineer', href: '/assistant?q=llm%20engineering%20and%20rag' },
-		{ label: 'Distributed Systems', href: '/assistant?q=distributed%20systems%20fundamentals' },
+	const trackLinks = [
+		{ label: 'Backend Engineer', href: '/assistant?q=backend%20engineering%20role-based%20track' },
+		{ label: 'AI Engineer', href: '/assistant?q=AI%20engineer%20role-based%20track' },
+		{ label: 'Infrastructure Engineer', href: '/assistant?q=infrastructure%20engineer%20role-based%20track' },
+		{ label: 'Systems Architect', href: '/assistant?q=systems%20architect%20role-based%20track' },
+		{ label: 'Principal Engineer', href: '/assistant?q=principal%20engineer%20role-based%20track' },
 	];
 
 	useEffect(() => {
@@ -266,13 +305,37 @@ export const PersonalHeader = () => {
 				</h1>
 				<nav className="justify-self-center flex items-center gap-1">
 					{navItems.map((item) => (
-						<Link
-							key={item.label}
-							href={item.href}
-							className="rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
-						>
-							{item.label}
-						</Link>
+						<DropdownMenu.Root key={item.label}>
+							<DropdownMenu.Trigger asChild>
+								<button
+									type="button"
+									className="rounded-lg px-3 py-1.5 font-sans text-sm font-semibold text-neutral-600 transition-colors hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 data-[state=open]:bg-blue-50 data-[state=open]:text-blue-700 dark:text-neutral-300 dark:hover:bg-blue-950/30 dark:hover:text-blue-400 dark:data-[state=open]:bg-blue-950/30 dark:data-[state=open]:text-blue-300"
+								>
+									{item.label}
+								</button>
+							</DropdownMenu.Trigger>
+							<DropdownMenu.Portal>
+								<DropdownMenu.Content
+									align="center"
+									sideOffset={10}
+									collisionPadding={16}
+									className="aa-nav-dropdown z-50 w-[21rem] rounded-2xl border border-neutral-200/80 bg-white/95 p-2.5 text-neutral-900 shadow-[0_18px_55px_rgba(15,23,42,0.16)] backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-950/95 dark:text-neutral-50"
+								>
+									{item.items.map((child) => (
+										<DropdownMenu.Item key={child.label} asChild>
+											<Link
+												href={child.href}
+												className="group block rounded-xl px-3.5 py-3 outline-none transition-colors hover:bg-blue-50 focus:bg-blue-50 dark:hover:bg-neutral-900 dark:focus:bg-neutral-900"
+											>
+												<span className="block text-[0.93rem] font-bold leading-5 tracking-normal text-neutral-950 group-hover:text-blue-700 dark:text-neutral-50 dark:group-hover:text-blue-300">{child.label}</span>
+												<span className="mt-1 block text-[0.78rem] font-medium leading-5 tracking-normal text-neutral-500 dark:text-neutral-400">{child.description}</span>
+											</Link>
+										</DropdownMenu.Item>
+									))}
+									<DropdownMenu.Arrow className="fill-white dark:fill-neutral-950" />
+								</DropdownMenu.Content>
+							</DropdownMenu.Portal>
+						</DropdownMenu.Root>
 					))}
 				</nav>
 				<div className="justify-self-end flex items-center gap-3">
@@ -344,14 +407,27 @@ export const PersonalHeader = () => {
 					</div>
 					<div className="mt-6 space-y-2">
 						{navItems.map((item) => (
-							<Link
-								key={item.label}
-								href={item.href}
-								onClick={() => setIsMobileMenuOpen(false)}
-								className="block rounded-xl border border-neutral-200 dark:border-neutral-800 px-4 py-3 text-base font-medium text-neutral-800 dark:text-neutral-100"
-							>
-								{item.label}
-							</Link>
+							<div key={item.label} className="rounded-xl border border-neutral-200 px-4 py-3 dark:border-neutral-800">
+								<Link
+									href={item.href}
+									onClick={() => setIsMobileMenuOpen(false)}
+									className="block text-base font-semibold text-neutral-900 dark:text-neutral-50"
+								>
+									{item.label}
+								</Link>
+								<div className="mt-3 grid gap-2">
+									{item.items.map((child) => (
+										<Link
+											key={child.label}
+											href={child.href}
+											onClick={() => setIsMobileMenuOpen(false)}
+											className="block rounded-lg bg-neutral-50 px-3 py-2 text-sm text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+										>
+											{child.label}
+										</Link>
+									))}
+								</div>
+							</div>
 						))}
 						<a
 							href={followUrl}
@@ -375,20 +451,20 @@ export const PersonalHeader = () => {
 						) : null}
 					</div>
 					<div className="mt-8">
-						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Recent learning shortcuts</p>
+						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Continue</p>
 						<div className="mt-2 space-y-2">
 							<Link href="/progress" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg bg-neutral-100 dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
-								Open Learning Hub
+								Open Progress
 							</Link>
-							<Link href="/assistant?q=How%20does%20Kafka%20transactions%20work%20internally%3F" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg bg-neutral-100 dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
-								Ask AI about Kafka transactions
+							<Link href="/assistant?q=recommend%20what%20I%20should%20learn%20next" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg bg-neutral-100 dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
+								Get Next Step
 							</Link>
 						</div>
 					</div>
 					<div className="mt-8">
-						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Roadmap quick links</p>
+						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Role paths</p>
 						<div className="mt-2 space-y-2">
-							{roadmapLinks.map((item) => (
+							{trackLinks.map((item) => (
 								<Link key={item.label} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
 									{item.label}
 								</Link>

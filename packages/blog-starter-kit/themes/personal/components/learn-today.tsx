@@ -392,7 +392,7 @@ const SearchResultsPanel = ({
 					</h3>
 				</div>
 				<p className="text-sm text-neutral-500 dark:text-neutral-400">
-					Not quite enough for a full learning path — here&apos;s what we have.
+					Not quite enough for a full track — here&apos;s what we have.
 				</p>
 			</div>
 			<button
@@ -578,7 +578,7 @@ export const LearnToday = ({ allPosts }: Props) => {
 					What do you want to learn today?
 				</h2>
 				<p className="text-neutral-500 dark:text-neutral-400 text-sm">
-					Type any topic — we&apos;ll find articles, build a learning path, or generate a fresh post, depending on what fits best.
+					Type any topic — we&apos;ll find articles, build a track, or generate a fresh post, depending on what fits best.
 				</p>
 			</div>
 
@@ -657,7 +657,7 @@ export const LearnToday = ({ allPosts }: Props) => {
 				</div>
 			)}
 
-			{/* ── Learning path ────────────────────────────────────────────────────── */}
+			{/* ── Track progression ───────────────────────────────────────────────── */}
 			{mode === 'path' && result && (
 				<div ref={resultRef} className="mt-10 flex flex-col gap-6">
 					{/* Path header */}

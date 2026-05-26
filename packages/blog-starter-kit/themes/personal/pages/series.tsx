@@ -190,7 +190,7 @@ export default function SeriesPage({ publication, series, footerPosts }: Props) 
 						{/* Page header */}
 						<div className="mb-10">
 							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
-								Guided Topics
+								Series
 							</p>
 							<h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3">
 								All Series
