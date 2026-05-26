@@ -317,6 +317,7 @@ export const useLearningMemoryStore = create<LearningMemoryState>()(
 		{
 			name: 'aa:adaptive-learning-memory:v1',
 			version: 1,
+			skipHydration: true,
 			partialize: DEFAULT_PARTIALIZE,
 		},
 	),

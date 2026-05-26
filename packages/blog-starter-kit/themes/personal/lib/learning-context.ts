@@ -115,6 +115,7 @@ export const useLearningContextStore = create<LearningContextState>()(
 		}),
 		{
 			name: 'aa:learning-context:v1',
+			skipHydration: true,
 			partialize: (state) => ({
 				current: state.current,
 				positions: state.positions,

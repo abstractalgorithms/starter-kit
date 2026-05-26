@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import { useEffect } from 'react';
+import { startTransition, useEffect } from 'react';
 import {
 	LearningContextSnapshot,
 	buildContextPrompt,
@@ -38,9 +38,11 @@ export const LearningContextProvider = ({ children }: { children: React.ReactNod
 
 	useEffect(() => {
 		if (!router.isReady) return;
-		setContext({
-			source: inferSourceFromPath(router.pathname),
-			pathname: router.asPath.split('#')[0].split('?')[0] || '/',
+		startTransition(() => {
+			setContext({
+				source: inferSourceFromPath(router.pathname),
+				pathname: router.asPath.split('#')[0].split('?')[0] || '/',
+			});
 		});
 	}, [router.asPath, router.isReady, router.pathname, setContext]);
 
@@ -52,18 +54,20 @@ export const LearningContextProvider = ({ children }: { children: React.ReactNod
 			cancelAnimationFrame(frame);
 			frame = requestAnimationFrame(() => {
 				const heading = getActiveHeading();
-				if (heading?.id) {
-					setSection({
-						sectionId: heading.id,
-						sectionTitle: heading.textContent?.trim() || heading.id,
+				startTransition(() => {
+					if (heading?.id) {
+						setSection({
+							sectionId: heading.id,
+							sectionTitle: heading.textContent?.trim() || heading.id,
+						});
+					}
+					rememberPosition({
+						pathname: router.asPath.split('#')[0].split('?')[0] || '/',
+						scrollY: window.scrollY,
+						sectionId: heading?.id,
+						sectionTitle: heading?.textContent?.trim(),
+						updatedAt: Date.now(),
 					});
-				}
-				rememberPosition({
-					pathname: router.asPath.split('#')[0].split('?')[0] || '/',
-					scrollY: window.scrollY,
-					sectionId: heading?.id,
-					sectionTitle: heading?.textContent?.trim(),
-					updatedAt: Date.now(),
 				});
 			});
 		};
