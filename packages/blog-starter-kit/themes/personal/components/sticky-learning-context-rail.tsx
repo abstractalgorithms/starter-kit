@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { isInterviewPrepEnabled } from '../lib/features';
 import { learningContextLabel } from '../lib/learning-context';
+import { buildContextualMentorPrompt, mentorHref, useLearningMemoryStore } from '../lib/learning-memory';
 import { ContextualBreadcrumbs } from './contextual-breadcrumbs';
 import { CTAButton, CTALink, CTAMenu } from './cta-system';
 import { useLearningContext } from './learning-context-provider';
@@ -9,6 +10,7 @@ import { useLearningContext } from './learning-context-provider';
 export const StickyLearningContextRail = () => {
 	const router = useRouter();
 	const { context, positions, getContextHref, buildPrompt } = useLearningContext();
+	const learningMemory = useLearningMemoryStore();
 	const [isCollapsed, setIsCollapsed] = useState(false);
 
 	useEffect(() => {
@@ -37,6 +39,15 @@ export const StickyLearningContextRail = () => {
 	const resumeHref = getContextHref('continue');
 	const simulationHref = getContextHref('simulation');
 	const roadmapHref = getContextHref('roadmap');
+	const tradeoffHref = mentorHref(
+		buildContextualMentorPrompt({
+			intent: 'tradeoff',
+			title: context.title,
+			concept: context.concept,
+			section: context.sectionTitle,
+			memory: learningMemory,
+		}),
+	);
 	const hasPosition = !!positions[context.pathname]?.updatedAt;
 	const isIndividualPage = router.pathname === '/[slug]';
 
@@ -96,8 +107,9 @@ export const StickyLearningContextRail = () => {
 								{hasPosition ? 'Continue Learning' : 'Open Current Context'}
 							</CTALink>
 							<CTAMenu label="More context actions">
-								<CTALink href={roadmapHref} level={3} size="sm" className="w-full justify-start">Open Roadmap</CTALink>
+								<CTALink href={roadmapHref} level={3} size="sm" className="w-full justify-start">Open Learning Graph</CTALink>
 								<CTALink href={simulationHref} level={3} size="sm" className="w-full justify-start">Launch Simulation</CTALink>
+								<CTALink href={tradeoffHref} level={3} size="sm" className="w-full justify-start">Practice Tradeoffs</CTALink>
 								{isInterviewPrepEnabled ? (
 									<CTALink href="/interview-prep" level={3} size="sm" className="w-full justify-start">Practice Interview</CTALink>
 								) : null}

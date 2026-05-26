@@ -65,7 +65,7 @@ export const UserProfile = ({ onLoginClick }: UserProfileProps) => {
 							href="/progress"
 							className="block text-sm text-neutral-700 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
 						>
-							📚 Learning Hub
+							Progress
 						</Link>
 					</div>
 

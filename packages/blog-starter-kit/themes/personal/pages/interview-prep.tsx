@@ -11,9 +11,12 @@ import { Container } from '../components/container';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { loadLearningPath } from '../components/learn-today';
+import { EmbeddedAIMentor } from '../components/embedded-ai-mentor';
 import { useLearningContext } from '../components/learning-context-provider';
+import { InlineSimulation } from '../components/visualization/inline-simulation';
 import { PersonalHeader } from '../components/personal-theme-header';
 import { isInterviewPrepEnabled } from '../lib/features';
+import { useLearningMemoryStore } from '../lib/learning-memory';
 import {
 	MorePostsByPublicationDocument,
 	MorePostsByPublicationQuery,
@@ -275,6 +278,8 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 		duration: 'All',
 	});
 	const { setContext } = useLearningContext();
+	const recordInterviewPractice = useLearningMemoryStore((state) => state.recordInterviewPractice);
+	const recordConceptCompleted = useLearningMemoryStore((state) => state.recordConceptCompleted);
 
 	useEffect(() => {
 		setPrepState(loadPrepState());
@@ -414,6 +419,20 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 		const next = { ...prepState, completedSlugs: [...prepState.completedSlugs, slug] };
 		setPrepState(next);
 		savePrepState(next);
+		const question = questions.find((item) => item.post.slug === slug);
+		if (question) {
+			recordConceptCompleted({
+				label: question.title,
+				domain: activeCategoryData.label,
+				slug,
+				minutes: question.post.readTimeInMinutes,
+			});
+			recordInterviewPractice({
+				topic: activeCategoryData.label,
+				weakness: question.difficulty === 'Advanced' ? 'advanced tradeoff depth' : 'interview fluency',
+				communicationDelta: 1,
+			});
+		}
 	};
 
 	const startMockInterview = () => {
@@ -421,6 +440,12 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 		const next = { ...prepState, mockInterviews: prepState.mockInterviews + 1, communicationScore: clamp(prepState.communicationScore + 2, 0, 96) };
 		setPrepState(next);
 		savePrepState(next);
+		recordInterviewPractice({
+			topic: activeCategoryData.label,
+			weakness: 'communication structure',
+			communicationDelta: 2,
+			completed: true,
+		});
 	};
 
 	const motionProps = reduceMotion
@@ -573,6 +598,19 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 									</div>
 								</div>
 							</motion.section>
+
+							<EmbeddedAIMentor
+								contextTitle="Engineering Interview Prep"
+								concept={activeCategoryData.label}
+								section="Interview readiness"
+								posts={posts}
+							/>
+
+							<InlineSimulation
+								topic={activeCategoryData.label}
+								node="Interview topology"
+								source="interview-prep"
+							/>
 
 							<section id="readiness" className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.55fr)]">
 								<div className="rounded-3xl border border-white/80 bg-white/82 p-5 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/80">
@@ -910,10 +948,10 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 					<nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 bg-white/94 px-2 py-2 backdrop-blur md:hidden dark:border-neutral-800 dark:bg-neutral-950/94">
 						<div className="grid grid-cols-5 gap-1 text-center text-[11px]">
 							<Link href="/" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">Home</Link>
-							<Link href="/guided-topics" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">Roadmaps</Link>
+							<Link href="/posts" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">Learn</Link>
 							<Link href="/interview-prep" className="rounded-xl bg-violet-50 py-1.5 font-semibold text-violet-700 dark:bg-violet-950/30 dark:text-violet-300">Interview</Link>
-							<Link href="/assistant" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">AI Copilot</Link>
-							<Link href="/posts" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">Library</Link>
+							<Link href="/assistant" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">AI Mentor</Link>
+							<Link href="/discover" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">Discover</Link>
 						</div>
 					</nav>
 					<button

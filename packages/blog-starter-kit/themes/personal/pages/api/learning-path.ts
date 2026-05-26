@@ -149,9 +149,9 @@ return query
 
 function buildHeadline(topic: string, phases: LearningPhase[]): string {
 const totalPosts = phases.reduce((s, p) => s + p.posts.length, 0);
-if (phases.length >= 3) return `Your structured path to mastering ${topic}`;
+if (phases.length >= 3) return `Your structured track to mastering ${topic}`;
 if (totalPosts <= 3) return `A focused intro to ${topic}`;
-return `Your learning path: ${topic}`;
+return `Your track: ${topic}`;
 }
 
 function buildSummary(topic: string, phases: LearningPhase[], totalMinutes: number, aiPowered: boolean): string {

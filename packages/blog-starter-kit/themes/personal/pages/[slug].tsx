@@ -19,7 +19,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { DateFormatter } from '../components/date-formatter';
@@ -45,11 +45,16 @@ import { PostChatbot } from '../components/post-chatbot';
 import { PostQuiz } from '../components/post-quiz';
 import { ScrollButtons } from '../components/scroll-buttons';
 import { LearningPathNav } from '../components/learning-path-nav';
+import { InlineSimulation } from '../components/visualization/inline-simulation';
 import { ArticleEngagement } from '../components/article-engagement';
 import { ContextualBreadcrumbs } from '../components/contextual-breadcrumbs';
+import { EmbeddedAIMentor } from '../components/embedded-ai-mentor';
+import { SystemsKnowledgeGraph } from '../components/systems-knowledge-graph';
 import { useLearningContext } from '../components/learning-context-provider';
 import { CTAButton, CTALink } from '../components/cta-system';
 import { isInterviewPrepEnabled } from '../lib/features';
+import { useLearningMemoryStore } from '../lib/learning-memory';
+import { getArticleConceptSeeds, inferArticleDomain, inferPrimaryArticleConcept } from '../lib/article-domain';
 
 // ─── Reading Progress Bar ─────────────────────────────────────────────────────
 const ReadingProgressBar = () => {
@@ -127,8 +132,6 @@ const GLOSSARY_TERMS: Record<string, string> = {
 	backpressure: 'Flow-control mechanism to prevent downstream overload.',
 	idempotency: 'Safe repeated operation producing the same result.',
 };
-
-const isVisualizationLabEnabled = process.env.NEXT_PUBLIC_ENABLE_VISUALIZATION_LAB === 'true';
 
 const detectGlossaryTerms = (markdown: string) => {
 	const haystack = markdown.toLowerCase();
@@ -335,6 +338,7 @@ const MobileChunkNavigator = ({
 }) => {
 	const [activeIdx, setActiveIdx] = useState(0);
 	const [trayOpen, setTrayOpen] = useState(false);
+	const cognitionSteps = ['Concept', 'Visual', 'Tradeoff', 'Challenge', 'Continue'];
 
 	useEffect(() => {
 		if (tocItems.length === 0) return;
@@ -371,6 +375,7 @@ const MobileChunkNavigator = ({
 
 	return (
 		<div className="xl:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 bg-white/95 px-3 py-3 shadow-[0_-16px_40px_rgba(15,23,42,0.08)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
+			<span className="sr-only">Concept Visual Tradeoff Challenge Continue</span>
 			{trayOpen ? (
 				<div className="fixed inset-0 z-[-1] bg-black/20" onClick={() => setTrayOpen(false)} aria-hidden="true" />
 			) : null}
@@ -468,8 +473,19 @@ const MobileChunkNavigator = ({
 				<button
 					onClick={() => goTo(Math.min(tocItems.length - 1, activeIdx + 1))}
 					disabled={activeIdx >= tocItems.length - 1}
-					className="min-w-0 rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-3 py-3 text-xs font-bold text-white shadow-lg shadow-violet-500/20 disabled:opacity-40"
+					className="min-w-0 rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-3 py-3 text-left text-xs font-bold text-white shadow-lg shadow-violet-500/20 disabled:opacity-40"
 				>
+					<span className="mb-1 flex gap-1">
+						{cognitionSteps.map((step, index) => (
+							<span
+								key={step}
+								className={`h-1.5 flex-1 rounded-full ${index <= Math.min(4, activeIdx % 5) ? 'bg-white' : 'bg-white/30'}`}
+							/>
+						))}
+					</span>
+					<span className="block text-[10px] uppercase tracking-[0.16em] text-blue-100">
+						{cognitionSteps[Math.min(4, activeIdx % 5)]}
+					</span>
 					<span className="block truncate">
 						Next: {decodeHtml(tocItems[Math.min(tocItems.length - 1, activeIdx + 1)]?.title ?? 'Topic')}
 					</span>
@@ -728,6 +744,113 @@ const ArticleAtAGlancePanel = ({
 	</section>
 );
 
+const ArticleCognitionLayers = ({
+	title,
+	summaryBullets,
+	flowNodes,
+	tradeoffOptions,
+	failureScenarios,
+	interviewPrompts,
+	getSimulationHref,
+	onSimulationIntent,
+	onAsk,
+}: {
+	title: string;
+	summaryBullets: string[];
+	flowNodes: string[];
+	tradeoffOptions: Array<{ title: string; body: string }>;
+	failureScenarios: Array<{ title: string; impact: string; mitigation: string; severity: number }>;
+	interviewPrompts: InterviewPromptSet;
+	getSimulationHref: (sectionTitle: string, sectionId?: string) => string;
+	onSimulationIntent: (sectionTitle: string, sectionId?: string) => void;
+	onAsk: (prompt: string) => void;
+}) => {
+	const layers = [
+		{
+			id: 'mental-model',
+			label: 'Mental model',
+			body: summaryBullets[0] || `Understand ${title} as a system of state, guarantees, and failure boundaries.`,
+			action: 'Explain model',
+			onAction: () => onAsk(`Explain the mental model behind ${title} with one concrete systems analogy.`),
+		},
+		{
+			id: 'tradeoffs',
+			label: 'Production tradeoffs',
+			body: tradeoffOptions[0]?.body || `Compare the speed, correctness, cost, and operability choices behind ${title}.`,
+			action: 'Reason tradeoffs',
+			onAction: () => onAsk(interviewPrompts.tradeoffPrompt),
+		},
+		{
+			id: 'failure',
+			label: 'Failure pressure-testing',
+			body: failureScenarios[0]?.impact || `Stress the assumptions until the design reveals where it bends or breaks.`,
+			action: 'Replay failure',
+			onAction: () => onSimulationIntent('Failure pressure test', 'cognition-failure'),
+		},
+		{
+			id: 'interview',
+			label: 'Interview reasoning',
+			body: interviewPrompts.practiceQuestion,
+			action: 'Practice answer',
+			onAction: () => onAsk(interviewPrompts.practiceQuestion),
+		},
+	];
+
+	return (
+		<section className="my-8 rounded-3xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900 md:p-5">
+			<div className="grid gap-5 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)] lg:items-start">
+				<div>
+					<p className="text-[10px] font-mono uppercase tracking-[0.24em] text-blue-600 dark:text-blue-300">
+						Engineering cognition interface
+					</p>
+					<h2 id="cognition-interface" className="mt-2 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
+						Read this as decisions, not prose.
+					</h2>
+					<p className="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+						Use the layers below as the primary article navigation. The full MDX article remains available as deep reference after the cognition path.
+					</p>
+					<div className="mt-4 flex snap-x gap-2 overflow-x-auto pb-2">
+						{flowNodes.slice(0, 5).map((node, index) => (
+							<a
+								key={`${node}-${index}`}
+								href={getSimulationHref(node, `cognition-node-${index}`)}
+								onClick={() => onSimulationIntent(node, `cognition-node-${index}`)}
+								className="min-w-[132px] snap-start rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-xs font-bold text-neutral-800 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100"
+							>
+								<span className="block text-[10px] text-blue-600 dark:text-blue-300">Node {index + 1}</span>
+								<span className="mt-1 block line-clamp-2">{node}</span>
+							</a>
+						))}
+					</div>
+				</div>
+				<div className="space-y-3">
+					{layers.map((layer, index) => (
+						<details
+							key={layer.id}
+							open={index === 0}
+							className="group rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-950"
+						>
+							<summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+								<span>
+									<span className="block text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
+										0{index + 1}
+									</span>
+									<span className="mt-1 block text-base font-black text-neutral-950 dark:text-neutral-50">{layer.label}</span>
+								</span>
+								<span className="text-neutral-400 transition group-open:rotate-180">⌄</span>
+							</summary>
+							<p className="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">{layer.body}</p>
+							<CTAButton type="button" level={index === 0 ? 1 : 2} size="sm" className="mt-3" onClick={layer.onAction}>
+								{layer.action}
+							</CTAButton>
+						</details>
+					))}
+				</div>
+			</div>
+		</section>
+	);
+};
+
 const ImmersiveArticleStory = ({
 	postTitle,
 	overview,
@@ -773,16 +896,14 @@ const ImmersiveArticleStory = ({
 							{overview}
 						</p>
 						<div className="mt-5 flex flex-wrap gap-2">
-							{isVisualizationLabEnabled ? (
-								<CTALink
-									href={getSimulationHref('Visual topology', 'story-architecture')}
-									level={1}
-									size="md"
-									onClick={() => onSimulationIntent('Visual topology', 'story-architecture')}
-								>
-									Launch Section Simulation
-								</CTALink>
-							) : null}
+							<CTALink
+								href={getSimulationHref('Visual topology', 'story-architecture')}
+								level={1}
+								size="md"
+								onClick={() => onSimulationIntent('Visual topology', 'story-architecture')}
+							>
+								Launch Section Simulation
+							</CTALink>
 							<CTAButton type="button" level={2} size="md" onClick={onToggleAnimation}>
 								{animateArchitecture ? 'Pause Flow' : 'Play Flow'}
 							</CTAButton>
@@ -888,16 +1009,14 @@ const ImmersiveArticleStory = ({
 							Pressure-test the mental model.
 						</h2>
 					</div>
-					{isVisualizationLabEnabled ? (
-						<CTALink
-							href={getSimulationHref('Failure rehearsal', 'story-failure')}
-							level={2}
-							size="sm"
-							onClick={() => onSimulationIntent('Failure rehearsal', 'story-failure')}
-						>
-							Simulate Failure Mode
-						</CTALink>
-					) : null}
+					<CTALink
+						href={getSimulationHref('Failure rehearsal', 'story-failure')}
+						level={2}
+						size="sm"
+						onClick={() => onSimulationIntent('Failure rehearsal', 'story-failure')}
+					>
+						Simulate Failure Mode
+					</CTALink>
 				</div>
 				<div className="mt-4 space-y-3">
 					{failureScenarios.map((scenario) => (
@@ -1075,8 +1194,11 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 	const [showQuizDrawer, setShowQuizDrawer] = useState(false);
 	const [isBookmarked, setIsBookmarked] = useState(false);
 	const [markedHelpful, setMarkedHelpful] = useState(false);
+	const completedMemoryRef = useRef(false);
 	const reduceMotion = useReducedMotion();
-	const { setContext, buildPrompt, getContextHref } = useLearningContext();
+	const { context, setContext, buildPrompt, getContextHref } = useLearningContext();
+	const recordConceptSeen = useLearningMemoryStore((state) => state.recordConceptSeen);
+	const recordConceptCompleted = useLearningMemoryStore((state) => state.recordConceptCompleted);
 	useEmbeds({ enabled: canLoadEmbeds });
 
 	if (post.hasLatexInPost) {
@@ -1117,6 +1239,8 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			: [];
 
 	const tags = post.tags ?? [];
+	const primaryArticleConcept = useMemo(() => inferPrimaryArticleConcept(post), [post]);
+	const articleConceptSeeds = useMemo(() => getArticleConceptSeeds(post), [post]);
 
 	useEffect(() => {
 		const primaryTag = tags[0] ? formatTagName(tags[0].name) : undefined;
@@ -1129,12 +1253,40 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			domain: primaryTag ? 'Engineering' : 'Abstract Algorithms',
 			topic: primaryTag ?? post.series?.name ?? post.title,
 			subtopic: post.series?.name ?? secondaryTag,
-			concept: secondaryTag ?? primaryTag ?? post.title,
-			roadmapNode: post.title,
+			concept: primaryArticleConcept,
+			roadmapNode: primaryArticleConcept,
 			roadmapHref: post.series?.slug ? `/series/${post.series.slug}` : '/guided-topics',
-			simulationTopic: post.title,
+			simulationTopic: primaryArticleConcept,
 		});
-	}, [post.series?.name, post.series?.slug, post.slug, post.title, setContext, tags]);
+		recordConceptSeen({
+			label: primaryArticleConcept,
+			domain: primaryTag ?? post.series?.name,
+			slug: post.slug,
+		});
+	}, [post.series?.name, post.series?.slug, post.slug, post.title, primaryArticleConcept, recordConceptSeen, setContext, tags]);
+
+	useEffect(() => {
+		completedMemoryRef.current = false;
+	}, [post.slug]);
+
+	useEffect(() => {
+		if (readingProgress < 85) return;
+		if (completedMemoryRef.current) return;
+		completedMemoryRef.current = true;
+		const primaryTag = tags[0] ? formatTagName(tags[0].name) : undefined;
+		recordConceptCompleted({
+			label: post.title,
+			domain: primaryTag ?? post.series?.name,
+			slug: post.slug,
+			minutes: post.readTimeInMinutes,
+		});
+		tags.slice(0, 4).forEach((tag) => {
+			recordConceptCompleted({
+				label: formatTagName(tag.name),
+				domain: primaryTag,
+			});
+		});
+	}, [post.readTimeInMinutes, post.series?.name, post.slug, post.title, readingProgress, recordConceptCompleted, tags]);
 
 	const aiSummaryBullets = useMemo(
 		() => getAiSummaryBullets(post.content.markdown, post.title),
@@ -1619,6 +1771,18 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</div>
 					</div>
 
+					<ArticleCognitionLayers
+						title={post.title}
+						summaryBullets={aiSummaryBullets}
+						flowNodes={articleFlowNodes}
+						tradeoffOptions={tradeoffOptions}
+						failureScenarios={failureScenarios}
+						interviewPrompts={interviewPrompts}
+						getSimulationHref={getSimulationHrefForSection}
+						onSimulationIntent={syncSimulationContext}
+						onAsk={(prompt) => openArticleChat(buildPrompt(prompt))}
+					/>
+
 					<ArticleOverviewBlock
 						post={post}
 						tags={tags}
@@ -1658,10 +1822,24 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						/>
 					) : null}
 
-					{/* Article body — article-doc activates docs-article.css scoped styles (h2 borders, p max-width); overflow-x handled by outer container */}
-					<div className="article-doc w-full min-w-0">
-						<MarkdownToHtml contentMarkdown={post.content.markdown} />
-					</div>
+					<details className="group mt-8 rounded-3xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+						<summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
+							<span>
+								<span className="block text-[10px] font-mono uppercase tracking-[0.24em] text-neutral-500 dark:text-neutral-400">
+									Deep technical expansion
+								</span>
+								<span className="mt-1 block text-lg font-black text-neutral-950 dark:text-neutral-50">
+									Open full authored reference
+								</span>
+							</span>
+							<span className="text-neutral-400 transition group-open:rotate-180">⌄</span>
+						</summary>
+						<div className="border-t border-neutral-100 px-5 py-6 dark:border-neutral-800">
+							<div className="article-doc w-full min-w-0">
+								<MarkdownToHtml contentMarkdown={post.content.markdown} />
+							</div>
+						</div>
+					</details>
 
 					{/* Expandable deep dives */}
 					{tocItems.length > 0 && (
@@ -1704,34 +1882,37 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 					{/* Dynamic Quiz */}
 					<PostQuiz postTitle={post.title} postContent={post.content.markdown} />
 
-					<ArticleEngagement post={post} publication={publication} />
+					<EmbeddedAIMentor
+						contextTitle={post.title}
+						concept={primaryArticleConcept}
+						section={context.sectionTitle}
+						posts={morePosts}
+						className="mt-8"
+					/>
 
-					<section className="mt-8 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
-							Continue learning
-						</p>
-						{upNextPost ? (
-							<div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-								<Link href={`/${upNextPost.slug}`} className="block rounded-lg border border-neutral-200 p-3 transition-colors hover:border-blue-300 dark:border-neutral-700 dark:hover:border-blue-600">
-									<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{upNextPost.title}</p>
-									<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-										{upNextPost.readTimeInMinutes} min · {upNextPost.tags?.[0]?.name ? `${formatTagName(upNextPost.tags[0].name)} · ` : ''}best next step
-									</p>
-								</Link>
-								<CTALink href={getContextHref('roadmap')} level={2} size="sm">
-									View roadmap
-								</CTALink>
-							</div>
-						) : (
-							<p className="text-xs text-neutral-500 dark:text-neutral-400">Complete this article to unlock your next recommendation.</p>
-						)}
-					</section>
+					<InlineSimulation
+						topic={primaryArticleConcept}
+						node={context.sectionTitle ?? articleConceptSeeds[1]}
+						source="article"
+						className="mt-8"
+					/>
+
+					<SystemsKnowledgeGraph
+						posts={[post, ...morePosts]}
+						initialConcept={primaryArticleConcept}
+						focusConcepts={articleConceptSeeds}
+						focusSlug={tags[0]?.slug}
+						focusPostSlug={post.slug}
+						mode="article"
+						compact
+						className="mt-8"
+					/>
 
 					{/* Tags */}
 					{tags.length > 0 && (
-						<div className="mt-12 pt-8 border-t border-neutral-100 dark:border-neutral-800">
+						<div className="mt-10 pt-8 border-t border-neutral-100 dark:border-neutral-800">
 							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
-								Tags
+								Article metadata
 							</p>
 							<ul className="flex flex-wrap gap-2 list-none m-0 p-0">
 								{tags.map((tag) => (
@@ -1770,6 +1951,8 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</div>
 					</div>
 
+					<ArticleEngagement post={post} publication={publication} />
+
 					{/* Related deep dives */}
 					{morePosts.length > 1 ? (
 					<section className="mt-10 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5">
@@ -1806,6 +1989,27 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</div>
 					</section>
 					) : null}
+
+					<section className="mt-8 rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
+						<p className="text-[10px] font-mono uppercase tracking-widest text-blue-600 dark:text-blue-300 mb-2">
+							Continue learning
+						</p>
+						{upNextPost ? (
+							<div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+								<Link href={`/${upNextPost.slug}`} className="block rounded-lg border border-blue-200 bg-white p-3 transition-colors hover:border-blue-400 dark:border-blue-900 dark:bg-neutral-950 dark:hover:border-blue-600">
+									<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{upNextPost.title}</p>
+									<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+										{upNextPost.readTimeInMinutes} min · {upNextPost.tags?.[0]?.name ? `${formatTagName(upNextPost.tags[0].name)} · ` : ''}best next step
+									</p>
+								</Link>
+								<CTALink href={getContextHref('roadmap')} level={1} size="sm">
+									View Learning Graph
+								</CTALink>
+							</div>
+						) : (
+							<p className="text-xs text-neutral-500 dark:text-neutral-400">Complete this article to unlock your next recommendation.</p>
+						)}
+					</section>
 
 				</div>
 
@@ -1903,6 +2107,17 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 	if (postData.publication?.post) {
 		const footerPosts = await getFooterPosts();
 		const currentPost = postData.publication.post;
+		const currentDomain = inferArticleDomain(currentPost);
+		const currentConcept = inferPrimaryArticleConcept(currentPost).toLowerCase();
+		const domainTerms: Record<string, RegExp> = {
+			'probabilistic-data-structures': /hyperloglog|bloom filter|count-min sketch|cardinality|probabilistic|sketch|membership|frequency estimation/i,
+			'data-structures': /data structure|algorithm|tree|graph|heap|hash|sketch|complexity/i,
+			'distributed-systems': /distributed|consensus|quorum|replication|leader|transaction|clock|split brain|kafka/i,
+			'ai-systems': /llm|rag|embedding|vector|model|inference|softmax|machine learning/i,
+			'system-design': /system design|architecture|scaling|load balancer|cache|sharding/i,
+			backend: /api|database|backend|microservice|queue|redis|postgres/i,
+			general: /./i,
+		};
 
 		// ── Compute related posts from footerPosts by tag overlap + title similarity ──
 		const currentTagSlugs = new Set((currentPost.tags ?? []).map((t) => t.slug));
@@ -1918,10 +2133,19 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 				const tagScore = (p.tags ?? []).filter((t) => currentTagSlugs.has(t.slug)).length * 10;
 				const titleWords = p.title.toLowerCase();
 				const briefWords = (p.brief ?? '').toLowerCase();
+				const haystack = `${titleWords} ${briefWords} ${(p.tags ?? []).map((tag) => `${tag.name} ${tag.slug}`).join(' ')}`;
 				const kwScore = currentKeywords.reduce((s, w) => {
 					return s + (titleWords.includes(w) ? 3 : 0) + (briefWords.includes(w) ? 1 : 0);
 				}, 0);
-				return { post: p, score: tagScore + kwScore };
+				const domainScore = domainTerms[currentDomain]?.test(haystack) ? 14 : 0;
+				const conceptScore = currentConcept && haystack.includes(currentConcept) ? 8 : 0;
+				const distributedPenalty =
+					currentDomain !== 'distributed-systems' && domainTerms['distributed-systems'].test(haystack) ? -10 : 0;
+				const partitioningPenalty =
+					currentDomain === 'probabilistic-data-structures' && /partition|sharding|sql|nosql|cassandra|dynamodb|mongodb/i.test(haystack)
+						? -16
+						: 0;
+				return { post: p, score: tagScore + kwScore + domainScore + conceptScore + distributedPenalty + partitioningPenalty };
 			})
 			.filter(({ score }) => score > 0)
 			.sort((a, b) => b.score - a.score);

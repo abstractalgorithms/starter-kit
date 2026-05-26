@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { isVisualizationLabEnabled } from './features';
 
 export type LearningContextSource =
 	| 'homepage'
@@ -8,6 +7,7 @@ export type LearningContextSource =
 	| 'assistant'
 	| 'simulation'
 	| 'roadmap'
+	| 'discover'
 	| 'interview-prep'
 	| 'library'
 	| 'unknown';
@@ -156,7 +156,7 @@ export const buildContextPrompt = (
 		`- Path: ${learningContextLabel(context)}`,
 		context.title ? `- Page: ${context.title}` : '',
 		context.sectionTitle ? `- Current section: ${context.sectionTitle}` : '',
-		context.roadmapNode ? `- Roadmap node: ${context.roadmapNode}` : '',
+		context.roadmapNode ? `- Learning graph node: ${context.roadmapNode}` : '',
 		context.simulationTopic ? `- Simulation topic: ${context.simulationTopic}` : '',
 		extra ? `- Extra instruction: ${extra}` : '',
 	].filter(Boolean);
@@ -173,9 +173,6 @@ export const contextAwareHref = (
 	}
 	if (action === 'simulation') {
 		const topic = context.simulationTopic ?? context.concept ?? context.subtopic ?? context.topic ?? context.title ?? '';
-		if (!isVisualizationLabEnabled) {
-			return `/assistant?q=${encodeURIComponent(buildContextPrompt(`Explain ${topic || 'this system'} visually without launching a simulation.`, context))}`;
-		}
 		const params = new URLSearchParams({
 			q: topic,
 			from: context.pathname,

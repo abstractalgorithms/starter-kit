@@ -86,7 +86,7 @@ function getPhaseRecommendations(
 			recommended: phases,
 			headline: 'Keep going! 💪',
 			subtext:
-				'A few gaps to fill. Work through this learning path from your starting point — the articles will build your intuition.',
+				'A few gaps to fill. Work through this track from your starting point — the articles will build your intuition.',
 		};
 	}
 
@@ -437,7 +437,7 @@ export function InterviewKnowledgeTest({ path, sourcePosts, query, interviewLabe
 							Test Your Knowledge
 						</h3>
 						<p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4 max-w-lg">
-							Answer a short quiz on <span className="font-semibold text-neutral-800 dark:text-neutral-200">{interviewLabel}</span> to find out which topics from this learning path deserve your attention.
+							Answer a short quiz on <span className="font-semibold text-neutral-800 dark:text-neutral-200">{interviewLabel}</span> to find out which topics from this track deserve your attention.
 						</p>
 						<button
 							onClick={generateQuiz}

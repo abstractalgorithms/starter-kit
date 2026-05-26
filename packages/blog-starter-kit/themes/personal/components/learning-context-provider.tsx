@@ -11,6 +11,7 @@ const inferSourceFromPath = (pathname: string): LearningContextSnapshot['source'
 	if (pathname === '/') return 'homepage';
 	if (pathname === '/assistant') return 'assistant';
 	if (pathname === '/visualizations') return 'simulation';
+	if (pathname === '/discover') return 'discover';
 	if (pathname === '/guided-topics' || pathname.startsWith('/series')) return 'roadmap';
 	if (pathname === '/interview-prep') return 'interview-prep';
 	if (pathname === '/posts' || pathname === '/progress') return 'library';

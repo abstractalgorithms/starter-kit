@@ -86,7 +86,8 @@ export type VizScenario = {
 		| 'cap'
 		| 'consensus'
 		| 'kubernetes'
-		| 'event-sourcing';
+		| 'event-sourcing'
+		| 'probabilistic-data-structure';
 	summary: string;
 	nodes: VizNode[];
 	edges: VizEdge[];

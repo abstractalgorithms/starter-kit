@@ -12,6 +12,7 @@ import { Layout } from '../components/layout';
 import { LearningPaths } from '../components/learning-paths';
 import { useLearningContext } from '../components/learning-context-provider';
 import { PersonalHeader } from '../components/personal-theme-header';
+import { SystemsKnowledgeGraph } from '../components/systems-knowledge-graph';
 import {
 	MorePostsByPublicationDocument,
 	MorePostsByPublicationQuery,
@@ -38,9 +39,9 @@ export default function LearningPathsPage({ publication, postCounts, footerPosts
 		setContext({
 			source: 'roadmap',
 			pathname: '/guided-topics',
-			title: 'Guided Topics',
+			title: 'Learning Graphs',
 			domain: 'Engineering',
-			topic: 'Roadmaps',
+			topic: 'Learning Graphs',
 			roadmapHref: '/guided-topics',
 		});
 	}, [setContext]);
@@ -49,15 +50,15 @@ export default function LearningPathsPage({ publication, postCounts, footerPosts
 		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
 				<Head>
-					<title>Guided Topics — {publication.title}</title>
+					<title>Learning Graphs — {publication.title}</title>
 					<meta
 						name="description"
-						content={`Guided topics on ${publication.title} — curated series and topic roadmaps to guide you from beginner to advanced.`}
+						content={`Learning graphs on ${publication.title} — dependency-aware concept progressions built on articles, simulations, and interview practice.`}
 					/>
-					<meta property="og:title" content={`Guided Topics — ${publication.title}`} />
+					<meta property="og:title" content={`Learning Graphs — ${publication.title}`} />
 					<meta
 						property="og:description"
-						content={`Guided topics on ${publication.title} — curated series and topic roadmaps.`}
+						content={`Learning graphs on ${publication.title} — dependency-aware concept progressions built on article-first learning.`}
 					/>
 					<meta
 						property="og:image"
@@ -89,15 +90,17 @@ export default function LearningPathsPage({ publication, postCounts, footerPosts
 						{/* Page header */}
 						<div className="mb-8">
 							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
-								Adaptive Skill Trees
+								Learning Graphs
 							</p>
 							<h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3">
-								Engineering Skill Trees
+								Dependency-aware concept progression
 							</h1>
 							<p className="text-lg text-neutral-500 dark:text-neutral-400 max-w-2xl">
-								Progress through locked prerequisites, branch into specializations, rehearse weak concepts, and connect each node to articles, simulations, and interview drills.
+								Move through prerequisites, branch into specializations, rehearse weak concepts, and connect each node to articles, simulations, and interview drills.
 							</p>
 						</div>
+
+						<SystemsKnowledgeGraph posts={footerPosts} initialConcept="replication" className="mb-8" />
 
 						{/* ── Topic-based paths ────────────────────────────────────── */}
 						<LearningPaths postCounts={postCounts} posts={footerPosts} />

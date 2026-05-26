@@ -1,16 +1,14 @@
 'use client';
 
-import { motion, useReducedMotion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useMemo } from 'react';
 import { CTAButton } from '../cta-system';
-import { EmbeddedAIMentor } from '../embedded-ai-mentor';
-import { getHoverLift, getRevealVariants, getTapScale } from '../motion-system';
 import { useLearningMemoryStore } from '../../lib/learning-memory';
 import { DiagramAffordanceBar, PedagogyCanvas } from './pedagogy-canvas';
 import { getEdgeSemantics, getHealthSemantics, getNodeSemantics } from './semantics';
 import { VIS_SCENARIOS } from './scenarios';
-import { useVisualizationEngine } from './use-visualization-engine';
 import { VizScenario } from './types';
+import { useVisualizationEngine } from './use-visualization-engine';
 
 const scoreScenarioMatch = (scenario: VizScenario, query: string) => {
 	const normalized = query.toLowerCase();
@@ -21,28 +19,30 @@ const scoreScenarioMatch = (scenario: VizScenario, query: string) => {
 		.reduce((score, token) => score + (haystack.includes(token) ? 1 : 0), 0);
 };
 
-export const VisualizationStudio = ({
-	initialTopic,
-	initialSection,
-}: {
-	initialTopic?: string;
-	initialSection?: string;
-}) => {
-	const initialScenario = useMemo(() => {
-		if (!initialTopic) return VIS_SCENARIOS[0];
-		return [...VIS_SCENARIOS].sort(
-			(a, b) => scoreScenarioMatch(b, initialTopic) - scoreScenarioMatch(a, initialTopic),
-		)[0] ?? VIS_SCENARIOS[0];
-	}, [initialTopic]);
-	const [scenarioId, setScenarioId] = useState(initialScenario?.id ?? '');
-	const reduceMotion = useReducedMotion();
-	const recordSimulationAttempt = useLearningMemoryStore((state) => state.recordSimulationAttempt);
-	const reveal = getRevealVariants(reduceMotion);
-	const scenario = useMemo(
-		() => VIS_SCENARIOS.find((item) => item.id === scenarioId) ?? VIS_SCENARIOS[0],
-		[scenarioId],
-	);
+const getScenarioForTopic = (topic?: string) => {
+	if (!topic) return VIS_SCENARIOS[0];
+	const ranked = [...VIS_SCENARIOS]
+		.map((scenario) => ({ scenario, score: scoreScenarioMatch(scenario, topic) }))
+		.sort((a, b) => b.score - a.score);
+	return ranked[0]?.score > 0 ? ranked[0].scenario : VIS_SCENARIOS[0];
+};
 
+export const InlineSimulation = ({
+	topic,
+	node,
+	source = 'inline',
+	compact = false,
+	className = '',
+}: {
+	topic?: string;
+	node?: string;
+	source?: 'article' | 'learning-graph' | 'ai-mentor' | 'interview-prep' | 'inline';
+	compact?: boolean;
+	className?: string;
+}) => {
+	const scenario = useMemo(() => getScenarioForTopic(`${topic ?? ''} ${node ?? ''}`.trim()), [node, topic]);
+	const recordSimulationAttempt = useLearningMemoryStore((state) => state.recordSimulationAttempt);
+	const recordTradeoffMistake = useLearningMemoryStore((state) => state.recordTradeoffMistake);
 	const {
 		stepIndex,
 		setStepIndex,
@@ -70,77 +70,65 @@ export const VisualizationStudio = ({
 		clearFailure,
 	} = useVisualizationEngine(scenario);
 
-	useEffect(() => {
-		if (initialScenario?.id) setScenarioId(initialScenario.id);
-	}, [initialScenario?.id]);
-
-	useEffect(() => {
-		if (!initialSection || !scenario) return;
-		const normalized = initialSection.toLowerCase();
-		const matchingStep = scenario.steps.findIndex((step) =>
-			[step.title, step.description, step.layers.overview, step.layers.deepDive, step.layers.tradeoffs]
-				.join(' ')
-				.toLowerCase()
-				.includes(normalized.split(/\s+/)[0] ?? ''),
-		);
-		if (matchingStep >= 0) setStepIndex(matchingStep);
-	}, [initialSection, scenario, setStepIndex]);
-
 	const highlightedNodeIds = new Set(activeStep.highlightNodeIds ?? []);
 	const highlightedEdgeIds = new Set(activeStep.highlightEdgeIds ?? []);
-	const hoveredNode = scenario.nodes.find((node) => node.id === hoveredNodeId) ?? null;
+	const hoveredNode = scenario.nodes.find((item) => item.id === hoveredNodeId) ?? null;
 	const activeNode = selectedNode ?? hoveredNode;
 	const activeNodeSemantics = activeNode ? getNodeSemantics(activeNode.kind) : null;
 	const activeFailureEdgeSemantics = activeFailure ? getEdgeSemantics('fallback') : null;
+
 	const replayAndRemember = () => {
-		recordSimulationAttempt({ topic: scenario.title, scenarioId: scenario.id, completed: true });
+		recordSimulationAttempt({ topic: topic ?? scenario.title, scenarioId: scenario.id, completed: true });
 		replayFlow();
 	};
+
 	const triggerFailureAndRemember = () => {
-		recordSimulationAttempt({ topic: scenario.title, scenarioId: scenario.id, failed: true });
+		recordSimulationAttempt({ topic: topic ?? scenario.title, scenarioId: scenario.id, failed: true });
 		triggerFailure();
 	};
 
+	const pressureTest = () => {
+		recordTradeoffMistake({
+			topic: topic ?? scenario.title,
+			mistake: `Pressure tested ${activeStep.title}`,
+		});
+		triggerFailureAndRemember();
+	};
+
 	return (
-		<div className="rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-			<div className="grid grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_320px]">
-				<aside className="space-y-4">
-					<div>
-						<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-							System scenarios
-						</p>
-						<div className="mt-2 max-h-[480px] space-y-2 overflow-y-auto pr-1">
-							{VIS_SCENARIOS.map((item) => (
-								<motion.button
-									key={item.id}
-									onClick={() => setScenarioId(item.id)}
-									whileHover={getHoverLift(reduceMotion)}
-									whileTap={getTapScale(reduceMotion)}
-									className={`w-full rounded-2xl border p-3 text-left transition-colors ${
-										item.id === scenario.id
-											? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/40'
-											: 'border-neutral-200 hover:border-blue-300 dark:border-neutral-700 dark:hover:border-blue-500'
-									}`}
-								>
-									<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">{item.title}</p>
-									<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{item.summary}</p>
-								</motion.button>
-							))}
-						</div>
+		<section
+			className={`rounded-3xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900 dark:bg-neutral-950 ${className}`}
+			aria-label="Inline engineering simulation"
+		>
+			<div className="flex flex-wrap items-start justify-between gap-3">
+				<div className="min-w-0">
+					<p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600 dark:text-blue-300">
+						System Simulation
+					</p>
+					<h2 className={`${compact ? 'text-lg' : 'text-2xl'} mt-1 font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50`}>
+						{scenario.title}
+					</h2>
+					<p className="mt-1 max-w-3xl text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+						{scenario.summary}
+					</p>
+					<div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">
+						<span>{source}</span>
+						<span>Step-through reasoning</span>
+						<span>Topology evolution</span>
+						<span>Failure replay</span>
 					</div>
-				</aside>
+				</div>
+				<Link
+					href={`/visualizations?q=${encodeURIComponent(topic ?? scenario.title)}${node ? `&node=${encodeURIComponent(node)}` : ''}`}
+					className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:border-blue-300 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200"
+				>
+					Open Lab
+				</Link>
+			</div>
 
+			<div className={`mt-4 grid gap-4 ${compact ? '' : 'xl:grid-cols-[minmax(0,1fr)_320px]'}`}>
 				<div className="space-y-3">
-					{initialTopic ? (
-						<div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-3 text-xs text-violet-800 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-200">
-							<p className="font-semibold">Contextual simulation state</p>
-							<p className="mt-1 text-violet-700 dark:text-violet-300">
-								{initialSection ? `${initialTopic} -> ${initialSection}` : initialTopic}
-							</p>
-						</div>
-					) : null}
-
-					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-700">
+					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
 						<div className="flex flex-wrap items-center gap-2">
 							<DiagramAffordanceBar
 								playing={playing}
@@ -151,13 +139,15 @@ export const VisualizationStudio = ({
 								onStep={stepThrough}
 								onSlowMotion={slowMotion}
 							/>
+							<CTAButton type="button" level={2} size="sm" onClick={pressureTest}>
+								Pressure Test
+							</CTAButton>
 							<CTAButton
 								type="button"
 								level={3}
 								size="sm"
 								className="ml-auto"
 								onClick={() => setPlaying((prev) => !prev)}
-								aria-label={playing ? 'Pause simulation' : 'Play simulation'}
 							>
 								{playing ? 'Pause' : 'Play'}
 							</CTAButton>
@@ -165,40 +155,28 @@ export const VisualizationStudio = ({
 								Speed
 								<select
 									value={speed}
-									onChange={(e) => setSpeed(Number(e.target.value))}
+									onChange={(event) => setSpeed(Number(event.target.value))}
 									className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-700 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
 								>
 									<option value={0.5}>0.5x</option>
-									<option value={0.75}>0.75x</option>
 									<option value={1}>1x</option>
 									<option value={1.5}>1.5x</option>
 									<option value={2}>2x</option>
 								</select>
 							</label>
 						</div>
-
 						<div className="mt-3">
 							<div className="flex items-center justify-between gap-3 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
 								<span>Step {stepIndex + 1} / {totalSteps}</span>
 								<span>{animationMode === 'failure' ? 'Failure mode' : animationMode === 'slow' ? 'Slow motion' : animationMode === 'stepping' ? 'Step mode' : 'Normal flow'}</span>
 							</div>
 							<div className="mt-1 h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
-								<motion.div
-									className="h-2 rounded-full bg-blue-500"
-									animate={{ width: `${progressPercent}%` }}
-									transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.2, 0, 0, 1] }}
-								/>
+								<div className="h-2 rounded-full bg-blue-500" style={{ width: `${progressPercent}%` }} />
 							</div>
 						</div>
 					</div>
 
-					<motion.div
-						key={scenario.id}
-						variants={reveal}
-						initial="hidden"
-						animate="show"
-						className="overflow-x-auto rounded-2xl border border-neutral-200 bg-neutral-50 p-2 dark:border-neutral-700 dark:bg-neutral-950"
-					>
+					<div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-neutral-50 p-2 dark:border-neutral-800 dark:bg-neutral-950">
 						<PedagogyCanvas
 							scenario={scenario}
 							highlightedNodeIds={highlightedNodeIds}
@@ -212,30 +190,24 @@ export const VisualizationStudio = ({
 							onHoverNode={setHoveredNodeId}
 							messages={activeStep.messages ?? []}
 						/>
-					</motion.div>
+					</div>
 				</div>
 
-				<aside className="space-y-4">
-					<motion.div
-						key={`${scenario.id}-${stepIndex}`}
-						variants={reveal}
-						initial="hidden"
-						animate="show"
-						className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-700"
-					>
+				<aside className="space-y-3">
+					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
 						<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-							Flow semantics
+							Step reasoning
 						</p>
-						<p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-50">{activeStep.title}</p>
-						<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{activeStep.description}</p>
-					</motion.div>
+						<p className="mt-1 text-sm font-bold text-neutral-950 dark:text-neutral-50">{activeStep.title}</p>
+						<p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{activeStep.description}</p>
+					</div>
 
 					{activeFailure ? (
 						<div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-3 dark:border-rose-900 dark:bg-rose-950/20">
 							<div className="flex items-start justify-between gap-3">
 								<div>
 									<p className="text-xs font-semibold uppercase tracking-wide text-rose-600 dark:text-rose-300">
-										Failure state
+										Replay Failure
 									</p>
 									<p className="mt-1 text-sm font-bold text-neutral-950 dark:text-neutral-50">{activeFailure.title}</p>
 								</div>
@@ -244,12 +216,8 @@ export const VisualizationStudio = ({
 								</button>
 							</div>
 							<p className="mt-2 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">{activeFailure.description}</p>
-							<p className="mt-2 text-xs leading-relaxed text-rose-800 dark:text-rose-200">
-								Blast radius: {activeFailure.blastRadius}
-							</p>
-							<p className="mt-2 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
-								Recovery: {activeFailure.recovery}
-							</p>
+							<p className="mt-2 text-xs leading-relaxed text-rose-800 dark:text-rose-200">Blast radius: {activeFailure.blastRadius}</p>
+							<p className="mt-2 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">Recovery: {activeFailure.recovery}</p>
 							{activeFailureEdgeSemantics ? (
 								<p className="mt-2 text-[11px] font-semibold text-rose-700 dark:text-rose-300">
 									Visual grammar: {activeFailureEdgeSemantics.label} paths use rose dashed strokes.
@@ -258,9 +226,9 @@ export const VisualizationStudio = ({
 						</div>
 					) : null}
 
-					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-700">
+					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
 						<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-							Explain this node
+							Topology node
 						</p>
 						{activeNode && activeNodeSemantics ? (
 							<div className="mt-2">
@@ -270,38 +238,28 @@ export const VisualizationStudio = ({
 										{getHealthSemantics(activeNode.health).label}
 									</span>
 								</div>
-								<p className="mt-1 text-xs font-semibold text-violet-700 dark:text-violet-300">{activeNodeSemantics.label}</p>
+								<p className="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-300">{activeNodeSemantics.label}</p>
 								<p className="mt-2 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
 									{activeNode.semantics?.responsibility ?? activeNodeSemantics.description}
-								</p>
-								<p className="mt-2 rounded-xl bg-violet-50 p-2 text-xs leading-relaxed text-violet-800 dark:bg-violet-950/30 dark:text-violet-200">
-									{activeNode.semantics?.interviewPrompt ?? `Explain why ${activeNode.label} belongs in this topology.`}
 								</p>
 							</div>
 						) : (
 							<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-								Hover or select a node to reveal responsibility, interview framing, and failure hints.
+								Select a node to inspect responsibility, health, and failure behavior.
 							</p>
 						)}
 					</div>
 
-					<EmbeddedAIMentor
-						contextTitle={scenario.title}
-						concept={activeNode?.label ?? activeStep.title}
-						section={activeFailure?.title ?? activeStep.title}
-						compact
-					/>
-
-					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-700">
+					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
 						<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-							Layered explanations
+							Layered explanation
 						</p>
-						<div className="mt-2 flex gap-2">
+						<div className="mt-2 flex flex-wrap gap-2">
 							{(['overview', 'deepDive', 'tradeoffs'] as const).map((item) => (
-								<motion.button
+								<button
 									key={item}
+									type="button"
 									onClick={() => setLayer(item)}
-									whileTap={getTapScale(reduceMotion)}
 									className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
 										layer === item
 											? 'bg-blue-600 text-white'
@@ -309,15 +267,13 @@ export const VisualizationStudio = ({
 									}`}
 								>
 									{item}
-								</motion.button>
+								</button>
 							))}
 						</div>
-						<p className="mt-3 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
-							{activeStep.layers[layer]}
-						</p>
+						<p className="mt-3 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{activeStep.layers[layer]}</p>
 					</div>
 				</aside>
 			</div>
-		</div>
+		</section>
 	);
 };

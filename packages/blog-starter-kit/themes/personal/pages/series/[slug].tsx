@@ -33,7 +33,7 @@ type SeriesInfo = {
 	description?: string | null;
 };
 
-type RoadmapPage = {
+type SeriesPlanPage = {
 	title: string;
 	markdown: string;
 } | null;
@@ -42,7 +42,7 @@ type Props = {
 	publication: PublicationFragment;
 	posts: PostFragment[];
 	series: SeriesInfo;
-	roadmap: RoadmapPage;
+	roadmap: SeriesPlanPage;
 	footerPosts: PostFragment[];
 };
 
@@ -51,7 +51,7 @@ const UNCATEGORIZED = '__uncategorized__';
 const toTitleCase = (str: string) =>
 	str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 
-const RoadmapSection = ({ title, markdown }: { title: string; markdown: string }) => {
+const SeriesPlanSection = ({ title, markdown }: { title: string; markdown: string }) => {
 	const [open, setOpen] = useState(true);
 	return (
 		<div className="mb-12 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
@@ -62,7 +62,7 @@ const RoadmapSection = ({ title, markdown }: { title: string; markdown: string }
 			>
 				<div className="flex items-center gap-3">
 					<span className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400">
-						Roadmap
+						Series Plan
 					</span>
 					<span className="text-base font-bold text-neutral-900 dark:text-neutral-50">
 						{title}
@@ -253,8 +253,8 @@ export default function SeriesDetailPage({ publication, posts, series, roadmap, 
 							)}
 						</div>
 
-						{/* ── Roadmap (static page) ── */}
-						{roadmap && <RoadmapSection title={roadmap.title} markdown={roadmap.markdown} />}
+						{/* ── Series plan (static page) ── */}
+						{roadmap && <SeriesPlanSection title={roadmap.title} markdown={roadmap.markdown} />}
 
 						{/* ── AI Learning Path ── */}
 						{posts.length > 0 && (
@@ -294,8 +294,8 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 	const posts = series.posts.edges.map((edge) => edge.node);
 	const footerPosts = await getFooterPosts();
 
-	// Try to fetch a matching static page (roadmap) using the series slug
-	let roadmap: RoadmapPage = null;
+	// Try to fetch a matching static page using the series slug.
+	let roadmap: SeriesPlanPage = null;
 	try {
 		const pageData = await request<PageByPublicationQuery, PageByPublicationQueryVariables>(
 			process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT,

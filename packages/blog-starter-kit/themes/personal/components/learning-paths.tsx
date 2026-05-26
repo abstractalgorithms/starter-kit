@@ -8,9 +8,12 @@ import {
 	getAdaptiveNode,
 	getNodeStatus,
 } from '../lib/roadmap-skill-tree';
-import { isInterviewPrepEnabled, isVisualizationLabEnabled } from '../lib/features';
+import { isInterviewPrepEnabled } from '../lib/features';
+import { useLearningMemoryStore } from '../lib/learning-memory';
 import { CTAButton, CTALink } from './cta-system';
+import { EmbeddedAIMentor } from './embedded-ai-mentor';
 import { useLearningContext } from './learning-context-provider';
+import { InlineSimulation } from './visualization/inline-simulation';
 
 const STORAGE_KEY = 'aa:roadmap-skill-tree:v1';
 
@@ -74,6 +77,8 @@ const statusClass = {
 export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 	const reduceMotion = useReducedMotion();
 	const { setContext } = useLearningContext();
+	const recordConceptCompleted = useLearningMemoryStore((state) => state.recordConceptCompleted);
+	const recordWeakArea = useLearningMemoryStore((state) => state.recordWeakArea);
 	const paths = useMemo(() => buildSkillTreePaths(posts, postCounts), [postCounts, posts]);
 	const [activePathSlug, setActivePathSlug] = useState(paths[0]?.tagSlug ?? '');
 	const [activeNodeId, setActiveNodeId] = useState('');
@@ -129,6 +134,21 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 			};
 		});
 		setActiveNodeId(node.id);
+		if ((patch.mastery ?? 0) >= 85) {
+			recordConceptCompleted({
+				label: node.title,
+				domain: activePath.title,
+				slug: node.postSlug,
+				minutes: node.estimatedMinutes,
+			});
+		}
+		if (patch.weak) {
+			recordWeakArea({
+				label: node.title,
+				domain: activePath.title,
+				slug: node.postSlug,
+			});
+		}
 	};
 
 	const resumeHref = activeNode?.postSlug ? `/${activeNode.postSlug}` : `/posts?tag=${activePath.tagSlug}&sort=created-asc`;
@@ -142,7 +162,7 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 			<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
 				<div className={`rounded-3xl border ${activeColors.surface} p-5`}>
 					<p className="text-[10px] font-mono uppercase tracking-[0.24em] text-neutral-500 dark:text-neutral-400">
-						Living engineering skill tree
+						Learning graph
 					</p>
 					<div className="mt-3 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
 						<div>
@@ -279,9 +299,7 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 								<CTAButton type="button" level={2} size="md" className="w-full" onClick={() => updateNode(activeNode, { attempts: (progress[activeNode.id]?.attempts ?? 0) + 1, mastery: Math.min(84, Math.max(progress[activeNode.id]?.mastery ?? 0, 55)), weak: false })}>
 									Continue Practice
 								</CTAButton>
-								{isVisualizationLabEnabled ? (
-									<CTALink href={simulationHref} level={3} size="md" className="w-full">Open Simulation</CTALink>
-								) : null}
+								<CTALink href={simulationHref} level={3} size="md" className="w-full">Launch Simulation</CTALink>
 								<CTAButton type="button" level={3} size="md" className="w-full" onClick={() => updateNode(activeNode, { weak: true, attempts: (progress[activeNode.id]?.attempts ?? 0) + 1, mastery: Math.min(progress[activeNode.id]?.mastery ?? 0, 40) })}>
 									Retry Weak Concepts
 								</CTAButton>
@@ -292,6 +310,20 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 									Mark Mastered
 								</CTAButton>
 							</div>
+							<EmbeddedAIMentor
+								contextTitle={activePath.title}
+								concept={activeNode.title}
+								posts={posts}
+								compact
+								className="mt-5"
+							/>
+							<InlineSimulation
+								topic={activeNode.simulationTopic}
+								node={activeNode.title}
+								source="learning-graph"
+								compact
+								className="mt-5"
+							/>
 						</>
 					) : null}
 				</div>

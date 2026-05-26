@@ -136,10 +136,10 @@ export const SeriesAiLearningPath = ({ seriesName, posts }: Props) => {
 			<div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
 				<div className="flex items-center gap-3">
 					<span className="text-[10px] font-mono uppercase tracking-widest text-purple-500 dark:text-purple-400">
-						AI Guided Topic
+						AI Mentor
 					</span>
 					<span className="text-sm font-bold text-neutral-900 dark:text-neutral-50 hidden sm:block">
-						{path ? path.headline : `Personalized roadmap for ${seriesName}`}
+						{path ? path.headline : `Personalized progression for ${seriesName}`}
 					</span>
 				</div>
 

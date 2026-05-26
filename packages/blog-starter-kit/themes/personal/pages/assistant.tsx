@@ -14,6 +14,7 @@ import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { MarkdownToHtml } from '../components/markdown-to-html';
 import { PersonalHeader } from '../components/personal-theme-header';
+import { InlineSimulation } from '../components/visualization/inline-simulation';
 import {
 	PostFragment,
 	PublicationByHostDocument,
@@ -27,7 +28,7 @@ import { PremiumSkeleton } from '../components/premium-skeleton';
 import { useLearningContext } from '../components/learning-context-provider';
 import { CTAButton, CTALink } from '../components/cta-system';
 import type { AssistantResponse } from './api/learning-assistant';
-import { isVisualizationLabEnabled } from '../lib/features';
+import { buildMemoryPromptContext, useLearningMemoryStore } from '../lib/learning-memory';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const MEMORY_KEY = 'aa-learning-assistant-memory';
@@ -37,7 +38,7 @@ const META_KEY = 'aa-learning-assistant-meta';
 
 const INPUT_PLACEHOLDERS = [
 	'Ask about any article, concept, or architecture tradeoff',
-	'Build a roadmap from the posts in this blog',
+	'Build a progression from the posts in this blog',
 	'Compare two engineering approaches',
 	'Generate interview questions for a topic',
 ];
@@ -45,7 +46,7 @@ const INPUT_PLACEHOLDERS = [
 const SLASH_COMMANDS = [
 	'/roadmap',
 	'/visualize',
-	...(isVisualizationLabEnabled ? (['/simulate'] as const) : []),
+	'/simulate',
 	'/quiz',
 	'/compare',
 	'/deep-dive',
@@ -126,9 +127,9 @@ const STREAM_SECTION_ORDER = [
 
 const TABS: Array<{ id: AssistantTab; label: string }> = [
 	{ id: 'answer', label: 'Answer' },
-	{ id: 'roadmap', label: 'Learning path' },
+	{ id: 'roadmap', label: 'Progression' },
 	{ id: 'concept-map', label: 'Concept map' },
-	...(isVisualizationLabEnabled ? ([{ id: 'simulations', label: 'Simulations' }] as const) : []),
+	{ id: 'simulations', label: 'Simulations' },
 	{ id: 'articles', label: 'Articles' },
 	{ id: 'code', label: 'Code' },
 	{ id: 'interview', label: 'Interview' },
@@ -288,8 +289,8 @@ const parseSlashCommand = (value: string): { query: string; tab?: AssistantTab; 
 		case '/simulate':
 			return {
 				query: topic,
-				tab: isVisualizationLabEnabled ? 'simulations' : 'concept-map',
-				personaBoost: isVisualizationLabEnabled ? 'simulation-first' : 'visual-learning',
+				tab: 'simulations',
+				personaBoost: 'simulation-first',
 			};
 		case '/quiz':
 			return { query: topic, tab: 'interview', personaBoost: 'quiz-mode' };
@@ -361,7 +362,7 @@ const buildMentorActions = ({
 			level: 1,
 			intent: 'continue',
 			title: `Continue into ${recentTopic}?`,
-			description: 'Pick up from the latest article, section, or roadmap node instead of starting a fresh search.',
+			description: 'Pick up from the latest article, section, or graph node instead of starting a fresh search.',
 			prompt: `Continue coaching me from ${recentTopic}. Give me the next concept, a short explanation, and one practice task.`,
 			tab: 'answer',
 			score: recentArticle ? 96 : 76,
@@ -370,10 +371,10 @@ const buildMentorActions = ({
 			id: 'roadmap-next',
 			level: 2,
 			intent: 'roadmap',
-			title: nextRoadmapStep ? `Advance to ${nextRoadmapStep}` : `Build a path for ${contextTopic}`,
+			title: nextRoadmapStep ? `Advance to ${nextRoadmapStep}` : `Build a progression for ${contextTopic}`,
 			description: nextRoadmapStep
-				? 'Resume the next planned module from your current roadmap.'
-				: 'Turn the current context into a sequenced learning path.',
+				? 'Resume the next planned module from your current progression.'
+				: 'Turn the current context into a sequenced progression.',
 			prompt: nextRoadmapStep
 				? `/roadmap ${nextRoadmapStep}`
 				: `/roadmap ${contextTopic}`,
@@ -409,19 +410,17 @@ const buildMentorActions = ({
 		});
 	}
 
-	if (isVisualizationLabEnabled) {
-		actions.push({
-			id: 'simulation',
-			level: 2,
-			intent: 'simulation',
-			title: `Try ${contextTopic} simulation`,
-			description: 'Move from explanation to step-through system behavior.',
-			prompt: `/simulate ${contextTopic}`,
-			tab: 'simulations',
-			href: simulationHref,
-			score: learningContext.source === 'article' || currentTurn ? 86 : 54,
-		});
-	}
+	actions.push({
+		id: 'simulation',
+		level: 2,
+		intent: 'simulation',
+		title: `Try ${contextTopic} simulation`,
+		description: 'Move from explanation to step-through system behavior.',
+		prompt: `/simulate ${contextTopic}`,
+		tab: 'simulations',
+		href: simulationHref,
+		score: learningContext.source === 'article' || currentTurn ? 86 : 54,
+	});
 
 	if (firstRecommendation) {
 		actions.push({
@@ -464,6 +463,10 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		buildPrompt,
 		getContextHref,
 	} = useLearningContext();
+	const learningMemory = useLearningMemoryStore();
+	const recordConceptSeen = useLearningMemoryStore((state) => state.recordConceptSeen);
+	const recordWeakArea = useLearningMemoryStore((state) => state.recordWeakArea);
+	const recordInterviewPractice = useLearningMemoryStore((state) => state.recordInterviewPractice);
 	const [query, setQuery] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [turns, setTurns] = useState<Turn[]>([]);
@@ -488,7 +491,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		setContext({
 			source: 'assistant',
 			pathname: '/assistant',
-			title: 'AI Learning Copilot',
+			title: 'AI Mentor',
 			domain: learningContext.domain ?? 'Engineering',
 			topic: learningContext.topic,
 			subtopic: learningContext.subtopic,
@@ -580,7 +583,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 	const placeholderOptions = useMemo(() => {
 		const dynamic = [
 			...topPosts.slice(0, 2).map((post) => `Explain ${post.title}`),
-			...popularTopics.slice(0, 2).map((topic) => `Build a roadmap for ${topic}`),
+			...popularTopics.slice(0, 2).map((topic) => `Build a progression for ${topic}`),
 		];
 		return dynamic.length > 0 ? dynamic : INPUT_PLACEHOLDERS;
 	}, [popularTopics, topPosts]);
@@ -599,7 +602,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 	const promptSuggestions = useMemo(() => {
 		const fromRecent = recentTopics.slice(0, 3);
 		const fromPosts = topPosts.slice(0, 4).map((post) => `Explain ${post.title}`);
-		const fromTags = popularTopics.slice(0, 4).map((topic) => `Create a roadmap for ${topic}`);
+		const fromTags = popularTopics.slice(0, 4).map((topic) => `Create a progression for ${topic}`);
 		return [...new Set([...fromRecent, ...fromPosts, ...fromTags])].slice(0, 6);
 	}, [popularTopics, recentTopics, topPosts]);
 	const composerSuggestions = useMemo(() => {
@@ -704,6 +707,10 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		[currentTurn, getContextHref, learningContext, learningHistory, profile],
 	);
 	const primaryMentorAction = mentorActions[0] ?? null;
+	const memoryPromptContext = useMemo(
+		() => buildMemoryPromptContext(learningMemory),
+		[learningMemory],
+	);
 
 	const runAssistant = async (inputValue: string) => {
 		const parsed = parseSlashCommand(inputValue);
@@ -732,6 +739,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 					]
 						.filter(Boolean)
 						.join('|'),
+					memoryContext: memoryPromptContext,
 				}),
 			});
 			if (!res.ok) throw new Error(`Assistant error ${res.status}`);
@@ -760,6 +768,19 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 				favoriteDomains: [...new Set([...prev.favoriteDomains, ...payload.relatedArchitectureTopics])].slice(0, 8),
 				weakAreas: payload.prerequisites.slice(0, 4),
 			}));
+			payload.relatedArchitectureTopics.forEach((topic) => {
+				recordConceptSeen({ label: topic, domain: topic });
+			});
+			payload.prerequisites.slice(0, 4).forEach((weakArea) => {
+				recordWeakArea({ label: weakArea, domain: payload.relatedArchitectureTopics[0] });
+			});
+			if (parsed.tab === 'interview') {
+				recordInterviewPractice({
+					topic: payload.relatedArchitectureTopics[0] ?? normalizedQuery,
+					weakness: payload.prerequisites[0] ?? 'interview follow-up depth',
+					communicationDelta: 1,
+				});
+			}
 
 			let revealed = 1;
 			const interval = window.setInterval(() => {
@@ -849,16 +870,12 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
 				<Head>
-					<title>AI Learning Copilot - {publication.title}</title>
+					<title>AI Mentor - {publication.title}</title>
 					<meta
 						name="description"
-						content={
-							isVisualizationLabEnabled
-								? 'AI-native engineering learning copilot with conversational roadmaping, concept maps, simulations, and adaptive progression guidance.'
-								: 'AI-native engineering learning copilot with conversational roadmaping, concept maps, and adaptive progression guidance.'
-						}
+						content="AI-native engineering mentor with conversational progression, concept maps, simulations, and adaptive guidance."
 					/>
-					<meta property="og:title" content={`AI Learning Copilot - ${publication.title}`} />
+					<meta property="og:title" content={`AI Mentor - ${publication.title}`} />
 					<meta property="og:description" content="Adaptive engineering mentor with visual systems guidance and interactive learning flow." />
 					<meta property="og:image" content={publication.ogMetaData?.image || getAutogeneratedPublicationOG(publication)} />
 					<script
@@ -873,9 +890,9 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 					<div className="mx-auto w-full max-w-[1440px] px-4 py-4 md:px-5 md:py-6">
 						<div className="mb-3 flex items-center justify-between xl:hidden">
 							<div>
-								<p className="text-xs font-semibold text-violet-600 dark:text-violet-300">✣ AI Copilot</p>
+								<p className="text-xs font-semibold text-violet-600 dark:text-violet-300">AI Mentor</p>
 								<h1 className="mt-1 text-xl font-bold text-neutral-950 dark:text-neutral-50">
-									{isVisualizationLabEnabled ? 'Ask, map, simulate, and continue.' : 'Ask, and learn'}
+									Ask, map, simulate, and continue.
 								</h1>
 							</div>
 						</div>
@@ -938,7 +955,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 
 									{profile.currentRoadmap.length > 0 ? (
 										<div className="mt-4">
-											<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Current roadmap</p>
+											<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Current progression</p>
 											<div className="mt-2 space-y-2 text-xs">
 												{profile.currentRoadmap.slice(0, 4).map((title, index) => (
 													<button key={title} onClick={() => startPrompt(title)} className="w-full text-left rounded-lg border border-neutral-200 dark:border-neutral-700 p-2 hover:border-blue-300 dark:hover:border-blue-600">
@@ -979,7 +996,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 												Your next best engineering move.
 											</h1>
 											<p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
-												The Copilot now uses your current article, roadmap node, recent conversations, weak areas, and interview readiness to suggest what to do next.
+												AI Mentor now uses your current article, graph node, recent conversations, weak areas, and interview readiness to suggest what to do next.
 											</p>
 										</div>
 										{primaryMentorAction ? (
@@ -1047,14 +1064,14 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 												placeholder={`${placeholderOptions[placeholderIndex % placeholderOptions.length]} ▌`}
 												rows={2}
 												className="w-full resize-none rounded-xl border-0 bg-transparent px-2 py-3 text-base text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-100 md:px-4"
-												aria-label="Ask the engineering learning copilot"
+												aria-label="Ask the engineering AI Mentor"
 											/>
 											<motion.button
 												onClick={() => runAssistant(query)}
 												disabled={loading}
 												whileTap={getTapScale(reduceMotion)}
 												className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 text-white shadow-lg shadow-blue-500/20 disabled:opacity-50 inline-flex items-center justify-center"
-												aria-label="Run AI copilot query"
+												aria-label="Run AI Mentor query"
 												aria-busy={loading}
 											>
 												{loading ? (
@@ -1145,7 +1162,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 									<div className="mt-4 rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6">
 										<p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Start your first learning conversation</p>
 										<p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-											Use natural language or slash commands for roadmaping, concept maps, and deep-dive explanations.
+											Use natural language or slash commands for progression, concept maps, and deep-dive explanations.
 										</p>
 										<div className="mt-3 flex flex-wrap gap-2">
 											{(semanticSuggestions.length > 0 ? semanticSuggestions : topPosts).slice(0, 4).map((item) => (
@@ -1259,7 +1276,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 
 										{activeTab === 'roadmap' ? (
 											<section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-												<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Roadmap navigator</p>
+												<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Progression navigator</p>
 												<div className="mt-3 space-y-3">
 													{currentTurn.response.recommendedSequence.map((step, index) => (
 														<div key={`roadmap-${step.slug}`} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3">
@@ -1270,7 +1287,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 													))}
 												</div>
 												<CTALink href="/guided-topics" level={2} size="sm" className="mt-3">
-													Open Full Roadmap
+													Open Learning Graph
 												</CTALink>
 											</section>
 										) : null}
@@ -1313,9 +1330,13 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 											</section>
 										) : null}
 
-										{isVisualizationLabEnabled && activeTab === 'simulations' ? (
-											<section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-												<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Simulation studio</p>
+										{activeTab === 'simulations' ? (
+											<section className="space-y-4">
+												<InlineSimulation
+													topic={currentTurn.query}
+													node={currentTurn.response.conceptGraph[0]?.concept ?? currentTurn.response.relatedArchitectureTopics[0]}
+													source="ai-mentor"
+												/>
 												<div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
 													{simulationPrompts.map((item) => (
 														<Link key={item} href={`/visualizations?q=${encodeURIComponent(`${currentTurn.query} ${item}`)}`} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 hover:border-blue-300 dark:hover:border-blue-600">
@@ -1417,7 +1438,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 							<aside className="hidden xl:block sticky top-24">
 								<div className="space-y-3">
 									<div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-										<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Roadmap at a glance</p>
+										<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Progression at a glance</p>
 										{metadata ? (
 											<div className="mt-2 space-y-2 text-xs">
 												<div className="flex items-center justify-between"><span className="text-neutral-500 dark:text-neutral-400">Difficulty</span><span className="font-semibold text-neutral-800 dark:text-neutral-100">{metadata.difficulty.label}</span></div>
@@ -1425,7 +1446,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 												<div className="flex items-center justify-between"><span className="text-neutral-500 dark:text-neutral-400">Domain</span><span className="font-semibold text-neutral-800 dark:text-neutral-100">{metadata.domain}</span></div>
 											</div>
 										) : (
-											<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Ask a question to generate a roadmap.</p>
+											<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Ask a question to generate a progression.</p>
 										)}
 									</div>
 
@@ -1520,8 +1541,8 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 								</div>
 								<div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px] font-semibold">
 									<Link href="/" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Home</Link>
-									<Link href="/guided-topics" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Roadmaps</Link>
-									<Link href="/posts" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Library</Link>
+									<Link href="/guided-topics" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Learning Graphs</Link>
+									<Link href="/posts" className="rounded-xl bg-neutral-50 px-2 py-2 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">Learn</Link>
 								</div>
 							</div>
 						) : null}

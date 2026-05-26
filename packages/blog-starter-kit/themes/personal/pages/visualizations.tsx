@@ -15,7 +15,6 @@ import { PersonalHeader } from '../components/personal-theme-header';
 import { VisualizationStudio } from '../components/visualization/visualization-studio';
 import { PostFragment, PublicationByHostDocument, PublicationByHostQuery, PublicationByHostQueryVariables, PublicationFragment } from '../generated/graphql';
 import { getFooterPosts } from '../lib/api/footerData';
-import { isVisualizationLabEnabled } from '../lib/features';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 
@@ -138,12 +137,6 @@ export default function VisualizationsPage({ publication, footerPosts }: Props) 
 }
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
-	if (!isVisualizationLabEnabled) {
-		return {
-			notFound: true,
-		};
-	}
-
 	const data = await request<PublicationByHostQuery, PublicationByHostQueryVariables>(
 		GQL_ENDPOINT,
 		PublicationByHostDocument,
