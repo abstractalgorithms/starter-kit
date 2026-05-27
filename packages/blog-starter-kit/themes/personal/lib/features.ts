@@ -6,3 +6,6 @@ export const isInterviewPrepEnabled =
 
 export const isVisualizationLabEnabled =
 	process.env.NEXT_PUBLIC_ENABLE_VISUALIZATION_LAB === 'true';
+
+export const isArticleInteractiveToolsEnabled =
+	process.env.NEXT_PUBLIC_ENABLE_ARTICLE_INTERACTIVE_TOOLS === 'true';
