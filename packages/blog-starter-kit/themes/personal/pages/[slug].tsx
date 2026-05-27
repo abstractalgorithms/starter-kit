@@ -1068,6 +1068,18 @@ type InterviewPromptSet = {
 	checkpoints: string[];
 };
 
+type ArticleCompanionData = {
+	overview: string;
+	summaryBullets: string[];
+	flowNodes: string[];
+	conceptDependencies: Array<{ concept: string; dependsOn: string | null }>;
+	tradeoffOptions: Array<{ title: string; body: string }>;
+	failureScenarios: Array<{ title: string; impact: string; mitigation: string; severity: number }>;
+	interviewPrompts: InterviewPromptSet;
+	quizPrompts: string[];
+	relatedArticleRefs: Array<{ title: string; slug: string }>;
+};
+
 const getInterviewPromptSet = ({
 	title,
 	tags,
@@ -1109,6 +1121,92 @@ const getInterviewPromptSet = ({
 			`Handle failure scenario: ${failure}.`,
 			`Close with observability, rollback, and scaling signals.`,
 		],
+	};
+};
+
+const buildLocalArticleCompanion = ({
+	post,
+	tags,
+	tocItems,
+	morePosts,
+	primaryArticleConcept,
+}: {
+	post: PostFullFragment;
+	tags: NonNullable<PostFullFragment['tags']>;
+	tocItems: TocItem[];
+	morePosts: PostFragment[];
+	primaryArticleConcept: string;
+}): ArticleCompanionData => {
+	const summaryBullets = getAiSummaryBullets(post.content.markdown, post.title);
+	const glossaryTerms = detectGlossaryTerms(post.content.markdown);
+	const conceptDependencies = tags.slice(0, 6).map((tag, index) => ({
+		concept: formatTagName(tag.name),
+		dependsOn: index > 0 ? formatTagName(tags[index - 1].name) : null,
+	}));
+	const misunderstandingWarnings = (() => {
+		const warnings = [
+			'Low latency does not automatically mean high throughput under contention.',
+			'Eventual consistency does not mean random correctness; it depends on reconciliation strategy.',
+			'Retries without idempotency can amplify failures and duplicate side effects.',
+		];
+		if (/llm|rag|embedding|retrieval/i.test(post.content.markdown)) {
+			warnings.unshift('High model quality can still produce incorrect outputs without grounding and verification.');
+		}
+		return warnings.slice(0, 3);
+	})();
+	const articleFlowNodes = deriveArticleFlowNodes(tocItems, tags, post.title);
+	const tradeoffOptions = [
+		{
+			title: `${articleFlowNodes[0] || tags[0]?.name || 'Fast path'}: speed-first`,
+			body: summaryBullets[0] || 'Optimizes for faster understanding or delivery, but can hide edge cases.',
+		},
+		{
+			title: `${articleFlowNodes[1] || tags[1]?.name || 'Safer path'}: reliability-first`,
+			body: summaryBullets[1] || 'Optimizes for correctness and clarity, with more upfront structure.',
+		},
+	];
+	const failureScenarios = [
+		{
+			title: `${articleFlowNodes[0] || 'Core concept'} misunderstood`,
+			impact: misunderstandingWarnings[0] || `The reader may apply ${post.title} without understanding its assumptions.`,
+			mitigation: tocItems[0]?.title ? `Revisit ${decodeHtml(tocItems[0].title)} and validate the first principles.` : 'Revisit the first principles and validate assumptions.',
+			severity: 68,
+		},
+		{
+			title: `${articleFlowNodes[1] || 'Implementation'} tradeoff missed`,
+			impact: misunderstandingWarnings[1] || 'The design may optimize one property while quietly weakening another.',
+			mitigation: tocItems[1]?.title ? `Compare against ${decodeHtml(tocItems[1].title)} and document the tradeoff.` : 'Document the tradeoff and add an operational check.',
+			severity: 58,
+		},
+	];
+	const interviewPrompts = getInterviewPromptSet({
+		title: post.title,
+		tags,
+		flowNodes: articleFlowNodes,
+		tradeoffOptions,
+		failureScenarios,
+		tocItems,
+	});
+	const quizPrompts = [
+		`What is the core tradeoff explained in "${post.title}"?`,
+		`Which failure mode is most likely if this design is deployed at scale?`,
+		`How would you explain the architecture in a whiteboard interview?`,
+	];
+
+	return {
+		overview:
+			post.subtitle ||
+			post.brief ||
+			summaryBullets[0] ||
+			`Understand ${post.title} through a practical engineering lens.`,
+		summaryBullets,
+		flowNodes: articleFlowNodes,
+		conceptDependencies: conceptDependencies.length > 0 ? conceptDependencies : [{ concept: primaryArticleConcept, dependsOn: null }],
+		tradeoffOptions,
+		failureScenarios,
+		interviewPrompts,
+		quizPrompts,
+		relatedArticleRefs: morePosts.slice(0, 4).map((item) => ({ title: item.title, slug: item.slug })),
 	};
 };
 
@@ -1195,6 +1293,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 	const [showQuizDrawer, setShowQuizDrawer] = useState(false);
 	const [isBookmarked, setIsBookmarked] = useState(false);
 	const [markedHelpful, setMarkedHelpful] = useState(false);
+	const [articleCompanionState, setArticleCompanionState] = useState<ArticleCompanionData | null>(null);
 	const completedMemoryRef = useRef(false);
 	const reduceMotion = useReducedMotion();
 	const { context, setContext, buildPrompt, getContextHref } = useLearningContext();
@@ -1290,37 +1389,65 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 		});
 	}, [post.readTimeInMinutes, post.series?.name, post.slug, post.title, readingProgress, recordConceptCompleted, tags]);
 
-	const aiSummaryBullets = useMemo(
-		() => getAiSummaryBullets(post.content.markdown, post.title),
-		[post.content.markdown, post.title],
+	const localArticleCompanion = useMemo(
+		() => buildLocalArticleCompanion({ post, tags, tocItems, morePosts, primaryArticleConcept }),
+		[morePosts, post, primaryArticleConcept, tags, tocItems],
 	);
-	const glossaryTerms = useMemo(
-		() => detectGlossaryTerms(post.content.markdown),
-		[post.content.markdown],
-	);
-	const conceptDependencies = useMemo(
-		() =>
-			tags.slice(0, 6).map((tag, index) => ({
-				concept: formatTagName(tag.name),
-				dependsOn: index > 0 ? formatTagName(tags[index - 1].name) : null,
-			})),
-		[tags],
-	);
-	const misunderstandingWarnings = useMemo(() => {
-		const warnings = [
-			'Low latency does not automatically mean high throughput under contention.',
-			'Eventual consistency does not mean random correctness; it depends on reconciliation strategy.',
-			'Retries without idempotency can amplify failures and duplicate side effects.',
-		];
-		if (/llm|rag|embedding|retrieval/i.test(post.content.markdown)) {
-			warnings.unshift('High model quality can still produce incorrect outputs without grounding and verification.');
+
+	useEffect(() => {
+		let isActive = true;
+		const controller = new AbortController();
+		setArticleCompanionState(null);
+
+		(async () => {
+			try {
+				const response = await fetch('/api/article-companion', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						title: post.title,
+						subtitle: post.subtitle,
+						brief: post.brief,
+						markdown: post.content.markdown,
+						tocItems,
+						tags: tags.map((tag) => ({ name: tag.name, slug: tag.slug })),
+						relatedPosts: morePosts,
+						readTimeInMinutes: post.readTimeInMinutes,
+					}),
+					signal: controller.signal,
+				});
+
+				if (!response.ok) {
+					throw new Error(`Article companion request failed with ${response.status}`);
+				}
+
+				const data = (await response.json()) as ArticleCompanionData;
+				if (!isActive) return;
+				if (data?.overview && Array.isArray(data.summaryBullets)) {
+					setArticleCompanionState(data);
+				}
+			} catch (error) {
+				if (!isActive || controller.signal.aborted) return;
+				console.error('[article-companion] request failed:', error);
 			}
-		return warnings.slice(0, 3);
-	}, [post.content.markdown]);
-	const articleFlowNodes = useMemo(
-		() => deriveArticleFlowNodes(tocItems, tags, post.title),
-		[tocItems, tags, post.title],
-	);
+		})();
+
+		return () => {
+			isActive = false;
+			controller.abort();
+		};
+	}, [morePosts, post.brief, post.content.markdown, post.readTimeInMinutes, post.slug, post.subtitle, post.title, tags, tocItems]);
+
+	const articleCompanion = articleCompanionState ?? localArticleCompanion;
+	const aiSummaryBullets = articleCompanion.summaryBullets;
+	const articleFlowNodes = articleCompanion.flowNodes;
+	const conceptDependencies = articleCompanion.conceptDependencies;
+	const tradeoffOptions = articleCompanion.tradeoffOptions;
+	const failureScenarios = articleCompanion.failureScenarios;
+	const quizPrompts = articleCompanion.quizPrompts;
+	const interviewPrompts = articleCompanion.interviewPrompts;
+	const storyOverview = articleCompanion.overview;
+	const glossaryTerms = useMemo(() => detectGlossaryTerms(post.content.markdown), [post.content.markdown]);
 	const architectureSequence = useMemo(() => {
 		if (articleFlowNodes.length >= 3) return articleFlowNodes;
 		const fromToc = tocItems
@@ -1351,69 +1478,18 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 			{ title: 'Why this matters', icon: '!', body: aiSummaryBullets[0] || post.brief || post.subtitle || `Understand the core idea behind ${post.title}.` },
 			{ title: 'Key section to watch', icon: '#', body: tocItems[1]?.title ? `Pay attention to "${decodeHtml(tocItems[1].title)}"; it usually contains the main mechanism or tradeoff.` : `Use the first sections to identify the main mechanism and its constraints.` },
 			{ title: 'Interview angle', icon: '?', body: `Be ready to explain ${articleFlowNodes.slice(0, 2).join(' and ') || post.title} with one concrete example and one tradeoff.` },
-			{ title: 'Production concern', icon: '!', body: misunderstandingWarnings[0] || `Map the idea to failure modes, monitoring signals, and rollback behavior before implementation.` },
+			{
+				title: 'Production concern',
+				icon: '!',
+				body:
+					glossaryTerms[0]
+						? `${glossaryTerms[0][0]}: ${glossaryTerms[0][1]}`
+						: `Map the idea to failure modes, monitoring signals, and rollback behavior before implementation.`,
+			},
 		];
 		return source.slice(0, 4);
-	}, [aiSummaryBullets, articleFlowNodes, misunderstandingWarnings, post.brief, post.subtitle, post.title, tocItems]);
-	const tradeoffOptions = useMemo(() => {
-		const left = articleFlowNodes[0] || tags[0]?.name || 'Fast path';
-		const right = articleFlowNodes[1] || tags[1]?.name || 'Safer path';
-		return [
-			{
-				title: `${left}: speed-first`,
-				body: aiSummaryBullets[0] || 'Optimizes for faster understanding or delivery, but can hide edge cases.',
-			},
-			{
-				title: `${right}: reliability-first`,
-				body: aiSummaryBullets[1] || 'Optimizes for correctness and clarity, with more upfront structure.',
-			},
-		];
-	}, [aiSummaryBullets, articleFlowNodes, tags]);
-	const failureScenarios = useMemo(
-		() =>
-			[
-				{
-					title: `${articleFlowNodes[0] || 'Core concept'} misunderstood`,
-					impact: misunderstandingWarnings[0] || `The reader may apply ${post.title} without understanding its assumptions.`,
-					mitigation: tocItems[0]?.title ? `Revisit ${decodeHtml(tocItems[0].title)} and validate the first principles.` : 'Revisit the first principles and validate assumptions.',
-					severity: 68,
-				},
-				{
-					title: `${articleFlowNodes[1] || 'Implementation'} tradeoff missed`,
-					impact: misunderstandingWarnings[1] || 'The design may optimize one property while quietly weakening another.',
-					mitigation: tocItems[1]?.title ? `Compare against ${decodeHtml(tocItems[1].title)} and document the tradeoff.` : 'Document the tradeoff and add an operational check.',
-					severity: 58,
-				},
-			],
-		[articleFlowNodes, misunderstandingWarnings, post.title, tocItems],
-	);
-	const quizPrompts = useMemo(
-		() =>
-			[
-				`What is the core tradeoff explained in "${post.title}"?`,
-				`Which failure mode is most likely if this design is deployed at scale?`,
-				`How would you explain the architecture in a whiteboard interview?`,
-			].slice(0, 3),
-		[post.title],
-	);
-	const interviewPrompts = useMemo(
-		() =>
-			getInterviewPromptSet({
-				title: post.title,
-				tags,
-				flowNodes: articleFlowNodes,
-				tradeoffOptions,
-				failureScenarios,
-				tocItems,
-			}),
-		[articleFlowNodes, failureScenarios, post.title, tags, tocItems, tradeoffOptions],
-	);
+	}, [aiSummaryBullets, articleFlowNodes, glossaryTerms, post.brief, post.subtitle, post.title, tocItems]);
 	const upNextPost = morePosts[0] ?? null;
-	const storyOverview =
-		post.subtitle ||
-		post.brief ||
-		aiSummaryBullets[0] ||
-		`Understand ${post.title} through a practical engineering lens.`;
 
 	const getSimulationHrefForSection = (sectionTitle: string, sectionId?: string) => {
 		const params = new URLSearchParams({

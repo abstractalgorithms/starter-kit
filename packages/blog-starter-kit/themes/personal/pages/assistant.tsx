@@ -177,13 +177,25 @@ const getTurnTopic = (turn: Turn) =>
 	turn.query;
 
 const getTurnTakeaways = (turn: Turn) => {
-	const generated = deriveTakeaways(turn.response.overview);
-	const fromGraph = turn.response.conceptGraph.map((node) => {
-		const dependencies = node.dependsOn.length > 0 ? ` depends on ${node.dependsOn.join(', ')}` : ' is an entry concept';
-		return `${node.concept}${dependencies}`;
+	const fromSequence = turn.response.recommendedSequence.slice(0, 3).map((step, index) =>
+		index === 0
+			? `Start with ${step.title} because ${step.reason.toLowerCase()}`
+			: `Then use ${step.title} to ${step.reason.toLowerCase()}`,
+	);
+	const fromPrerequisites = turn.response.prerequisites
+		.slice(0, 3)
+		.map((item) => `Stabilize ${item.replace(/[.]+$/g, '')} before advancing.`);
+	const fromQuestions = turn.response.interviewQuestions
+		.slice(0, 1)
+		.map((question) => `Be ready to reason about: ${question.replace(/[?.!]+$/g, '')}.`);
+	const fromGraph = turn.response.conceptGraph.slice(0, 2).map((node) => {
+		const dependencies = node.dependsOn.length > 0 ? ` after ${node.dependsOn.join(', ')}` : '';
+		return `${node.concept}${dependencies} is part of the learning path.`;
 	});
-	const fromRecommendations = turn.response.adaptiveRecommendations.map((item) => item.why);
-	return [...new Set([...generated, ...fromGraph, ...fromRecommendations])].slice(0, 5);
+	const fallback = deriveTakeaways(turn.response.overview);
+	return [...new Set([...fromSequence, ...fromPrerequisites, ...fromQuestions, ...fromGraph, ...fallback])]
+		.filter(Boolean)
+		.slice(0, 5);
 };
 
 const deriveLearningTime = (response: AssistantResponse) => {
@@ -380,10 +392,10 @@ const buildMentorActions = ({
 			intent: 'roadmap',
 			title: nextRoadmapStep ? `Continue with ${nextRoadmapStep}` : `Build a progression for ${contextTopic}`,
 			description: nextRoadmapStep
-				? 'Use the strongest current-question match as the next reading step.'
+				? `Use ${nextRoadmapStep} as the next reading step after ${recentTopic}.`
 				: 'Turn the current context into a sequenced progression.',
 			prompt: nextRoadmapStep
-				? `/roadmap ${nextRoadmapStep}`
+				? `/roadmap ${nextRoadmapStep} after ${recentTopic}`
 				: `/roadmap ${contextTopic}`,
 			tab: 'roadmap',
 			href: roadmapHref,
@@ -410,8 +422,12 @@ const buildMentorActions = ({
 			level: 1,
 			intent: 'continue',
 			title: `Continue into ${recentTopic}?`,
-			description: 'Pick up from the latest article, section, or graph node instead of starting a fresh search.',
-			prompt: `Continue coaching me from ${recentTopic}. Give me the next concept, a short explanation, and one practice task.`,
+			description: weakArea
+				? `Resume from your latest context and close the gap around ${weakArea}.`
+				: 'Pick up from the latest article, section, or graph node instead of starting a fresh search.',
+			prompt: weakArea
+				? `Continue coaching me from ${recentTopic}. Bridge me from the current context into ${weakArea}, explain why it matters next, and give me one concrete practice task.`
+				: `Continue coaching me from ${recentTopic}. Give me the next concept, a short explanation, and one practice task.`,
 			tab: 'answer',
 			score: 96,
 		});
@@ -800,6 +816,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					query: normalizedQuery,
+					posts,
 					history,
 					persona: [
 						'engineering-learning',
@@ -810,6 +827,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 						.filter(Boolean)
 						.join('|'),
 					memoryContext: memoryPromptContext,
+					learningContext,
 				}),
 			});
 			if (!res.ok) throw new Error(`Assistant error ${res.status}`);
