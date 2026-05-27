@@ -177,6 +177,7 @@ const getTurnTopic = (turn: Turn) =>
 	turn.query;
 
 const getTurnTakeaways = (turn: Turn) => {
+	const fromBullets = (turn.response.answerBullets ?? []).slice(0, 3).map((bullet) => bullet);
 	const fromSequence = turn.response.recommendedSequence.slice(0, 3).map((step, index) =>
 		index === 0
 			? `Start with ${step.title} because ${step.reason.toLowerCase()}`
@@ -193,7 +194,7 @@ const getTurnTakeaways = (turn: Turn) => {
 		return `${node.concept}${dependencies} is part of the learning path.`;
 	});
 	const fallback = deriveTakeaways(turn.response.overview);
-	return [...new Set([...fromSequence, ...fromPrerequisites, ...fromQuestions, ...fromGraph, ...fallback])]
+	return [...new Set([...fromBullets, ...fromSequence, ...fromPrerequisites, ...fromQuestions, ...fromGraph, ...fallback])]
 		.filter(Boolean)
 		.slice(0, 5);
 };
@@ -510,7 +511,8 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 	const [placeholderIndex, setPlaceholderIndex] = useState(0);
 	const [activeTab, setActiveTab] = useState<AssistantTab>('answer');
 	const [selectedNode, setSelectedNode] = useState<string | null>(null);
-	const [takeawaysCollapsed, setTakeawaysCollapsed] = useState(false);
+	const [takeawaysCollapsed, setTakeawaysCollapsed] = useState(true);
+	const [prerequisitesCollapsed, setPrerequisitesCollapsed] = useState(true);
 	const [conversationMeta, setConversationMeta] = useState<Record<number, ConversationMeta>>({});
 	const [profile, setProfile] = useState<LearningProfile>(defaultProfile);
 	const [mobileMentorTrayOpen, setMobileMentorTrayOpen] = useState(false);
@@ -771,6 +773,9 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 			difficulty: currentTurn.response.difficultyEstimate,
 		};
 	}, [currentTurn]);
+	const hasStructuredAnswer =
+		(currentTurn?.response.answerBullets ?? []).length > 0 ||
+		(currentTurn?.response.examples ?? []).length > 0;
 	const mentorActions = useMemo(
 		() =>
 			buildMentorActions({
@@ -920,14 +925,6 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		if (profile.completedConcepts.some((item) => lower.includes(item.toLowerCase()))) return 'completed';
 		if (profile.currentRoadmap.some((item) => item.toLowerCase().includes(lower) || lower.includes(item.toLowerCase()))) return 'in-progress';
 		return 'locked';
-	};
-
-	const copyTakeaways = async () => {
-		if (!currentTurn) return;
-		const text = getTurnTakeaways(currentTurn).map((point) => `• ${point}`).join('\n');
-		try {
-			await navigator.clipboard.writeText(text);
-		} catch {}
 	};
 
 	const startPrompt = (value: string) => {
@@ -1274,6 +1271,33 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 													</motion.section>
 												) : null}
 
+												{sectionVisible(currentTurn, 'overview') && hasStructuredAnswer ? (
+													<motion.section
+														key={`answer-points-${currentTurn.id}`}
+														variants={reveal}
+														initial="hidden"
+														animate="show"
+														className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+													>
+														<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Key points</p>
+														{(currentTurn.response.answerBullets ?? []).length > 0 ? (
+															<div className="mt-2 text-sm leading-6 text-neutral-700 dark:text-neutral-300">
+																<MarkdownToHtml contentMarkdown={toMarkdownBullets(currentTurn.response.answerBullets ?? [])} />
+															</div>
+														) : null}
+														{(currentTurn.response.examples ?? []).length > 0 ? (
+															<div className="mt-4 grid gap-3 md:grid-cols-2">
+																{(currentTurn.response.examples ?? []).map((example) => (
+																	<div key={example.title} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
+																		<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{example.title}</p>
+																		<p className="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">{example.body}</p>
+																	</div>
+																))}
+															</div>
+														) : null}
+													</motion.section>
+												) : null}
+
 												{sectionVisible(currentTurn, 'overview') ? (
 													<motion.section
 														key={`remember-${currentTurn.id}`}
@@ -1284,10 +1308,7 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 													>
 														<div className="flex items-center justify-between gap-2">
 															<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">What to Remember</p>
-															<div className="flex items-center gap-1.5">
-																<button onClick={() => setTakeawaysCollapsed((prev) => !prev)} className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-[11px]">{takeawaysCollapsed ? 'Expand' : 'Collapse'}</button>
-																<button onClick={copyTakeaways} className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-[11px]">Copy</button>
-															</div>
+															<button onClick={() => setTakeawaysCollapsed((prev) => !prev)} className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-[11px]">{takeawaysCollapsed ? 'Expand' : 'Collapse'}</button>
 														</div>
 														{!takeawaysCollapsed ? (
 															<div className="mt-2 text-[13px] leading-6 text-neutral-600 dark:text-neutral-300">
@@ -1305,16 +1326,26 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 
 												{sectionVisible(currentTurn, 'prerequisites') ? (
 													<section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-														<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Prerequisites</p>
-														{currentTurn.response.prerequisites.length > 0 ? (
-															<div className="mt-2 text-sm text-neutral-700 dark:text-neutral-300">
-																<MarkdownToHtml contentMarkdown={toMarkdownBullets(currentTurn.response.prerequisites)} />
-															</div>
-														) : (
-															<div className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-																<MarkdownToHtml contentMarkdown="*No prerequisites detected for this response.*" />
-															</div>
-														)}
+														<div className="flex items-center justify-between gap-2">
+															<p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Prerequisites</p>
+															<button
+																onClick={() => setPrerequisitesCollapsed((prev) => !prev)}
+																className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-[11px]"
+															>
+																{prerequisitesCollapsed ? 'Expand' : 'Collapse'}
+															</button>
+														</div>
+														{!prerequisitesCollapsed ? (
+															currentTurn.response.prerequisites.length > 0 ? (
+																<div className="mt-2 text-sm text-neutral-700 dark:text-neutral-300">
+																	<MarkdownToHtml contentMarkdown={toMarkdownBullets(currentTurn.response.prerequisites)} />
+																</div>
+															) : (
+																<div className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+																	<MarkdownToHtml contentMarkdown="*No prerequisites detected for this response.*" />
+																</div>
+															)
+														) : null}
 													</section>
 												) : null}
 

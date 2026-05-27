@@ -52,7 +52,7 @@ import { EmbeddedAIMentor } from '../components/embedded-ai-mentor';
 import { SystemsKnowledgeGraph } from '../components/systems-knowledge-graph';
 import { useLearningContext } from '../components/learning-context-provider';
 import { CTAButton, CTALink } from '../components/cta-system';
-import { isInterviewPrepEnabled } from '../lib/features';
+import { isArticleInteractiveToolsEnabled, isInterviewPrepEnabled } from '../lib/features';
 import { useLearningMemoryStore } from '../lib/learning-memory';
 import { getArticleConceptSeeds, inferArticleDomain, inferPrimaryArticleConcept } from '../lib/article-domain';
 import { inferTopicSlugForPost } from '../lib/topic-learning';
@@ -166,6 +166,141 @@ const deriveArticleFlowNodes = (
 
 	const fallback = deriveFallbackConcepts(title, tags);
 	return (fallback.length >= 3 ? fallback : [...fallback, 'Core idea', 'Tradeoffs', 'Application']).slice(0, 5);
+};
+
+const normalizeHeadingKey = (value: string) =>
+	decodeHtml(value)
+		.toLowerCase()
+		.replace(/[^a-z0-9\s]/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+
+const deriveDeepDiveSummaries = (markdown: string, tocItems: TocItem[]) => {
+	const lines = markdown.split(/\r?\n/);
+	type SectionBlock = { title: string; body: string[] };
+	const blocks: SectionBlock[] = [];
+	let current: SectionBlock | null = null;
+
+	for (const rawLine of lines) {
+		const headingMatch = rawLine.match(/^#{1,6}\s+(.+)$/);
+		if (headingMatch) {
+			if (current) blocks.push(current);
+			current = { title: headingMatch[1].trim(), body: [] };
+			continue;
+		}
+		if (!current) continue;
+		current.body.push(rawLine);
+	}
+	if (current) blocks.push(current);
+
+	const allSentences = stripMarkdown(markdown)
+		.split(/(?<=[.!?])\s+/)
+		.map((line) => line.trim())
+		.filter((line) => line.length > 35);
+
+	const titleKeywords = (title: string) =>
+		normalizeHeadingKey(title)
+			.split(' ')
+			.filter((token) => token.length > 3)
+			.filter((token) => !['deep', 'dive', 'with', 'from', 'into', 'that', 'this', 'what', 'when'].includes(token));
+
+	const getHeadingMatchScore = (targetKey: string, keywords: string[], blockTitle: string) => {
+		const headingKey = normalizeHeadingKey(blockTitle);
+		if (!headingKey) return 0;
+		if (headingKey === targetKey) return 100;
+		if (headingKey.includes(targetKey) || targetKey.includes(headingKey)) return 75;
+		return keywords.reduce((score, keyword) => (headingKey.includes(keyword) ? score + 1 : score), 0);
+	};
+
+	const getExcerptMarkdown = (bodyLines: string[]) => {
+		const cleaned = bodyLines
+			.map((line) => line.trimEnd())
+			.filter((line) => {
+				const trimmed = line.trim();
+				if (!trimmed) return true;
+				// Avoid raw markdown table rows in summary excerpts; they render poorly in compact cards.
+				if (/^\|.*\|$/.test(trimmed)) return false;
+				if (/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(trimmed)) return false;
+				return true;
+			});
+		const chunks: string[] = [];
+		let chunk: string[] = [];
+
+		for (const line of cleaned) {
+			if (!line.trim()) {
+				if (chunk.length > 0) {
+					chunks.push(chunk.join('\n').trim());
+					chunk = [];
+				}
+				continue;
+			}
+			chunk.push(line);
+		}
+		if (chunk.length > 0) chunks.push(chunk.join('\n').trim());
+
+		const narrativeChunks = chunks.filter((value) => {
+			if (!value) return false;
+			if (/^#{1,6}\s+/.test(value)) return false;
+			if (/^```/.test(value)) return false;
+			if (/^([-*+]\s+|\d+[.)]\s+)/.test(value)) return false;
+			if (value.includes('|')) return false;
+			return stripMarkdown(value).replace(/\s+/g, ' ').trim().length > 80;
+		});
+
+		return (narrativeChunks[0] ?? chunks.find(Boolean) ?? '').slice(0, 1200);
+	};
+
+	return tocItems.reduce<Record<string, { summaryMarkdown: string; bulletMarkdown: string }>>((acc, item) => {
+		const key = normalizeHeadingKey(item.title);
+		const keywords = titleKeywords(item.title);
+		const match =
+			blocks
+				.map((block) => ({
+					block,
+					score: getHeadingMatchScore(key, keywords, block.title),
+				}))
+				.sort((left, right) => right.score - left.score)[0] ?? null;
+
+		const rawBody = match && match.score > 0 ? match.block.body : [];
+		const excerptMarkdown = getExcerptMarkdown(rawBody);
+		const plain = stripMarkdown(rawBody.join('\n')).trim();
+		const sentences = plain
+			.split(/(?<=[.!?])\s+/)
+			.map((line) => line.trim())
+			.filter((line) => line.length > 35);
+		const semanticFallback = allSentences.find((sentence) =>
+			keywords.filter((keyword) => sentence.toLowerCase().includes(keyword)).length >= Math.min(2, Math.max(1, keywords.length)) &&
+			!sentence.includes('|'),
+		);
+		const summaryMarkdown =
+			excerptMarkdown ||
+			semanticFallback ||
+			`This section explains ${decodeHtml(item.title)} and connects it to the broader concept progression in this article.`;
+
+		const bulletLines = rawBody
+			.map((line) => line.trim())
+			.filter((line) => /^([-*+]\s+|\d+[.)]\s+)/.test(line))
+			.slice(0, 3);
+		const fallbackBullets = [
+			...sentences.slice(1, 4),
+			...allSentences
+				.filter((sentence) => keywords.some((keyword) => sentence.toLowerCase().includes(keyword)))
+				.slice(0, 2),
+		]
+			.filter((point) => point.length < 180)
+			.filter((point) => !summaryMarkdown.includes(point))
+			.slice(0, 3)
+			.map((point) => `- ${point}`);
+		const bulletMarkdown =
+			bulletLines.length > 0
+				? bulletLines.join('\n')
+				: summaryMarkdown.includes('|')
+				? ''
+				: fallbackBullets.join('\n');
+
+		acc[item.slug] = { summaryMarkdown, bulletMarkdown };
+		return acc;
+	}, {});
 };
 
 const getNumberedTocLabel = (item: TocItem, index: number) => {
@@ -637,7 +772,6 @@ const ArticleOverviewBlock = ({
 	summaryBullets: string[];
 	flowNodes: string[];
 }) => {
-	const primaryConcepts = flowNodes.length > 0 ? flowNodes : deriveFallbackConcepts(post.title, tags);
 	const overview =
 		post.subtitle ||
 		post.brief ||
@@ -667,83 +801,9 @@ const ArticleOverviewBlock = ({
 					</div>
 				</div>
 			</div>
-
-			<details className="group rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-				<summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-bold text-neutral-900 dark:text-neutral-50">
-					<span>Show high-level concept flow</span>
-					<span className="text-neutral-400 transition group-open:rotate-180">⌄</span>
-				</summary>
-				<div className="border-t border-neutral-100 p-3 dark:border-neutral-800">
-					<div className="overflow-x-auto">
-						<div className="relative grid min-w-[680px] grid-cols-5 gap-3 rounded-xl border border-neutral-200 bg-white p-3 pb-11 dark:border-neutral-800 dark:bg-neutral-900">
-							{primaryConcepts.slice(0, 5).map((concept, index) => (
-								<div key={`${concept}-${index}`} className="relative rounded-lg border border-neutral-200 bg-gradient-to-b from-neutral-50 to-white p-2.5 text-center dark:border-neutral-700 dark:from-neutral-800/60 dark:to-neutral-900">
-									<div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold ${
-										index % 3 === 0
-											? 'bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300'
-											: index % 3 === 1
-											? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-											: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-									}`}>
-										{index + 1}
-									</div>
-									<p className="mt-2 text-xs font-bold text-neutral-900 dark:text-neutral-100">{concept}</p>
-									<p className="mt-1 text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
-										{index === 0 ? 'Starting point' : index === primaryConcepts.slice(0, 5).length - 1 ? 'Outcome' : 'Next concept'}
-									</p>
-									{index < primaryConcepts.slice(0, 5).length - 1 ? (
-										<span className="absolute -right-3 top-1/2 hidden -translate-y-1/2 text-blue-500 md:block">→</span>
-									) : null}
-								</div>
-							))}
-							<div className="absolute bottom-3 left-10 right-10 flex items-center justify-center">
-								<div className="h-px flex-1 border-t border-dashed border-blue-300 dark:border-blue-800" />
-								<span className="rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-									Committed
-								</span>
-								<div className="h-px flex-1 border-t border-dashed border-blue-300 dark:border-blue-800" />
-							</div>
-						</div>
-					</div>
-				</div>
-			</details>
 		</section>
 	);
 };
-
-const ArticleAtAGlancePanel = ({
-	tocItems,
-	readTimeInMinutes,
-	conceptDependencies,
-}: {
-	tocItems: TocItem[];
-	readTimeInMinutes: number;
-	conceptDependencies: Array<{ concept: string; dependsOn: string | null }>;
-}) => (
-	<section className="mb-7 rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
-		<p className="mb-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">At a glance</p>
-		<div className="space-y-3 text-xs">
-			<div className="flex items-center justify-between gap-4">
-				<span className="font-semibold text-neutral-700 dark:text-neutral-300">Difficulty</span>
-				<span className="text-neutral-600 dark:text-neutral-300">{readTimeInMinutes > 12 ? 'Advanced' : 'Intermediate'} ▥</span>
-			</div>
-			<div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-				<span className="font-semibold text-neutral-700 dark:text-neutral-300">Concepts</span>
-				<span className="text-neutral-600 dark:text-neutral-300">{Math.max(5, tocItems.length)}</span>
-			</div>
-			<div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-				<span className="font-semibold text-neutral-700 dark:text-neutral-300">Estimated time</span>
-				<span className="text-neutral-600 dark:text-neutral-300">{readTimeInMinutes} min</span>
-			</div>
-			<div className="flex items-start justify-between gap-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-				<span className="font-semibold text-neutral-700 dark:text-neutral-300">Prerequisites</span>
-				<span className="max-w-[220px] text-right text-neutral-600 dark:text-neutral-300">
-					{conceptDependencies.slice(0, 2).map((item) => item.concept).join(', ') || 'Foundations'}
-				</span>
-			</div>
-		</div>
-	</section>
-);
 
 const ArticleCognitionLayers = ({
 	title,
@@ -1078,6 +1138,7 @@ type ArticleCompanionData = {
 	interviewPrompts: InterviewPromptSet;
 	quizPrompts: string[];
 	relatedArticleRefs: Array<{ title: string; slug: string }>;
+	deepDiveSections: Array<{ slug: string; title: string; summaryMarkdown: string; bulletMarkdown: string }>;
 };
 
 const getInterviewPromptSet = ({
@@ -1207,6 +1268,15 @@ const buildLocalArticleCompanion = ({
 		interviewPrompts,
 		quizPrompts,
 		relatedArticleRefs: morePosts.slice(0, 4).map((item) => ({ title: item.title, slug: item.slug })),
+		deepDiveSections: tocItems.slice(0, 4).map((item) => {
+			const dive = deriveDeepDiveSummaries(post.content.markdown, tocItems)[item.slug];
+			return {
+				slug: item.slug,
+				title: item.title,
+				summaryMarkdown: dive?.summaryMarkdown || '',
+				bulletMarkdown: dive?.bulletMarkdown || '',
+			};
+		}),
 	};
 };
 
@@ -1489,6 +1559,29 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 		];
 		return source.slice(0, 4);
 	}, [aiSummaryBullets, articleFlowNodes, glossaryTerms, post.brief, post.subtitle, post.title, tocItems]);
+	const deepDiveSummaries = useMemo(
+		() =>
+			(articleCompanion.deepDiveSections?.length ? articleCompanion.deepDiveSections : localArticleCompanion.deepDiveSections).reduce<Record<string, { summaryMarkdown: string; bulletMarkdown: string }>>(
+				(acc, item) => {
+					acc[item.slug] = {
+						summaryMarkdown: item.summaryMarkdown,
+						bulletMarkdown: item.bulletMarkdown,
+					};
+					return acc;
+				},
+				{},
+			),
+		[articleCompanion.deepDiveSections, localArticleCompanion.deepDiveSections],
+	);
+	const atGlanceMetadata = useMemo(
+		() => [
+			`${post.readTimeInMinutes > 12 ? 'Advanced' : 'Intermediate'} level`,
+			`${Math.max(5, tocItems.length)} concepts`,
+			`${post.readTimeInMinutes} min`,
+			`${conceptDependencies.slice(0, 2).map((item) => item.concept).join(', ') || 'Foundations'}`,
+		],
+		[conceptDependencies, post.readTimeInMinutes, tocItems.length],
+	);
 	const upNextPost = morePosts[0] ?? null;
 
 	const getSimulationHrefForSection = (sectionTitle: string, sectionId?: string) => {
@@ -1608,6 +1701,14 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 							{post.subtitle}
 						</p>
 					)}
+
+					<div className="mb-2 flex flex-wrap items-center gap-2">
+						{atGlanceMetadata.map((item) => (
+							<span key={`mobile-glance-${item}`} className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
+								{item}
+							</span>
+						))}
+					</div>
 
 					{/* Series badge */}
 					{post.series && (
@@ -1774,6 +1875,13 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 										{post.subtitle}
 									</p>
 								) : null}
+								<div className="mt-3 flex flex-wrap items-center gap-2">
+									{atGlanceMetadata.map((item) => (
+										<span key={`desktop-glance-${item}`} className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
+											{item}
+										</span>
+									))}
+								</div>
 								<div className="mt-4 flex items-center gap-3">
 									{post.author.profilePicture ? (
 										<img
@@ -1855,18 +1963,6 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</div>
 					</div>
 
-					<ArticleCognitionLayers
-						title={post.title}
-						summaryBullets={aiSummaryBullets}
-						flowNodes={articleFlowNodes}
-						tradeoffOptions={tradeoffOptions}
-						failureScenarios={failureScenarios}
-						interviewPrompts={interviewPrompts}
-						getSimulationHref={getSimulationHrefForSection}
-						onSimulationIntent={syncSimulationContext}
-						onAsk={(prompt) => openArticleChat(buildPrompt(prompt))}
-					/>
-
 					<ArticleOverviewBlock
 						post={post}
 						tags={tags}
@@ -1875,36 +1971,55 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						flowNodes={articleFlowNodes}
 					/>
 
-					<ArticleAtAGlancePanel
-						tocItems={tocItems}
-						readTimeInMinutes={post.readTimeInMinutes}
-						conceptDependencies={conceptDependencies}
-					/>
+					{/* Expandable deep dives */}
+					{tocItems.length > 0 && (
+						<section className="mt-8 space-y-3">
+							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+								Expandable deep dives
+							</p>
+							{tocItems.slice(0, 4).map((item) => (
+								<details
+									key={item.id}
+									className="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4"
+								>
+									<summary className="cursor-pointer list-none text-sm font-semibold text-neutral-800 dark:text-neutral-100 flex items-center justify-between">
+										<span>{item.title}</span>
+										<span className="text-xs text-neutral-400 group-open:rotate-180 transition-transform">⌄</span>
+									</summary>
+									{(() => {
+										const dive = deepDiveSummaries[item.slug];
+										return (
+											<div className="mt-2 space-y-2">
+												<div className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-300 [&_p]:text-xs [&_li]:text-xs [&_table]:text-xs [&_td]:text-xs [&_th]:text-xs [&_math]:text-xs">
+													<MarkdownToHtml contentMarkdown={dive?.summaryMarkdown || ''} />
+												</div>
+												{dive?.bulletMarkdown ? (
+													<div className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-300 [&_p]:text-xs [&_li]:text-xs [&_table]:text-xs [&_td]:text-xs [&_th]:text-xs [&_math]:text-xs">
+														<MarkdownToHtml contentMarkdown={dive.bulletMarkdown} />
+													</div>
+												) : null}
+												<Link href={`#heading-${item.slug}`} className="inline-flex text-xs font-semibold text-blue-600 dark:text-blue-400">
+													Jump to section
+												</Link>
+											</div>
+										);
+									})()}
+								</details>
+							))}
+						</section>
+					)}
 
-					<ImmersiveArticleStory
-						postTitle={post.title}
-						overview={storyOverview}
-						flowNodes={articleFlowNodes}
-						architectureSequence={architectureSequence}
-						insightCards={insightCards}
-						tradeoffOptions={tradeoffOptions}
-						failureScenarios={failureScenarios}
-						animateArchitecture={animateArchitecture}
-						reduceMotion={reduceMotion}
-						onToggleAnimation={() => setAnimateArchitecture((prev) => !prev)}
-						getSimulationHref={getSimulationHrefForSection}
-						onSimulationIntent={syncSimulationContext}
-					/>
-
-					{isInterviewPrepEnabled ? (
-						<InterviewArticleOverlay
-							promptSet={interviewPrompts}
-							onAsk={(prompt) => openArticleChat(buildPrompt(prompt))}
-							assistantHref={interviewAssistantHref}
-							mockHref={mockDiscussionHref}
-							whiteboardHref={whiteboardHref}
-						/>
-					) : null}
+					<section className="mt-8 rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
+						<p className="mb-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">Key takeaways</p>
+						<ul className="space-y-3 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
+							{aiSummaryBullets.slice(0, 4).map((item) => (
+								<li key={item} className="flex gap-2">
+									<span className="mt-0.5 text-violet-600 dark:text-violet-300">✓</span>
+									<span>{item}</span>
+								</li>
+							))}
+						</ul>
+					</section>
 
 					<details className="group mt-8 rounded-3xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
 						<summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
@@ -1925,72 +2040,88 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</div>
 					</details>
 
-					{/* Expandable deep dives */}
-					{tocItems.length > 0 && (
-						<section className="mt-8 space-y-3">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
-								Expandable deep dives
-							</p>
-							{tocItems.slice(0, 4).map((item) => (
-								<details
-									key={item.id}
-									className="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4"
-								>
-									<summary className="cursor-pointer list-none text-sm font-semibold text-neutral-800 dark:text-neutral-100 flex items-center justify-between">
-										<span>{item.title}</span>
-										<span className="text-xs text-neutral-400 group-open:rotate-180 transition-transform">⌄</span>
-									</summary>
-									<p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
-										Dive deeper into this section and cross-reference concepts before moving to the next heading.
-										<Link href={`#heading-${item.slug}`} className="ml-1 text-blue-600 dark:text-blue-400">
-											Jump to section
-										</Link>
-									</p>
-								</details>
-							))}
-						</section>
-					)}
+					{isArticleInteractiveToolsEnabled ? (
+						<details className="group mt-8 rounded-3xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+							<summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
+								<span>
+									<span className="block text-[10px] font-mono uppercase tracking-[0.24em] text-neutral-500 dark:text-neutral-400">
+										Interactive tools
+									</span>
+									<span className="mt-1 block text-lg font-black text-neutral-950 dark:text-neutral-50">
+										Open simulations, interview mode, and concept graph
+									</span>
+								</span>
+								<span className="text-neutral-400 transition group-open:rotate-180">⌄</span>
+							</summary>
+							<div className="border-t border-neutral-100 px-5 py-6 dark:border-neutral-800">
+								<ArticleCognitionLayers
+									title={post.title}
+									summaryBullets={aiSummaryBullets}
+									flowNodes={articleFlowNodes}
+									tradeoffOptions={tradeoffOptions}
+									failureScenarios={failureScenarios}
+									interviewPrompts={interviewPrompts}
+									getSimulationHref={getSimulationHrefForSection}
+									onSimulationIntent={syncSimulationContext}
+									onAsk={(prompt) => openArticleChat(buildPrompt(prompt))}
+								/>
 
-					<section className="mt-8 rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
-						<p className="mb-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">Key takeaways</p>
-						<ul className="space-y-3 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
-							{aiSummaryBullets.slice(0, 4).map((item) => (
-								<li key={item} className="flex gap-2">
-									<span className="mt-0.5 text-violet-600 dark:text-violet-300">✓</span>
-									<span>{item}</span>
-								</li>
-							))}
-						</ul>
-					</section>
+								<ImmersiveArticleStory
+									postTitle={post.title}
+									overview={storyOverview}
+									flowNodes={articleFlowNodes}
+									architectureSequence={architectureSequence}
+									insightCards={insightCards}
+									tradeoffOptions={tradeoffOptions}
+									failureScenarios={failureScenarios}
+									animateArchitecture={animateArchitecture}
+									reduceMotion={reduceMotion}
+									onToggleAnimation={() => setAnimateArchitecture((prev) => !prev)}
+									getSimulationHref={getSimulationHrefForSection}
+									onSimulationIntent={syncSimulationContext}
+								/>
+
+								{isInterviewPrepEnabled ? (
+									<InterviewArticleOverlay
+										promptSet={interviewPrompts}
+										onAsk={(prompt) => openArticleChat(buildPrompt(prompt))}
+										assistantHref={interviewAssistantHref}
+										mockHref={mockDiscussionHref}
+										whiteboardHref={whiteboardHref}
+									/>
+								) : null}
+
+								<EmbeddedAIMentor
+									contextTitle={post.title}
+									concept={primaryArticleConcept}
+									section={context.sectionTitle}
+									posts={morePosts}
+									className="mt-8"
+								/>
+
+								<InlineSimulation
+									topic={primaryArticleConcept}
+									node={context.sectionTitle ?? articleConceptSeeds[1]}
+									source="article"
+									className="mt-8"
+								/>
+
+								<SystemsKnowledgeGraph
+									posts={[post, ...morePosts]}
+									initialConcept={primaryArticleConcept}
+									focusConcepts={articleConceptSeeds}
+									focusSlug={tags[0]?.slug}
+									focusPostSlug={post.slug}
+									mode="article"
+									compact
+									className="mt-8"
+								/>
+							</div>
+						</details>
+					) : null}
 
 					{/* Dynamic Quiz */}
 					<PostQuiz postTitle={post.title} postContent={post.content.markdown} />
-
-					<EmbeddedAIMentor
-						contextTitle={post.title}
-						concept={primaryArticleConcept}
-						section={context.sectionTitle}
-						posts={morePosts}
-						className="mt-8"
-					/>
-
-					<InlineSimulation
-						topic={primaryArticleConcept}
-						node={context.sectionTitle ?? articleConceptSeeds[1]}
-						source="article"
-						className="mt-8"
-					/>
-
-					<SystemsKnowledgeGraph
-						posts={[post, ...morePosts]}
-						initialConcept={primaryArticleConcept}
-						focusConcepts={articleConceptSeeds}
-						focusSlug={tags[0]?.slug}
-						focusPostSlug={post.slug}
-						mode="article"
-						compact
-						className="mt-8"
-					/>
 
 					{/* Tags */}
 					{tags.length > 0 && (

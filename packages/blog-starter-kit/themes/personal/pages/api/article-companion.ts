@@ -29,6 +29,7 @@ type ArticleCompanionResponse = {
 	};
 	quizPrompts: string[];
 	relatedArticleRefs: Array<{ title: string; slug: string }>;
+	deepDiveSections: Array<{ slug: string; title: string; summaryMarkdown: string; bulletMarkdown: string }>;
 };
 
 type ErrorResponse = { error: string };
