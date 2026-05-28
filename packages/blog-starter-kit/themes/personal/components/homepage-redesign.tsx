@@ -1,22 +1,18 @@
 'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { resizeImage } from '@starter-kit/utils/image';
 import type { PostFragment, PublicationFragment } from '../generated/graphql';
 import type { LearnPost } from './learn-today';
 import { loadLearningPath } from './learn-today';
 import type { TopicCluster } from './topic-clusters';
-import { AuthModal } from './auth-modal';
-import { useAuth } from './contexts/authContext';
 import { CTAButton, CTALink } from './cta-system';
 import { useLearningContext } from './learning-context-provider';
-import { MOTION_EASE, MOTION_TIMING, getHoverLift } from './motion-system';
-import { isInterviewPrepEnabled } from '../lib/features';
-import { buildAdaptiveRecommendations, useLearningMemoryStore } from '../lib/learning-memory';
-import { SystemsKnowledgeGraph } from './systems-knowledge-graph';
+import { MOTION_EASE, MOTION_TIMING } from './motion-system';
 
 type Props = {
 	publication: PublicationFragment;
@@ -26,64 +22,11 @@ type Props = {
 	topicClusters: TopicCluster[];
 };
 
-type LearningPathCard = {
-	id: string;
-	title: string;
-	description: string;
-	query: string;
-	tagHints: string[];
-	icon: string;
-};
-
-type PathSourcePost = Pick<LearnPost, 'title' | 'brief' | 'tags' | 'readTimeInMinutes'>;
-
 const AI_PLACEHOLDERS = [
 	'How does Kafka exactly-once semantics work?',
 	'Explain quorum consistency visually',
 	'Teach me vector databases',
 	'How does Raft leader election work?',
-];
-const LEARNING_PATHS: LearningPathCard[] = [
-	{
-		id: 'backend-engineer',
-		title: 'Backend Engineer',
-		description: 'Build resilient APIs, storage systems, queues, and distributed reliability patterns.',
-		query: 'Backend engineering role-based track from fundamentals to production',
-		tagHints: ['backend', 'api', 'database', 'queues'],
-		icon: '⚙️',
-	},
-	{
-		id: 'ai-engineer',
-		title: 'AI Engineer',
-		description: 'Go from model fundamentals to production RAG and LLM system architecture.',
-		query: 'AI engineer role-based track for LLM systems and retrieval',
-		tagHints: ['ai', 'llm', 'rag', 'embeddings'],
-		icon: '🤖',
-	},
-	{
-		id: 'infrastructure-engineer',
-		title: 'Infrastructure Engineer',
-		description: 'Build reliable distributed platforms across consistency, replication, consensus, and failure recovery.',
-		query: 'Infrastructure engineer role-based track for distributed systems reliability and platform internals',
-		tagHints: ['distributed', 'consensus', 'replication', 'kafka'],
-		icon: '🌐',
-	},
-	{
-		id: 'systems-architect',
-		title: 'Systems Architect',
-		description: 'Develop architecture judgment across scale, reliability, tradeoffs, and operating constraints.',
-		query: 'Systems architect role-based track from system design foundations to production tradeoffs',
-		tagHints: ['system-design', 'architecture', 'reliability'],
-		icon: '🎯',
-	},
-	{
-		id: 'principal-engineer',
-		title: 'Principal Engineer',
-		description: 'Develop cross-system judgment, platform strategy, and long-horizon technical decision-making.',
-		query: 'Principal engineer role-based track for platform strategy architecture judgment and technical leadership',
-		tagHints: ['architecture', 'platform', 'staff'],
-		icon: '🏗️',
-	},
 ];
 const SIMULATIONS = [
 	{
@@ -111,7 +54,6 @@ const SIMULATIONS = [
 		time: '7 min',
 	},
 ];
-const LEARNING_STREAK_KEY = 'aa:learning-streak';
 
 const sectionTransition = {
 	duration: MOTION_TIMING.slow,
@@ -163,46 +105,6 @@ const normalizeCoverImageUrl = (coverImage: unknown) => {
 	if (!raw) return null;
 	const withProtocol = raw.startsWith('//') ? `https:${raw}` : raw;
 	return resizeImage(withProtocol, { w: 960, h: 540, c: 'thumb' });
-};
-
-const getPathMatches = (posts: PathSourcePost[], hints: string[]) =>
-	posts.filter((post) => {
-		const haystack = `${post.title} ${post.brief} ${(post.tags ?? [])
-			.flatMap((tag) => [tag.name, tag.slug])
-			.join(' ')}`.toLowerCase();
-		return hints.some((hint) => haystack.includes(hint.toLowerCase()));
-	});
-
-const getDifficultyLabel = (posts: PathSourcePost[]) => {
-	if (posts.length === 0) return 'Mentor-built';
-	const averageReadTime =
-		posts.reduce((total, post) => total + (post.readTimeInMinutes || 0), 0) / posts.length;
-	if (averageReadTime >= 12) return 'Advanced';
-	if (averageReadTime >= 7) return 'Intermediate';
-	return 'Foundational';
-};
-
-const formatPathTime = (minutes: number) => {
-	if (minutes <= 0) return 'Plan on demand';
-	if (minutes < 60) return `${minutes} min reading`;
-	const hours = Math.round(minutes / 60);
-	return `${hours} hr${hours === 1 ? '' : 's'} reading`;
-};
-
-const getPathDescription = (path: LearningPathCard, posts: PathSourcePost[]) => {
-	if (posts.length === 0) return path.description;
-	const topics = [
-		...new Set(
-			posts
-				.flatMap((post) => post.tags ?? [])
-				.map((tag) => tag.name)
-				.filter(Boolean),
-		),
-	].slice(0, 2);
-	if (topics.length > 0) {
-		return `Covers ${topics.join(' and ')} through published deep dives from Learn.`;
-	}
-	return `Starts with ${posts[0].title} and continues through related deep dives.`;
 };
 
 const AALogo = ({ className = 'h-10 w-10' }: { className?: string }) => (
@@ -310,34 +212,21 @@ const JourneyTopologyGraphic = ({ activeLabel }: { activeLabel?: string }) => (
 
 export const HomepageRedesign = ({
 	publication,
-	allPosts,
 	popularPosts,
 	initialPosts,
 	topicClusters,
 }: Props) => {
 	const router = useRouter();
 	const reduceMotion = useReducedMotion();
-	const { user } = useAuth();
 	const [savedPath, setSavedPath] = useState<ReturnType<typeof loadLearningPath>>(null);
-	const [learningStreak, setLearningStreak] = useState(0);
 	const [aiQuery, setAiQuery] = useState('');
 	const [searchText, setSearchText] = useState('');
 	const [placeholderIndex, setPlaceholderIndex] = useState(0);
-	const [selectedPathId, setSelectedPathId] = useState(LEARNING_PATHS[0].id);
 	const [mentorOpen, setMentorOpen] = useState(false);
-	const [dashboardAuthOpen, setDashboardAuthOpen] = useState(false);
-	const pathsRef = useRef<HTMLDivElement>(null);
 	const { setContext } = useLearningContext();
-	const learningMemory = useLearningMemoryStore();
 
 	useEffect(() => {
 		setSavedPath(loadLearningPath());
-		try {
-			const storedStreak = Number(localStorage.getItem(LEARNING_STREAK_KEY) ?? '0');
-			setLearningStreak(Number.isFinite(storedStreak) && storedStreak > 0 ? storedStreak : 0);
-		} catch {
-			setLearningStreak(0);
-		}
 	}, []);
 
 	useEffect(() => {
@@ -362,79 +251,10 @@ export const HomepageRedesign = ({
 
 	const trendingPosts = popularPosts.slice(0, 4);
 
-	const selectedPath = useMemo(
-		() => LEARNING_PATHS.find((path) => path.id === selectedPathId) ?? LEARNING_PATHS[0],
-		[selectedPathId],
-	);
-
-	const learningPathCards = useMemo(
-		() =>
-			LEARNING_PATHS.map((path) => {
-				const matchedPosts = getPathMatches(allPosts, path.tagHints);
-				const moduleCount = matchedPosts.length;
-				const totalMinutes = matchedPosts.reduce(
-					(total, post) => total + (post.readTimeInMinutes || 0),
-					0,
-				);
-				const previewTitles = matchedPosts.slice(0, 2).map((post) => post.title);
-				return {
-					...path,
-					moduleCount,
-					totalMinutes,
-					difficultyLabel: getDifficultyLabel(matchedPosts),
-					timeLabel: formatPathTime(totalMinutes),
-					description: getPathDescription(path, matchedPosts),
-					previewTitles,
-				};
-			}),
-		[allPosts],
-	);
-
-	const activeGraphCluster = topicClusters[0] ?? null;
-	const popularSearchSuggestions = useMemo(() => {
-		const topPosts = trendingPosts.slice(0, 3).map((post) => ({
-			label: post.title,
-			value: post.title,
-		}));
-		const topClusters = topicClusters
-			.slice(0, 3)
-			.map((cluster) => ({
-				label: cluster.label,
-				value: `Explain ${cluster.label} visually`,
-			}));
-		return [...topPosts, ...topClusters].slice(0, 4);
-	}, [topicClusters, trendingPosts]);
-
-	const completionPercent = useMemo(() => {
-		if (!savedPath?.readSlugs?.length || !savedPath.totalPosts) return 0;
-		return Math.round((savedPath.readSlugs.length / savedPath.totalPosts) * 100);
-	}, [savedPath]);
-
-	const adaptiveRecommendations = useMemo(
-		() => buildAdaptiveRecommendations(learningMemory, allPosts),
-		[allPosts, learningMemory],
-	);
-	const adaptiveNextPost = useMemo(() => {
-		const next = adaptiveRecommendations.find((item) => item.type === 'next');
-		return next ? allPosts.find((post) => post.slug === next.href.replace(/^\//, '')) ?? null : null;
-	}, [adaptiveRecommendations, allPosts]);
-	const weakAreaRecommendation = adaptiveRecommendations.find((item) => item.type === 'review' || item.type === 'practice');
-
 	const nextRecommendation = useMemo(() => {
-		if (adaptiveNextPost) return adaptiveNextPost;
 		const readSlugs = new Set(savedPath?.readSlugs ?? []);
 		return trendingPosts.find((post) => !readSlugs.has(post.slug)) ?? trendingPosts[0] ?? null;
-	}, [adaptiveNextPost, savedPath, trendingPosts]);
-
-	const secondaryRecommendations = useMemo(() => {
-		const readSlugs = new Set(savedPath?.readSlugs ?? []);
-		return trendingPosts
-			.filter((post) => post.slug !== nextRecommendation?.slug && !readSlugs.has(post.slug))
-			.slice(0, 2);
-	}, [nextRecommendation?.slug, savedPath, trendingPosts]);
-
-	const dashboardFocusArea =
-		nextRecommendation?.tags?.[0]?.name ?? topicClusters[0]?.label ?? savedPath?.headline ?? null;
+	}, [savedPath, trendingPosts]);
 
 	useEffect(() => {
 		setContext({
@@ -442,60 +262,14 @@ export const HomepageRedesign = ({
 			pathname: '/',
 			title: 'Abstract Algorithms',
 			domain: 'Engineering',
-			topic: savedPath?.interviewLabel ?? topicClusters[0]?.label ?? 'Learning platform',
+			topic: topicClusters[0]?.label ?? 'Systems engineering',
 			subtopic: savedPath?.headline ?? nextRecommendation?.title,
 			concept: nextRecommendation?.tags?.[0]?.name,
 			roadmapNode: savedPath?.headline ?? nextRecommendation?.title,
-			roadmapHref: '/guided-topics',
+			roadmapHref: '/discover#topic-collections',
 			simulationTopic: nextRecommendation?.title ?? topicClusters[0]?.label,
 		});
 	}, [nextRecommendation, savedPath, setContext, topicClusters]);
-
-	const dashboardCards = user
-		? [
-				{
-					label: 'Streak',
-					value: learningStreak > 0 ? `${learningStreak} day${learningStreak === 1 ? '' : 's'}` : 'Not started',
-					detail: learningStreak > 0 ? 'Tracked from reading activity' : 'Read an article to begin',
-				},
-				{
-					label: 'Mastery',
-					value: completionPercent > 0 ? `${completionPercent}%` : 'No progress yet',
-					detail: savedPath?.headline ?? 'Start or resume a track',
-				},
-				{
-					label: 'Focus area',
-					value: weakAreaRecommendation?.concept ?? dashboardFocusArea ?? 'Choose a topic',
-					detail: weakAreaRecommendation ? 'Weak-area reinforcement' : nextRecommendation ? 'Based on your next unread post' : 'Based on your track',
-				},
-				{
-					label: 'Recommendation',
-					value: nextRecommendation?.title ?? 'Browse Learn',
-					detail: nextRecommendation ? `${nextRecommendation.readTimeInMinutes} min read` : 'No article signal yet',
-				},
-		  ]
-		: [
-				{
-					label: 'Streak',
-					value: 'Sign in to track',
-					detail: 'No activity is tracked while signed out',
-				},
-				{
-					label: 'Mastery',
-					value: 'Not started',
-					detail: 'Progress appears after you save a track',
-				},
-				{
-					label: 'Focus area',
-					value: weakAreaRecommendation?.concept ?? 'Personalized later',
-					detail: weakAreaRecommendation ? 'Based on local learning memory' : 'Based on saved topics and completed posts',
-				},
-				{
-					label: 'Recommendation',
-					value: nextRecommendation?.title ?? 'Browse Learn',
-					detail: nextRecommendation ? 'Popular with readers right now' : 'Available after posts load',
-				},
-		  ];
 
 	const motionConfig = reduceMotion
 		? { initial: { opacity: 1, y: 0 }, whileInView: { opacity: 1, y: 0 } }
@@ -520,23 +294,26 @@ export const HomepageRedesign = ({
 							Abstract Algorithms
 						</p>
 						<h1 className="mt-4 text-4xl font-bold leading-[1.05] text-neutral-950 dark:text-neutral-50 md:text-6xl">
-							Start your engineering evolution.
+							Understand how systems work.
 							<br />
-							<span className="bg-gradient-to-r from-blue-600 via-violet-600 to-teal-500 bg-clip-text text-transparent">Think in systems.</span>
+							<span className="text-neutral-500 dark:text-neutral-400">One deep article at a time.</span>
 						</h1>
 						<p className="mt-4 max-w-2xl text-base leading-relaxed text-neutral-600 dark:text-neutral-300 md:text-lg">
-							Choose the engineer you want to become, enter with AI guidance, then move through concepts, topology, simulations, pressure tests, and interview readiness.
+							Abstract Algorithms is a calm engineering publication for distributed systems, AI infrastructure, data structures, and production tradeoffs.
 						</p>
 						<div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
-							<CTALink href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : '/topic/distributed-systems'} level={1} size="lg">
-								{savedPath ? 'Continue Learning' : 'Begin Topic'}
+							<CTALink href={nextRecommendation ? `/${nextRecommendation.slug}` : '/posts'} level={1} size="lg">
+								Start Reading
+							</CTALink>
+							<CTALink href="/discover#topic-collections" level={2} size="lg">
+								Explore Concepts
 							</CTALink>
 							<button type="button" onClick={() => setMentorOpen(true)} className="text-sm font-bold text-neutral-600 hover:text-blue-700 dark:text-neutral-300 dark:hover:text-blue-300">
-								Ask AI Mentor
+								Ask quietly
 							</button>
 						</div>
 						<div className="mt-8 grid max-w-xl grid-cols-3 gap-3">
-							{['Concept', 'Visual', 'Challenge'].map((item, index) => (
+							{['Mental model', 'Production', 'Tradeoffs'].map((item, index) => (
 								<div key={item} className="rounded-2xl border border-neutral-200 bg-white p-3 text-xs dark:border-neutral-800 dark:bg-neutral-900">
 									<p className="font-black text-neutral-950 dark:text-neutral-50">0{index + 1}</p>
 									<p className="mt-1 font-semibold text-neutral-600 dark:text-neutral-300">{item}</p>
@@ -548,49 +325,77 @@ export const HomepageRedesign = ({
 				</motion.div>
 			</SectionShell>
 
-			<SectionShell id="learning-paths">
-				<div ref={pathsRef} />
+			<SectionShell id="articles">
 				<SectionHeading
-					title="What you want to become"
-					description="Start with identity, then let the platform sequence articles, simulations, and interview practice around that role."
+					title="Latest deep dives"
+					description="The article is the primary surface: long-form explanations, diagrams when they matter, and enough production reasoning to make the idea usable."
+					action={<CTALink href="/posts" level={2} size="sm">All Articles</CTALink>}
 				/>
-				<div className="grid gap-5 lg:grid-cols-[minmax(0,0.92fr)_minmax(320px,0.55fr)]">
-					<div className="flex snap-x gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:gap-4">
-					{learningPathCards.map((path) => (
-						<motion.button
-							key={path.id}
-							whileHover={getHoverLift(reduceMotion)}
-							onClick={() => setSelectedPathId(path.id)}
-							className={`min-w-[240px] snap-start rounded-2xl border p-5 text-left shadow-sm md:min-w-0 ${
-								selectedPathId === path.id
-									? 'border-blue-400 bg-blue-50/70 dark:bg-blue-950/30 dark:border-blue-600'
-									: 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900'
-							}`}
+				<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+					{trendingPosts.map((post) => (
+						<Link
+							key={post.slug}
+							href={`/${post.slug}`}
+							className="group flex min-w-0 flex-col rounded-2xl border border-neutral-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-blue-700"
 						>
-							<p className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-lg dark:bg-blue-950/40">{path.icon}</p>
-							<p className="mt-3 text-sm font-bold text-neutral-900 dark:text-neutral-50">{path.title}</p>
-							<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2">{path.description}</p>
-						</motion.button>
-					))}
-					</div>
-					<div className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-						<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-blue-600 dark:text-blue-300">Selected identity</p>
-						<p className="mt-2 text-2xl font-black text-neutral-950 dark:text-neutral-50">{selectedPath.title}</p>
-						<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">{selectedPath.description}</p>
-						<CTALink href={`/assistant?q=${encodeURIComponent(selectedPath.query)}`} level={1} size="md" className="mt-5 w-full">
-							Begin Path
-						</CTALink>
-						<Link href="/topic/distributed-systems" className="mt-3 block text-center text-xs font-bold text-neutral-500 hover:text-blue-700 dark:text-neutral-400 dark:hover:text-blue-300">
-							Explore Concepts
+							{resolveCoverImage(post) ? (
+								<Image
+									src={resolveCoverImage(post) ?? ''}
+									alt=""
+									width={480}
+									height={300}
+									className="mb-4 aspect-[16/10] w-full rounded-xl object-cover"
+								/>
+							) : null}
+							<p className="text-sm font-black leading-5 text-neutral-950 group-hover:text-blue-700 dark:text-neutral-50 dark:group-hover:text-blue-300">
+								{post.title}
+							</p>
+							<p className="mt-2 line-clamp-3 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+								{post.brief}
+							</p>
+							<p className="mt-auto pt-4 text-[11px] font-bold uppercase text-neutral-400">
+								{post.readTimeInMinutes} min read
+							</p>
 						</Link>
+					))}
+				</div>
+			</SectionShell>
+
+			<SectionShell id="explore">
+				<SectionHeading
+					title="Explore related systems"
+					description="A lightweight way to move from one system idea to the next while staying close to the articles."
+				/>
+				<div className="grid gap-5 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)] lg:items-start">
+					<div className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+						<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-blue-600 dark:text-blue-300">Concept collections</p>
+						<p className="mt-2 text-2xl font-black text-neutral-950 dark:text-neutral-50">Follow the durable themes.</p>
+						<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+							Collections gather related articles around systems behavior, not course modules or visible learning machinery.
+						</p>
+						<CTALink href="/discover#topic-collections" level={1} size="md" className="mt-5">Open Explore</CTALink>
+					</div>
+					<div className="grid gap-3 md:grid-cols-2">
+						{topicClusters.slice(0, 4).map((cluster) => (
+							<Link
+								key={cluster.label}
+								href={`/topic/${cluster.slug}`}
+								className="rounded-2xl border border-neutral-200 bg-white p-4 transition hover:border-blue-300 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-blue-700"
+							>
+								<p className="text-sm font-black text-neutral-950 dark:text-neutral-50">{cluster.label}</p>
+								<p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+									{cluster.postCount} related article{cluster.postCount === 1 ? '' : 's'} across this systems theme.
+								</p>
+							</Link>
+						))}
 					</div>
 				</div>
 			</SectionShell>
 
 			<SectionShell>
 				<SectionHeading
-					title="AI-guided entry"
-					description="Ask from where you are. The mentor turns the answer into a next concept, a visual, or a practice challenge."
+					title="A quiet mentor when you need one"
+					description="Ask for a simpler explanation, a comparison, or the next concept. The content stays in front."
 				/>
 				<form
 					onSubmit={(event) => {
@@ -606,7 +411,7 @@ export const HomepageRedesign = ({
 						className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-4 text-sm text-neutral-800 outline-none transition focus:border-blue-400 focus:bg-white dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
 					/>
 					<CTAButton type="submit" level={1} size="lg" className="mt-3 w-full md:mt-0">
-						Ask AI Mentor
+						Ask
 					</CTAButton>
 				</form>
 			</SectionShell>
@@ -614,21 +419,18 @@ export const HomepageRedesign = ({
 			<SectionShell>
 				<SectionHeading
 					title="Continue learning"
-					description="Resume from the exact cognition state, or start inside a topic journey that can span many canonical articles."
+					description="A simple next step from what you have been reading. No complex roadmap required."
 				/>
 				<div className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 md:grid md:grid-cols-[minmax(0,1fr)_260px] md:items-center md:gap-5">
 					<div>
 						<p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">
-							{savedPath?.interviewLabel ?? (savedPath ? 'Active journey' : 'Recommended next')}
+							{savedPath ? 'Last read' : 'Recommended next'}
 						</p>
 						<p className="mt-1 text-2xl font-black text-neutral-950 dark:text-neutral-50">
 							{savedPath?.headline ?? nextRecommendation?.title ?? 'Explore the latest systems deep dive'}
 						</p>
-						<div className="mt-4 h-2 max-w-md overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
-							<motion.div animate={{ width: `${completionPercent}%` }} transition={{ duration: reduceMotion ? 0 : 0.35 }} className="h-full rounded-full bg-gradient-to-r from-violet-600 to-blue-500" />
-						</div>
 						<CTALink href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : nextRecommendation?.tags?.[0]?.slug ? `/topic/${nextRecommendation.tags[0].slug}` : '/topic/distributed-systems'} level={1} size="md" className="mt-5">
-							Continue Learning
+							Continue
 						</CTALink>
 					</div>
 					<LoadBalancerGraphic />
@@ -637,26 +439,15 @@ export const HomepageRedesign = ({
 
 			<SectionShell>
 				<SectionHeading
-					title="Interactive systems exploration"
-					description="Concepts are easier to retain when you can see topology evolve and failure boundaries move."
-				/>
-				<SystemsKnowledgeGraph posts={initialPosts} initialConcept={activeGraphCluster?.label} compact />
-				<div className="mt-4 flex justify-center">
-					<CTALink href="/discover" level={1} size="md">Explore Concepts</CTALink>
-				</div>
-			</SectionShell>
-
-			<SectionShell>
-				<SectionHeading
-					title="Practice and pressure-testing"
-					description="Move from knowing the idea to operating it under constraints."
+					title="Practice the hard parts"
+					description="Small simulations and prompts for reasoning about failure, latency, consistency, and tradeoffs."
 				/>
 				<div className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] lg:items-center">
-					<div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-5 dark:border-rose-950 dark:bg-rose-950/15">
-						<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-rose-600 dark:text-rose-300">Pressure mode</p>
-						<p className="mt-2 text-2xl font-black text-neutral-950 dark:text-neutral-50">Break the system before production does.</p>
-						<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">Replay stale reads, rebalance storms, queue overload, partition recovery, and consistency failures.</p>
-						<CTALink href="/visualizations" level={1} size="md" className="mt-5">Start Simulation</CTALink>
+					<div className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+						<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">Practice</p>
+						<p className="mt-2 text-2xl font-black text-neutral-950 dark:text-neutral-50">Focused moments, not a separate product.</p>
+						<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">Use simulations when a visual change makes the underlying system easier to reason about.</p>
+						<CTALink href="/visualizations" level={1} size="md" className="mt-5">Open Practice</CTALink>
 					</div>
 					<div className="space-y-3">
 						{SIMULATIONS.slice(0, 3).map((item, index) => (
@@ -670,26 +461,10 @@ export const HomepageRedesign = ({
 			</SectionShell>
 
 			<SectionShell>
-				<SectionHeading
-					title="Interview readiness"
-					description="Turn the concepts you just learned into crisp tradeoff reasoning."
-				/>
-				<div className="rounded-3xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 md:grid md:grid-cols-[minmax(0,1fr)_220px] md:items-center md:gap-5">
-					<div>
-						<p className="text-2xl font-black text-neutral-950 dark:text-neutral-50">Practice explaining decisions under follow-up pressure.</p>
-						<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">The mentor targets weak areas, communication gaps, and tradeoff mistakes from your learning memory.</p>
-					</div>
-					<CTALink href={isInterviewPrepEnabled ? '/interview-prep' : '/assistant?q=interview%20coaching'} level={1} size="md" className="mt-5 md:mt-0">
-						Practice Reasoning
-					</CTALink>
-				</div>
-			</SectionShell>
-
-			<SectionShell>
 				<div className="rounded-3xl border border-neutral-200 bg-neutral-950 p-6 text-white dark:border-neutral-800">
-					<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-blue-200">Continue your journey</p>
-					<p className="mt-2 max-w-3xl text-3xl font-black tracking-tight">One path. Articles, graphs, simulations, mentor guidance, and interviews all keep the same learning state.</p>
-					<CTALink href="/topic/distributed-systems" level={1} size="lg" className="mt-6">Continue Your Journey</CTALink>
+					<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-blue-200">Editorial first</p>
+					<p className="mt-2 max-w-3xl text-3xl font-black tracking-tight">Deep systems understanding should feel calm, precise, and readable.</p>
+					<CTALink href="/posts" level={1} size="lg" className="mt-6">Read Articles</CTALink>
 				</div>
 			</SectionShell>
 
@@ -723,16 +498,14 @@ export const HomepageRedesign = ({
 					</div>
 				</div>
 			) : null}
-			<AuthModal isOpen={dashboardAuthOpen} onClose={() => setDashboardAuthOpen(false)} />
 
 			{/* Mobile bottom navigation */}
 			<nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-950/95 backdrop-blur px-2 py-2">
-				<div className="grid grid-cols-5 gap-1 text-center text-[11px]">
+				<div className="grid grid-cols-4 gap-1 text-center text-[11px]">
 					<Link href="/" className="rounded-lg py-1.5 text-neutral-700 dark:text-neutral-300">Home</Link>
-					<Link href="/posts" className="rounded-lg py-1.5 text-neutral-700 dark:text-neutral-300">Learn</Link>
-					<Link href={isInterviewPrepEnabled ? '/interview-prep' : '/visualizations'} className="rounded-lg py-1.5 text-neutral-700 dark:text-neutral-300">Practice</Link>
+					<Link href="/posts" className="rounded-lg py-1.5 text-neutral-700 dark:text-neutral-300">Articles</Link>
+					<Link href="/discover" className="rounded-lg py-1.5 text-neutral-700 dark:text-neutral-300">Explore</Link>
 					<Link href="/assistant" className="rounded-lg py-1.5 text-neutral-700 dark:text-neutral-300">AI Mentor</Link>
-					<Link href="/discover" className="rounded-lg py-1.5 text-neutral-700 dark:text-neutral-300">Discover</Link>
 				</div>
 			</nav>
 		</div>

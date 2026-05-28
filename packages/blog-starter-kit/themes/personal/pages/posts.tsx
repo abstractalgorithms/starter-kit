@@ -218,11 +218,11 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 	const seriesSlug = getQueryValue(router.query.series);
 
 	const rolePaths = [
-		{ id: 'system-design', label: 'System Design Engineer', query: 'system design' },
-		{ id: 'backend', label: 'Backend Engineer', query: 'backend api database' },
-		{ id: 'ai-llm', label: 'AI/LLM Engineer', query: 'llm rag ai model' },
+		{ id: 'system-design', label: 'System Design', query: 'system design' },
+		{ id: 'backend', label: 'Backend Systems', query: 'backend api database' },
+		{ id: 'ai-llm', label: 'AI Infrastructure', query: 'llm rag ai model' },
 		{ id: 'distributed', label: 'Distributed Systems', query: 'distributed systems consensus replication' },
-		{ id: 'interview', label: 'Interview Prep', query: 'interview prep' },
+		{ id: 'tradeoffs', label: 'Tradeoff Reasoning', query: 'tradeoff failure consistency latency' },
 	] as const;
 
 	const architecturePatterns = [
@@ -344,6 +344,13 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 	].filter(Boolean).length;
 	const activeView = POST_VIEW_META[view];
 	const activeSortField = getSortField(sort);
+	const pageHeading =
+		sort === 'popular-desc' && view === 'all'
+			? {
+					label: 'Reader favorites',
+					description: 'Popular systems essays and engineering deep dives, ordered by what readers return to most.',
+			  }
+			: activeView;
 
 	// ── Pagination ────────────────────────────────────────────────────────────
 	const [currentPage, setCurrentPage] = useState(1);
@@ -433,7 +440,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 		<div className="flex flex-col gap-4">
 			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
 				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-					Role-based paths
+					Concept threads
 				</p>
 				<div className="mt-3 flex flex-col gap-2">
 					{rolePaths.map((path) => (
@@ -450,7 +457,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 
 			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
 				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-					Intelligent filters
+					Reading filters
 				</p>
 				<div className="mt-3 space-y-3">
 					<div>
@@ -529,7 +536,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 
 			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
 				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-					Topic dependency graph
+					Related topics
 				</p>
 				<div className="mt-3 space-y-2">
 					{topicGraphNodes.slice(0, 6).map((node) => (
@@ -545,7 +552,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 								</span>
 							</p>
 							<p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-								{node.dependency ? `Depends on: ${node.dependency}` : 'Foundational topic'}
+								{node.dependency ? `Often read near ${node.dependency}` : 'Foundational topic'}
 							</p>
 						</button>
 					))}
@@ -558,35 +565,35 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 		<div className="flex flex-col gap-4">
 			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
 				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-					Continue learning
+					Continue reading
 				</p>
 				{savedPath ? (
 					<div className="mt-2">
 						<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">{savedPath.headline}</p>
 						<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-							{savedPath.readSlugs.length}/{savedPath.totalPosts} lessons completed
+							Last saved reading thread
 						</p>
 						<Link
 							href={
 								savedPath.readSlugs.length
 									? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}`
-									: '/guided-topics'
+									: '/discover#topic-collections'
 							}
 							className="mt-3 inline-flex rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
 						>
-							Resume track
+							Resume reading
 						</Link>
 					</div>
 				) : (
 					<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-						Start a role-based track to unlock adaptive recommendations.
+						Browse articles or concept collections to find the next system to understand.
 					</p>
 				)}
 			</div>
 
 			<div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
 				<p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-					AI recommendation panel
+					Recommended next
 				</p>
 				<div className="mt-3 space-y-2">
 					{aiRecommendedPosts.map((post) => (
@@ -637,14 +644,14 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 		<AppProvider publication={publication} footerPosts={initialPosts}>
 			<Layout>
 				<Head>
-					<title>All Posts - {publication.title}</title>
-					<meta name="description" content={`Browse all posts from ${publication.title}`} />
-					<meta property="og:title" content={`All Posts - ${publication.title}`} />
-					<meta property="og:description" content={`Browse all posts from ${publication.title}`} />
+					<title>Articles - {publication.title}</title>
+					<meta name="description" content={`Browse systems articles and engineering deep dives from ${publication.title}`} />
+					<meta property="og:title" content={`Articles - ${publication.title}`} />
+					<meta property="og:description" content={`Browse systems articles and engineering deep dives from ${publication.title}`} />
 					<meta property="og:image" content={publication.ogMetaData?.image || getAutogeneratedPublicationOG(publication)} />
 					<meta property="twitter:card" content="summary_large_image" />
-					<meta property="twitter:title" content={`All Posts - ${publication.title}`} />
-					<meta property="twitter:description" content={`Browse all posts from ${publication.title}`} />
+					<meta property="twitter:title" content={`Articles - ${publication.title}`} />
+					<meta property="twitter:description" content={`Browse systems articles and engineering deep dives from ${publication.title}`} />
 					<meta property="twitter:image" content={publication.ogMetaData?.image || getAutogeneratedPublicationOG(publication)} />
 					<script
 						type="application/ld+json"
@@ -657,13 +664,13 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 						<div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
 							<div>
 								<p className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400 mb-2">
-									Post explorer
+									Articles
 								</p>
 								<h1 className="text-4xl md:text-5xl font-bold text-neutral-900 dark:text-neutral-50 mb-3">
-									{activeView.label}
+									{pageHeading.label}
 								</h1>
 								<p className="text-lg text-neutral-600 dark:text-neutral-300 max-w-3xl">
-									{activeView.description}
+									{pageHeading.description}
 								</p>
 							</div>
 							<div className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -677,10 +684,10 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 						<div className="flex-1 border-t border-neutral-200 dark:border-neutral-800" />
 						<div className="flex flex-col items-center gap-1">
 							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
-								Browse &amp; Filter
+								Browse
 							</p>
 							<h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">
-								All Posts
+								Article archive
 							</h2>
 						</div>
 						<div className="flex-1 border-t border-neutral-200 dark:border-neutral-800" />
@@ -691,7 +698,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 								onClick={() => setMobileNavOpen((prev) => !prev)}
 								className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-4 py-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200"
 							>
-								{mobileNavOpen ? 'Close intelligent navigation' : 'Open intelligent navigation'}
+								{mobileNavOpen ? 'Close filters' : 'Open filters'}
 							</button>
 							{mobileNavOpen && (
 								<div className="mt-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/40 p-3">
@@ -738,7 +745,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 										onChange={(e) => setSearchTerm(e.target.value)}
 										onFocus={() => setSearchFocused(true)}
 										onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-										placeholder="Search posts..."
+										placeholder="Search articles..."
 										className="w-full rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-4 py-2.5 text-neutral-900 dark:text-neutral-50 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
 									/>
 									{searchFocused && searchPreviewPosts.length > 0 && (
@@ -986,7 +993,7 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 						) : (
 							<div className="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 px-6 py-14 text-center">
 								<h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50">
-									No posts match the current filters
+									No articles match the current filters
 								</h2>
 								<p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
 									{searchTerm
@@ -994,27 +1001,25 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 										: 'Try clearing filters or switching the active view.'}
 								</p>
 
-								{/* AI generation CTA — only shown for text searches */}
 								{searchTerm.trim().length > 2 && (
 									<div className="mt-8 rounded-xl border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-5 py-5">
 										<div className="flex items-center justify-center gap-2 mb-2">
-											<span className="text-base">🤖</span>
 											<p className="text-sm font-semibold text-blue-800 dark:text-blue-300">
-												Generate an AI article about this topic
+												Ask the mentor about this topic
 											</p>
 										</div>
 										<p className="text-xs text-blue-600 dark:text-blue-400 mb-4">
-											No existing posts match your query. Let AI write a draft article about{' '}
+											No existing article matches your query. Ask for a short explanation and related concepts for{' '}
 											<strong>&ldquo;{searchTerm}&rdquo;</strong> on the fly.
 										</p>
 										<Link
-											href={`/generated?topic=${encodeURIComponent(searchTerm.trim())}`}
+											href={`/assistant?q=${encodeURIComponent(`Explain ${searchTerm.trim()} and suggest related systems articles`)}`}
 											className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
 										>
 											<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
 											</svg>
-											Generate article
+											Ask Mentor
 										</Link>
 									</div>
 								)}

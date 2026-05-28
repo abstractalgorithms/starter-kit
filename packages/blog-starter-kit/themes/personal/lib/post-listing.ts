@@ -24,20 +24,20 @@ export const POST_VIEW_META: Record<
 	{ label: string; description: string }
 > = {
 	all: {
-		label: 'All posts',
-		description: 'Browse every article with filters and custom sorting.',
+		label: 'All articles',
+		description: 'Browse the full archive of systems essays and engineering deep dives.',
 	},
 	created: {
-		label: 'Recently created',
-		description: 'Newest posts first.',
+		label: 'Newest articles',
+		description: 'The most recently published essays first.',
 	},
 	updated: {
 		label: 'Recently updated',
-		description: 'Most recently refreshed posts first.',
+		description: 'Essays that were recently revised or expanded.',
 	},
 	top: {
-		label: 'Top posts',
-		description: 'Most popular posts ranked by views.',
+		label: 'Reader favorites',
+		description: 'Popular articles that readers return to most.',
 	},
 };
 

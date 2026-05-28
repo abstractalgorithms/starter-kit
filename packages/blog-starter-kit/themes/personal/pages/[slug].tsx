@@ -1305,13 +1305,13 @@ const InterviewArticleOverlay = ({
 					</span>
 				</div>
 				<h2 id="interview-mode" className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
-					Interview mode for this article.
+					Reason through this article.
 				</h2>
 				<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
-					Use this article as a live interview drill: explain the mechanism, defend tradeoffs, whiteboard the architecture, and handle production failure follow-ups.
+					Explain the mechanism, defend tradeoffs, sketch the architecture, and handle production failure follow-ups.
 				</p>
 				<div className="mt-4 grid gap-2 sm:grid-cols-2">
-					<CTALink href={assistantHref} level={1} size="sm">Practice Interview Question</CTALink>
+					<CTALink href={assistantHref} level={1} size="sm">Try a Reasoning Prompt</CTALink>
 					<CTAButton type="button" level={2} size="sm" onClick={() => onAsk(promptSet.tradeoffPrompt)}>
 						Explain Tradeoffs
 					</CTAButton>
@@ -1784,13 +1784,13 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 									href={`/topic/${topicLearningSlug}`}
 									className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-center text-xs font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
 								>
-									Topic Journey
+									Related Concepts
 								</Link>
 								<Link
 									href={interviewAssistantHref}
 									className="rounded-xl border border-violet-200 bg-white px-3 py-3 text-center text-xs font-semibold text-violet-700 dark:border-violet-800 dark:bg-neutral-950 dark:text-violet-300"
 								>
-									Practice Interview
+									Reasoning Prompt
 								</Link>
 								<button
 									onClick={() => setIsBookmarked((prev) => !prev)}
@@ -2207,7 +2207,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 
 					<section className="mt-8 rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
 						<p className="text-[10px] font-mono uppercase tracking-widest text-blue-600 dark:text-blue-300 mb-2">
-							Continue topic learning
+							Continue reading
 						</p>
 						{upNextPost ? (
 							<div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
@@ -2218,14 +2218,14 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 									</p>
 								</Link>
 								<CTALink href={`/topic/${topicLearningSlug}`} level={1} size="sm">
-									Open Topic Journey
+									Open Collection
 								</CTALink>
 							</div>
 						) : (
 							<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
 								<p className="text-xs text-neutral-500 dark:text-neutral-400">Continue through the broader topic instead of stopping at this article.</p>
 								<CTALink href={`/topic/${topicLearningSlug}`} level={1} size="sm">
-									Open Topic Journey
+									Open Collection
 								</CTALink>
 							</div>
 						)}

@@ -226,6 +226,7 @@ export const TopicLearningJourneyView = ({ journey, posts }: Props) => {
 					focusConcepts={journey.concepts}
 					focusSlug={journey.slug}
 					mode="article"
+					compact
 					className="min-h-full"
 				/>
 				<div className="space-y-4">

@@ -16,7 +16,7 @@ import { useAppContext } from './contexts/appContext';
 import { ToggleTheme } from './toggle-theme';
 import { UserProfile } from './user-profile';
 import { AuthModal } from './auth-modal';
-import { isInterviewPrepEnabled, isNewsletterSubscribeEnabled } from '../lib/features';
+import { isNewsletterSubscribeEnabled } from '../lib/features';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const NO_OF_SEARCH_RESULTS = 5;
@@ -210,23 +210,31 @@ export const PersonalHeader = () => {
 	const newsletterUrl = publication.url ? `${publication.url.replace(/\/$/, '')}/newsletter` : null;
 	const navItems = [
 		{
-			label: 'Learn',
+			label: 'Articles',
 			href: '/posts',
 			items: [
-				{ label: 'Topic Journeys', href: '/topic/distributed-systems', description: 'Learn through connected concepts and articles' },
-				{ label: 'Articles', href: '/posts', description: 'Canonical engineering deep dives' },
+				{ label: 'Latest Articles', href: '/posts', description: 'Canonical engineering deep dives' },
+				{ label: 'Popular Deep Dives', href: '/posts?sort=popular-desc', description: 'What engineers are reading most' },
+				{ label: 'Recently Updated', href: '/posts?sort=updated-desc', description: 'Freshly revised systems ideas' },
 				{ label: 'Series', href: '/series', description: 'Author-curated reading sequences' },
-				{ label: 'Learning Graphs', href: '/guided-topics', description: 'Prerequisites, dependencies, and next steps' },
+			],
+		},
+		{
+			label: 'Explore',
+			href: '/discover',
+			items: [
+				{ label: 'Concept Collections', href: '/discover#topic-collections', description: 'Article-backed systems themes' },
+				{ label: 'Related Systems', href: '/discover', description: 'Follow adjacent engineering ideas' },
+				{ label: 'Architecture Deep Dives', href: '/posts?sort=popular-desc', description: 'Durable systems essays and patterns' },
 			],
 		},
 		{
 			label: 'Practice',
-			href: isInterviewPrepEnabled ? '/interview-prep' : '/visualizations',
+			href: '/visualizations',
 			items: [
-				{ label: 'System Behavior', href: '/visualizations', description: 'Observe systems under changing constraints' },
-				{ label: 'Pressure Tests', href: '/visualizations', description: 'Replay failures and tradeoff consequences' },
-				{ label: 'Architecture Drills', href: '/assistant?q=architecture%20drill', description: 'Practice design choices and constraints' },
-				...(isInterviewPrepEnabled ? [{ label: 'Interview Practice', href: '/interview-prep', description: 'Reason through follow-up pressure' }] : []),
+				{ label: 'System Behavior', href: '/visualizations', description: 'Small simulations for difficult tradeoffs' },
+				{ label: 'Architecture Prompts', href: '/assistant?q=architecture%20tradeoff%20question', description: 'Reason through design choices' },
+				{ label: 'Failure Cases', href: '/assistant?q=production%20failure%20reasoning', description: 'Practice operational judgment' },
 			],
 		},
 		{
@@ -239,23 +247,12 @@ export const PersonalHeader = () => {
 				{ label: 'Compare Tradeoffs', href: '/assistant?q=compare%20architecture%20tradeoffs', description: 'Reason through competing designs' },
 			],
 		},
-		{
-			label: 'Discover',
-			href: '/discover',
-			items: [
-				{ label: 'Concept Graph', href: '/discover', description: 'Explore connected systems ideas' },
-				{ label: 'Topic Collections', href: '/topic/probabilistic-data-structures', description: 'Enter a connected concept area' },
-				{ label: 'Popular Deep Dives', href: '/posts?sort=popular-desc', description: 'What engineers are reading most' },
-				{ label: 'Recently Updated', href: '/posts?sort=updated-desc', description: 'Freshly revised engineering ideas' },
-			],
-		},
 	] as const;
 	const trackLinks = [
-		{ label: 'Backend Engineer', href: '/assistant?q=backend%20engineering%20role-based%20track' },
-		{ label: 'AI Engineer', href: '/assistant?q=AI%20engineer%20role-based%20track' },
-		{ label: 'Infrastructure Engineer', href: '/assistant?q=infrastructure%20engineer%20role-based%20track' },
-		{ label: 'Systems Architect', href: '/assistant?q=systems%20architect%20role-based%20track' },
-		{ label: 'Principal Engineer', href: '/assistant?q=principal%20engineer%20role-based%20track' },
+		{ label: 'Distributed Systems', href: '/topic/distributed-systems' },
+		{ label: 'AI Systems', href: '/topic/ai-systems' },
+		{ label: 'System Design', href: '/topic/system-design' },
+		{ label: 'Probabilistic Data Structures', href: '/topic/probabilistic-data-structures' },
 	];
 
 	useEffect(() => {
@@ -451,18 +448,7 @@ export const PersonalHeader = () => {
 						) : null}
 					</div>
 					<div className="mt-8">
-						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Continue</p>
-						<div className="mt-2 space-y-2">
-							<Link href="/progress" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg bg-neutral-100 dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
-								Open Progress
-							</Link>
-							<Link href="/assistant?q=recommend%20what%20I%20should%20learn%20next" onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg bg-neutral-100 dark:bg-neutral-900 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
-								Get Next Step
-							</Link>
-						</div>
-					</div>
-					<div className="mt-8">
-						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Role paths</p>
+						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Continue reading</p>
 						<div className="mt-2 space-y-2">
 							{trackLinks.map((item) => (
 								<Link key={item.label} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">

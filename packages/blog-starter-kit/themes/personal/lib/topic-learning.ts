@@ -33,6 +33,15 @@ export type TopicLearningJourney = {
 	semanticQuery: string;
 };
 
+export type TopicCollectionSummary = {
+	slug: string;
+	label: string;
+	description: string;
+	articleCount: number;
+	concepts: string[];
+	featuredArticle?: TopicLearningArticle;
+};
+
 const TOPIC_PROFILES: Record<
 	string,
 	{
@@ -209,11 +218,11 @@ export const buildTopicLearningJourney = (slugInput: string, posts: PostFragment
 	const concepts = [...new Set([...profile.concepts, ...conceptSeeds])].slice(0, 10);
 
 	const stages: TopicLearningStage[] = [
-		buildStage('concept', 'Concept', 'Establish the topic mental model before choosing an article.', 'Start Topic', articles, 0),
-		buildStage('visual', 'Visual', 'Explore the topology and relationship map across the topic.', 'Explore Graph', articles, 1),
-		buildStage('tradeoff', 'Tradeoff', 'Compare production constraints across related articles.', 'Practice Tradeoffs', articles, 2),
-		buildStage('challenge', 'Challenge', 'Pressure-test the topic with simulations and interview prompts.', 'Start Challenge', articles, 3),
-		buildStage('continue', 'Continue', 'Resume from the next article, weak area, or semantic search result.', 'Continue Learning', articles, 4),
+		buildStage('concept', 'Concept', 'Establish the topic mental model before choosing an article.', 'Start Reading', articles, 0),
+		buildStage('visual', 'Visual', 'See the nearby systems ideas when the relationship matters.', 'See Context', articles, 1),
+		buildStage('tradeoff', 'Tradeoff', 'Compare production constraints across related articles.', 'Compare Tradeoffs', articles, 2),
+		buildStage('challenge', 'Challenge', 'Practice the operational question behind the topic.', 'Practice Reasoning', articles, 3),
+		buildStage('continue', 'Continue', 'Move to the next article or related concept.', 'Continue Reading', articles, 4),
 	];
 
 	return {
@@ -226,4 +235,41 @@ export const buildTopicLearningJourney = (slugInput: string, posts: PostFragment
 		stages,
 		semanticQuery: `${profile.label} ${concepts.slice(0, 5).join(' ')}`,
 	};
+};
+
+export const buildTopicCollectionSummaries = (posts: PostFragment[], limit = 8): TopicCollectionSummary[] => {
+	const tagSlugs = posts
+		.flatMap((post) => post.tags ?? [])
+		.reduce<Map<string, number>>((counts, tag) => {
+			const slug = normalizeTopicSlug(tag.slug || tag.name);
+			if (!slug) return counts;
+			counts.set(slug, (counts.get(slug) ?? 0) + 1);
+			return counts;
+		}, new Map<string, number>());
+
+	const candidateSlugs = [
+		...Object.keys(TOPIC_PROFILES),
+		...[...tagSlugs.entries()]
+			.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+			.map(([slug]) => slug),
+	];
+
+	const seen = new Set<string>();
+	return candidateSlugs
+		.filter((slug) => {
+			if (seen.has(slug)) return false;
+			seen.add(slug);
+			return true;
+		})
+		.map((slug) => buildTopicLearningJourney(slug, posts))
+		.map((journey) => ({
+			slug: journey.slug,
+			label: journey.label,
+			description: journey.description,
+			articleCount: journey.articles.length,
+			concepts: journey.concepts.slice(0, 4),
+			featuredArticle: journey.articles[0],
+		}))
+		.sort((a, b) => b.articleCount - a.articleCount || a.label.localeCompare(b.label))
+		.slice(0, limit);
 };
