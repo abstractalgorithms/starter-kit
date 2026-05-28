@@ -28,7 +28,6 @@ import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { MarkdownToHtml } from '../components/markdown-to-html';
 import { PersonalHeader } from '../components/personal-theme-header';
-import { ProgressBadge } from '../components/progress-badge';
 import {
 	PageByPublicationDocument,
 	PostFragment,
@@ -41,18 +40,11 @@ import {
 // @ts-ignore
 import { triggerCustomWidgetEmbed } from '@starter-kit/utils/trigger-custom-widget-embed';
 import { getFooterPosts } from '../lib/api/footerData';
-import { PostChatbot } from '../components/post-chatbot';
-import { PostQuiz } from '../components/post-quiz';
 import { ScrollButtons } from '../components/scroll-buttons';
-import { LearningPathNav } from '../components/learning-path-nav';
-import { InlineSimulation } from '../components/visualization/inline-simulation';
 import { ArticleEngagement } from '../components/article-engagement';
 import { ContextualBreadcrumbs } from '../components/contextual-breadcrumbs';
-import { EmbeddedAIMentor } from '../components/embedded-ai-mentor';
-import { SystemsKnowledgeGraph } from '../components/systems-knowledge-graph';
 import { useLearningContext } from '../components/learning-context-provider';
 import { CTAButton, CTALink } from '../components/cta-system';
-import { isArticleInteractiveToolsEnabled, isInterviewPrepEnabled } from '../lib/features';
 import { useLearningMemoryStore } from '../lib/learning-memory';
 import { getArticleConceptSeeds, inferArticleDomain, inferPrimaryArticleConcept } from '../lib/article-domain';
 import { inferTopicSlugForPost } from '../lib/topic-learning';
@@ -1609,10 +1601,6 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 	};
 	const interviewAssistantHref = `/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.practiceQuestion))}`;
 	const whiteboardHref = `/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.whiteboardPrompt))}`;
-	const mockDiscussionHref = isInterviewPrepEnabled
-		? `/interview-prep#mock-interviews`
-		: `/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.mockDiscussionPrompt))}`;
-
 	const handleAiExplain = (section: string) => {
 		window.location.href = `/assistant?q=${encodeURIComponent(
 			buildPrompt(`Explain ${section} from ${post.title} in simpler terms.`),
@@ -1672,311 +1660,128 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 				<style dangerouslySetInnerHTML={{ __html: highlightJsMonokaiTheme }} />
 			</Head>
 
-			{/* ── Learning article hero ── */}
-			<div className="mb-5 md:mb-6 xl:hidden">
-				{/* Left: title, subtitle, meta */}
-				<div className="w-full">
-					<div className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
-						<ContextualBreadcrumbs compact />
-					</div>
-					<div className="mb-2.5 flex flex-wrap items-center gap-2">
-						<span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-							{post.readTimeInMinutes > 12 ? 'Advanced' : 'Intermediate'}
-						</span>
-						<span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300">
-							{post.readTimeInMinutes} min read
-						</span>
-						{tags.slice(0, 3).map((tag) => (
-							<span key={`hero-tag-${tag.id}`} className="inline-flex rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2.5 py-1 text-[11px] text-neutral-600 dark:text-neutral-300">
-								{formatTagName(tag.name)}
-							</span>
-						))}
-					</div>
-					<h1 className="mb-2.5 max-w-4xl text-3xl font-extrabold leading-[1.12] tracking-tight text-neutral-900 dark:text-neutral-50 sm:text-4xl md:text-5xl">
-						{post.title}
-					</h1>
-
-					{post.subtitle && (
-						<p className="mb-2.5 max-w-3xl text-base leading-relaxed text-neutral-500 dark:text-neutral-400 md:text-lg">
-							{post.subtitle}
-						</p>
-					)}
-
-					<div className="mb-2 flex flex-wrap items-center gap-2">
-						{atGlanceMetadata.map((item) => (
-							<span key={`mobile-glance-${item}`} className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-								{item}
-							</span>
-						))}
-					</div>
-
-					{/* Series badge */}
-					{post.series && (
-						<div className="mb-3">
-							<Link
-								href={`/series/${post.series.slug}`}
-								className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-800/60 transition-colors"
-							>
-								<svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-									<path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-								</svg>
+			<div className="mx-auto max-w-3xl">
+				<div className="mb-3 flex flex-wrap items-center gap-2 text-[11px]">
+					<ContextualBreadcrumbs compact />
+				</div>
+				<div className="mb-4 flex flex-wrap items-center gap-2">
+					<span className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
+						{post.readTimeInMinutes} min read
+					</span>
+					{tags.slice(0, 3).map((tag) => (
+						<Link
+							key={`hero-tag-${tag.id}`}
+							href={`/tag/${tag.slug}`}
+							className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-blue-800 dark:hover:text-blue-300"
+						>
+							{formatTagName(tag.name)}
+						</Link>
+					))}
+				</div>
+				<h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight text-neutral-950 dark:text-neutral-50 md:text-6xl">
+					{post.title}
+				</h1>
+				{post.subtitle ? (
+					<p className="mt-5 text-lg leading-relaxed text-neutral-600 dark:text-neutral-300 md:text-xl">
+						{post.subtitle}
+					</p>
+				) : null}
+				<div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-neutral-500 dark:text-neutral-400">
+					{post.author.profilePicture ? (
+						<img
+							src={resizeImage(post.author.profilePicture, { w: 80, h: 80, c: 'face' })}
+							alt={post.author.name}
+							className="h-8 w-8 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-800"
+						/>
+					) : null}
+					<span className="font-semibold text-neutral-700 dark:text-neutral-200">{post.author.name}</span>
+					<span className="text-neutral-300 dark:text-neutral-700">/</span>
+					<time><DateFormatter dateString={post.publishedAt} /></time>
+					{post.series ? (
+						<>
+							<span className="text-neutral-300 dark:text-neutral-700">/</span>
+							<Link href={`/series/${post.series.slug}`} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200">
 								{post.series.name}
 							</Link>
-						</div>
-					)}
-
-					{/* Meta row */}
-					<div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-1.5">
-						<div className="flex items-center gap-2">
-							{post.author.profilePicture && (
-								<img
-									src={resizeImage(post.author.profilePicture, { w: 80, h: 80, c: 'face' })}
-									alt={post.author.name}
-									className="w-7 h-7 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-800"
-								/>
-							)}
-							<span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
-								{post.author.name}
-							</span>
-						</div>
-						<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
-						<time className="text-sm text-neutral-400 dark:text-neutral-500">
-							<DateFormatter dateString={post.publishedAt} />
-						</time>
-						<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
-						<span className="inline-flex items-center gap-1 text-sm text-neutral-400 dark:text-neutral-500">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								className="w-3.5 h-3.5"
-							>
-								<path
-									fillRule="evenodd"
-									d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z"
-									clipRule="evenodd"
-								/>
-							</svg>
-							{post.readTimeInMinutes} min read
-						</span>
-						{post.reactionCount > 0 && (
-							<>
-								<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
-								<span className="text-sm text-neutral-400 dark:text-neutral-500">
-									♥ {post.reactionCount}
-								</span>
-							</>
-						)}
-					</div>
-
-					{/* Mobile primary action + expandable tray */}
-					<div id="mark-complete-anchor" className="mt-3.5 rounded-2xl border border-neutral-200 bg-white p-2 dark:border-neutral-800 dark:bg-neutral-900">
-						<CTAButton type="button" level={1} size="lg" className="w-full" onClick={() => openArticleChat()}>
-							Ask AI About This Article
-						</CTAButton>
-						<details className="group mt-2">
-							<summary className="flex cursor-pointer list-none items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-neutral-600 dark:text-neutral-300">
-								<span>More actions</span>
-								<span className="transition group-open:rotate-180">⌄</span>
-							</summary>
-							<div className="mt-2 grid grid-cols-2 gap-2">
-								<Link
-									href={`/topic/${topicLearningSlug}`}
-									className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-center text-xs font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
-								>
-									Related Concepts
-								</Link>
-								<Link
-									href={interviewAssistantHref}
-									className="rounded-xl border border-violet-200 bg-white px-3 py-3 text-center text-xs font-semibold text-violet-700 dark:border-violet-800 dark:bg-neutral-950 dark:text-violet-300"
-								>
-									Reasoning Prompt
-								</Link>
-								<button
-									onClick={() => setIsBookmarked((prev) => !prev)}
-									className={`rounded-xl border border-neutral-200 px-3 py-3 text-xs font-semibold dark:border-neutral-700 ${isBookmarked ? 'text-amber-600 dark:text-amber-300' : 'text-neutral-600 dark:text-neutral-300'}`}
-								>
-									{isBookmarked ? 'Saved' : 'Save'}
-								</button>
-								<button
-									onClick={() => navigator.share?.({ title: post.title, text: post.brief ?? post.subtitle ?? '', url: post.url })}
-									className="rounded-xl border border-neutral-200 px-3 py-3 text-xs font-semibold text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
-								>
-									Share
-								</button>
-								<button
-									onClick={() => setMarkedHelpful((prev) => !prev)}
-									className={`rounded-xl border border-neutral-200 px-3 py-3 text-xs font-semibold dark:border-neutral-700 ${markedHelpful ? 'text-emerald-600 dark:text-emerald-300' : 'text-neutral-600 dark:text-neutral-300'}`}
-								>
-									{markedHelpful ? 'Helpful' : 'Rate helpful'}
-								</button>
-								<button
-									onClick={() => navigator.clipboard.writeText(post.url)}
-									className="rounded-xl border border-neutral-200 px-3 py-3 text-xs font-semibold text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
-								>
-									Copy link
-								</button>
-							</div>
-						</details>
-					</div>
-					<div className="mt-3">
-						<ProgressBadge postId={post.id} postTitle={post.title} />
-					</div>
+						</>
+					) : null}
 				</div>
 			</div>
 
-			<MobileArticleLearningPanel
-				tocItems={tocItems}
-				readTimeInMinutes={post.readTimeInMinutes}
-				progress={readingProgress}
-				onBeginnerHelp={() => openArticleChat(buildPrompt(`Explain the current section of "${post.title}" in simpler terms.`))}
-				onOpenQuiz={() => setShowQuizDrawer(true)}
-			/>
-
-			{/* ── Responsive article layout: 2 cols on xl, 3 cols on 2xl ── */}
-			<div className="mt-3 grid min-w-0 w-full items-start gap-6 md:mt-5 lg:gap-8 xl:mt-4 xl:grid-cols-[240px_minmax(0,1fr)] xl:gap-6">
-				<ReadingNavigationSidebar
-					tocItems={tocItems}
-					readTimeInMinutes={post.readTimeInMinutes}
-					progress={readingProgress}
-					onBeginnerHelp={() => openArticleChat(buildPrompt(`Explain the current section of "${post.title}" in simpler terms.`))}
-					onOpenQuiz={() => setShowQuizDrawer(true)}
-					onMarkComplete={() => {
-						document.getElementById('mark-complete-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-					}}
-				/>
-
-				{/* Center: article content gets priority width */}
-				<div className="min-w-0 w-full max-w-[860px]">
-					<div className="mb-5 hidden xl:block">
-						<div className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
-							<ContextualBreadcrumbs compact />
-						</div>
-						<div className="mb-3 flex flex-wrap items-center gap-2">
-							<span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-								{post.readTimeInMinutes > 12 ? 'Advanced' : 'Intermediate'}
-							</span>
-							<span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300">
-								{post.readTimeInMinutes} min read
-							</span>
-							{tags.slice(0, 3).map((tag) => (
-								<span key={`desktop-tag-${tag.id}`} className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-									{formatTagName(tag.name)}
-								</span>
+			<div className="mx-auto mt-10 grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+				<div className="min-w-0">
+					<section className="mx-auto max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 md:p-6">
+						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300">Executive TLDR</p>
+						<ul className="mt-4 space-y-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
+							{aiSummaryBullets.slice(0, 4).map((item) => (
+								<li key={item} className="flex gap-3">
+									<span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+									<span>{item}</span>
+								</li>
 							))}
-						</div>
-						<div className="grid grid-cols-[minmax(0,1fr)_88px] gap-6">
-							<div>
-								<h1 className="text-[2.45rem] font-extrabold leading-[1.08] tracking-tight text-neutral-900 dark:text-neutral-50">
-									{post.title}
-								</h1>
-								{post.subtitle ? (
-									<p className="mt-3 max-w-3xl text-base leading-relaxed text-neutral-500 dark:text-neutral-400">
-										{post.subtitle}
-									</p>
-								) : null}
-								<div className="mt-3 flex flex-wrap items-center gap-2">
-									{atGlanceMetadata.map((item) => (
-										<span key={`desktop-glance-${item}`} className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-											{item}
-										</span>
-									))}
-								</div>
-								<div className="mt-4 flex items-center gap-3">
-									{post.author.profilePicture ? (
-										<img
-											src={resizeImage(post.author.profilePicture, { w: 80, h: 80, c: 'face' })}
-											alt={post.author.name}
-											className="h-9 w-9 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-800"
-										/>
-									) : null}
-									<div>
-										<p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">{post.author.name}</p>
-										<p className="text-xs text-neutral-500 dark:text-neutral-400">
-											<DateFormatter dateString={post.publishedAt} /> · {post.readTimeInMinutes} min read
-										</p>
-									</div>
-								</div>
-							</div>
-							<div className="flex flex-col gap-2.5 pt-8">
-								<button
-									onClick={() => setIsBookmarked((prev) => !prev)}
-									className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-blue-600 dark:text-neutral-300 dark:hover:text-blue-400"
-								>
-									<span aria-hidden="true">▱</span> Save
-								</button>
-								<button
-									onClick={() => navigator.share?.({ title: post.title, text: post.brief ?? post.subtitle ?? '', url: post.url })}
-									className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-blue-600 dark:text-neutral-300 dark:hover:text-blue-400"
-								>
-									<span aria-hidden="true">↗</span> Share
-								</button>
-								<button
-									onClick={() => navigator.clipboard.writeText(post.url)}
-									className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-blue-600 dark:text-neutral-300 dark:hover:text-blue-400"
-								>
-									<span aria-hidden="true">⛓</span> Copy link
-								</button>
-								<button
-									onClick={() => openArticleChat()}
-									className="inline-flex items-center gap-2 text-xs font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200"
-								>
-									<span aria-hidden="true">✦</span> Ask AI
-								</button>
-								<Link
-									href={`/topic/${topicLearningSlug}`}
-									className="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
-								>
-									<span aria-hidden="true">◎</span> Topic journey
-								</Link>
-								<Link
-									href={interviewAssistantHref}
-									className="inline-flex items-center gap-2 text-xs font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-300 dark:hover:text-violet-200"
-								>
-									<span aria-hidden="true">▣</span> Interview
-								</Link>
-								<div className="pt-2">
-									<p className="mb-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">Helpful?</p>
-									<div className="flex gap-2">
-										<button onClick={() => setMarkedHelpful(true)} className="h-9 w-9 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">✓</button>
-										<button onClick={() => setMarkedHelpful(false)} className="h-9 w-9 rounded-lg border border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-300">!</button>
-									</div>
-								</div>
-							</div>
-						</div>
+						</ul>
+					</section>
 
-						<div className="mt-5 rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900 dark:bg-violet-950/20">
-							<div className="grid grid-cols-[minmax(0,1fr)_96px] items-center gap-4">
-								<div>
-									<p className="mb-2 inline-flex rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-300">
-										{tocItems[0]?.title ? decodeHtml(tocItems[0].title) : 'Key learning issue'}
-									</p>
-									<p className="text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-										{aiSummaryBullets[0] || post.brief || post.subtitle || `This article explains ${post.title} through its core concepts and tradeoffs.`}
-									</p>
-								</div>
-								<div className="relative h-20">
-									<div className="absolute left-3 top-5 h-10 w-10 rounded-xl border border-violet-200 bg-white dark:border-violet-800 dark:bg-neutral-900" />
-									<div className="absolute right-3 top-2 h-10 w-10 rounded-xl border border-blue-200 bg-white dark:border-blue-800 dark:bg-neutral-900" />
-								</div>
+					<section className="mx-auto mt-8 max-w-3xl">
+						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Core mental model</p>
+						<h2 className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
+							Read this as a system of state, constraints, and failure boundaries.
+						</h2>
+						<p className="mt-4 text-base leading-relaxed text-neutral-700 dark:text-neutral-300">
+							{storyOverview}
+						</p>
+						<div className="mt-5 flex flex-wrap gap-2">
+							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(`Explain the mental model behind ${post.title} in simpler terms.`))}`} className="inline-flex rounded-lg border border-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
+								Explain simpler
+							</Link>
+							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.tradeoffPrompt))}`} className="inline-flex rounded-lg border border-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
+								Compare tradeoffs
+							</Link>
+						</div>
+					</section>
+
+					<section className="mx-auto mt-10 max-w-4xl rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900/60 md:p-6">
+						<div className="mx-auto max-w-3xl">
+							<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Key systems visualization</p>
+							<h2 className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
+								The article’s conceptual path
+							</h2>
+						</div>
+						<div className="mt-6 overflow-x-auto pb-2">
+							<div className="flex min-w-max items-stretch gap-3">
+								{articleFlowNodes.slice(0, 5).map((node, index) => (
+									<div key={`${node}-${index}`} className="flex items-center gap-3">
+										<div className="w-44 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+											<p className="text-[11px] font-semibold text-blue-600 dark:text-blue-300">0{index + 1}</p>
+											<p className="mt-2 text-sm font-bold leading-snug text-neutral-950 dark:text-neutral-50">{decodeHtml(node)}</p>
+										</div>
+										{index < Math.min(articleFlowNodes.length, 5) - 1 ? (
+											<span className="text-neutral-300 dark:text-neutral-700">{'->'}</span>
+										) : null}
+									</div>
+								))}
 							</div>
 						</div>
+					</section>
+
+					<div className="article-doc mx-auto mt-12 w-full max-w-3xl min-w-0">
+						<MarkdownToHtml contentMarkdown={post.content.markdown} />
 					</div>
-
-					<ArticleOverviewBlock
-						post={post}
-						tags={tags}
-						tocItems={tocItems}
-						summaryBullets={aiSummaryBullets}
-						flowNodes={articleFlowNodes}
-					/>
 
 					{/* Expandable deep dives */}
 					{tocItems.length > 0 && (
-						<section className="mt-8 space-y-3">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
-								Expandable deep dives
-							</p>
+						<section className="mx-auto mt-12 max-w-3xl space-y-3">
+							<div>
+								<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
+									Optional deep reference
+								</p>
+								<h2 className="mt-2 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
+									Deep technical breakdown
+								</h2>
+								<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+									Expand implementation internals, section notes, and dense reference material when you need a second pass.
+								</p>
+							</div>
 							{tocItems.slice(0, 4).map((item) => (
 								<details
 									key={item.id}
@@ -2009,119 +1814,40 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</section>
 					)}
 
-					<section className="mt-8 rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
-						<p className="mb-3 text-sm font-bold text-neutral-900 dark:text-neutral-100">Key takeaways</p>
-						<ul className="space-y-3 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
-							{aiSummaryBullets.slice(0, 4).map((item) => (
-								<li key={item} className="flex gap-2">
-									<span className="mt-0.5 text-violet-600 dark:text-violet-300">✓</span>
-									<span>{item}</span>
-								</li>
+					<section className="mx-auto mt-12 max-w-3xl">
+						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
+							Tradeoffs and production insights
+						</p>
+						<div className="mt-4 grid gap-4 md:grid-cols-2">
+							{tradeoffOptions.slice(0, 2).map((option) => (
+								<div key={option.title} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+									<h3 className="text-base font-bold text-neutral-950 dark:text-neutral-50">{option.title}</h3>
+									<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">{option.body}</p>
+								</div>
 							))}
-						</ul>
+						</div>
+						<div className="mt-4 rounded-xl border border-rose-200 bg-rose-50/50 p-4 dark:border-rose-950 dark:bg-rose-950/15">
+							<p className="text-sm font-bold text-neutral-950 dark:text-neutral-50">Failure case to keep in mind</p>
+							<p className="mt-2 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
+								{failureScenarios[0]?.impact || 'The idea becomes risky when its assumptions are applied outside the conditions that make them true.'}
+							</p>
+						</div>
 					</section>
 
-					<details className="group mt-8 rounded-3xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-						<summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
-							<span>
-								<span className="block text-[10px] font-mono uppercase tracking-[0.24em] text-neutral-500 dark:text-neutral-400">
-									Deep technical expansion
-								</span>
-								<span className="mt-1 block text-lg font-black text-neutral-950 dark:text-neutral-50">
-									Open full authored reference
-								</span>
-							</span>
-							<span className="text-neutral-400 transition group-open:rotate-180">⌄</span>
-						</summary>
-						<div className="border-t border-neutral-100 px-5 py-6 dark:border-neutral-800">
-							<div className="article-doc w-full min-w-0">
-								<MarkdownToHtml contentMarkdown={post.content.markdown} />
-							</div>
+					<section className="mx-auto mt-10 max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Quiet AI help</p>
+						<div className="mt-4 grid gap-3 sm:grid-cols-3">
+							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(`Explain ${post.title} more simply, preserving the engineering details.`))}`} className="rounded-xl border border-neutral-200 px-3 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
+								Explain simpler
+							</Link>
+							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.tradeoffPrompt))}`} className="rounded-xl border border-neutral-200 px-3 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
+								Compare approaches
+							</Link>
+							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(`What should I read next after ${post.title}?`))}`} className="rounded-xl border border-neutral-200 px-3 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
+								What next?
+							</Link>
 						</div>
-					</details>
-
-					{isArticleInteractiveToolsEnabled ? (
-						<details className="group mt-8 rounded-3xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-							<summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
-								<span>
-									<span className="block text-[10px] font-mono uppercase tracking-[0.24em] text-neutral-500 dark:text-neutral-400">
-										Interactive tools
-									</span>
-									<span className="mt-1 block text-lg font-black text-neutral-950 dark:text-neutral-50">
-										Open simulations, interview mode, and concept graph
-									</span>
-								</span>
-								<span className="text-neutral-400 transition group-open:rotate-180">⌄</span>
-							</summary>
-							<div className="border-t border-neutral-100 px-5 py-6 dark:border-neutral-800">
-								<ArticleCognitionLayers
-									title={post.title}
-									summaryBullets={aiSummaryBullets}
-									flowNodes={articleFlowNodes}
-									tradeoffOptions={tradeoffOptions}
-									failureScenarios={failureScenarios}
-									interviewPrompts={interviewPrompts}
-									getSimulationHref={getSimulationHrefForSection}
-									onSimulationIntent={syncSimulationContext}
-									onAsk={(prompt) => openArticleChat(buildPrompt(prompt))}
-								/>
-
-								<ImmersiveArticleStory
-									postTitle={post.title}
-									overview={storyOverview}
-									flowNodes={articleFlowNodes}
-									architectureSequence={architectureSequence}
-									insightCards={insightCards}
-									tradeoffOptions={tradeoffOptions}
-									failureScenarios={failureScenarios}
-									animateArchitecture={animateArchitecture}
-									reduceMotion={reduceMotion}
-									onToggleAnimation={() => setAnimateArchitecture((prev) => !prev)}
-									getSimulationHref={getSimulationHrefForSection}
-									onSimulationIntent={syncSimulationContext}
-								/>
-
-								{isInterviewPrepEnabled ? (
-									<InterviewArticleOverlay
-										promptSet={interviewPrompts}
-										onAsk={(prompt) => openArticleChat(buildPrompt(prompt))}
-										assistantHref={interviewAssistantHref}
-										mockHref={mockDiscussionHref}
-										whiteboardHref={whiteboardHref}
-									/>
-								) : null}
-
-								<EmbeddedAIMentor
-									contextTitle={post.title}
-									concept={primaryArticleConcept}
-									section={context.sectionTitle}
-									posts={morePosts}
-									className="mt-8"
-								/>
-
-								<InlineSimulation
-									topic={primaryArticleConcept}
-									node={context.sectionTitle ?? articleConceptSeeds[1]}
-									source="article"
-									className="mt-8"
-								/>
-
-								<SystemsKnowledgeGraph
-									posts={[post, ...morePosts]}
-									initialConcept={primaryArticleConcept}
-									focusConcepts={articleConceptSeeds}
-									focusSlug={tags[0]?.slug}
-									focusPostSlug={post.slug}
-									mode="article"
-									compact
-									className="mt-8"
-								/>
-							</div>
-						</details>
-					) : null}
-
-					{/* Dynamic Quiz */}
-					<PostQuiz postTitle={post.title} postContent={post.content.markdown} />
+					</section>
 
 					{/* Tags */}
 					{tags.length > 0 && (
@@ -2233,42 +1959,26 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 
 				</div>
 
-				{/* Right sidebar intentionally removed from page view */}
-				<ReadingContextSidebar />
+				<aside className="hidden lg:block">
+					<div className="sticky top-24 space-y-5">
+						<div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+							<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">On this page</p>
+							<div className="mt-3 space-y-2">
+								{tocItems.slice(0, 7).map((item) => (
+									<a key={`quiet-toc-${item.id}`} href={`#heading-${item.slug}`} className="block text-sm leading-snug text-neutral-600 transition-colors hover:text-blue-700 dark:text-neutral-300 dark:hover:text-blue-300">
+										{decodeHtml(item.title)}
+									</a>
+								))}
+							</div>
+						</div>
+						<Link href={`/topic/${topicLearningSlug}`} className="block rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-sm font-semibold text-blue-800 transition-colors hover:border-blue-300 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-200">
+							Explore related concept
+						</Link>
+					</div>
+				</aside>
 			</div>
 
-			{/* Floating AI Chatbot */}
-			<StickyMiniArticleHeader title={post.title} readTimeInMinutes={post.readTimeInMinutes} progress={readingProgress} />
-			<PostChatbot postTitle={post.title} postContent={post.content.markdown} />
 			<ScrollButtons />
-			<LearningPathNav slug={post.slug} />
-			<MobileChunkNavigator
-				tocItems={tocItems}
-				onAiExplain={handleAiExplain}
-				onBookmark={() => setIsBookmarked((prev) => !prev)}
-				isBookmarked={isBookmarked}
-				interviewHref={interviewAssistantHref}
-				whiteboardHref={whiteboardHref}
-				mockHref={mockDiscussionHref}
-			/>
-
-			{showQuizDrawer ? (
-				<div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm p-4 flex items-end md:items-center justify-center">
-					<div className="w-full max-w-xl rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-						<div className="flex items-center justify-between">
-							<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Quiz yourself</p>
-							<button onClick={() => setShowQuizDrawer(false)} className="rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-xs">Close</button>
-						</div>
-						<div className="mt-3 space-y-2">
-							{quizPrompts.map((question) => (
-								<button key={question} onClick={() => handleAiExplain(question)} className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 text-left text-xs text-neutral-700 dark:text-neutral-200 hover:border-blue-300 dark:hover:border-blue-600">
-									{question}
-								</button>
-							))}
-						</div>
-					</div>
-				</div>
-			) : null}
 		</>
 	);
 };
