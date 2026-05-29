@@ -6,6 +6,8 @@ import { useSafeAppContext } from '../hooks/useSafeAppContext';
 const GA_TRACKING_ID = 'G-72XG3F8LNJ'; // This is Hashnode's GA tracking ID
 const isProd = process.env.NEXT_PUBLIC_MODE === 'production';
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_URL || '';
+const enableHashnodeInternalAnalytics =
+	process.env.NEXT_PUBLIC_ENABLE_HASHNODE_INTERNAL_ANALYTICS === 'true';
 
 const _sendPageViewsToHashnodeGoogleAnalytics = () => {
 	// @ts-ignore
@@ -16,6 +18,10 @@ const _sendPageViewsToHashnodeGoogleAnalytics = () => {
 };
 
 const _sendViewsToHashnodeInternalAnalytics = async (publication: any) => {
+	if (!enableHashnodeInternalAnalytics) {
+		return;
+	}
+
 	// Send to Hashnode's own internal analytics
 	const event: Record<string, string | number | object> = {
 		event_type: 'pageview',
@@ -40,13 +46,21 @@ const _sendViewsToHashnodeInternalAnalytics = async (publication: any) => {
 
 	event['device_id'] = deviceId;
 
-	await fetch(`${BASE_PATH}/ping/data-event`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({ events: [event] }),
-	});
+	try {
+		const response = await fetch(`${BASE_PATH}/ping/data-event`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ events: [event] }),
+		});
+
+		if (!response.ok) {
+			console.warn(`Hashnode internal analytics request failed with status ${response.status}`);
+		}
+	} catch (error) {
+		console.warn('Hashnode internal analytics request failed:', error);
+	}
 };
 
 function _sendViewsToAdvancedAnalyticsDashboard(publication: any, post: any, page: any) {

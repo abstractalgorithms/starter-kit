@@ -34,9 +34,9 @@ type ArticleCompanionResponse = {
 
 type ErrorResponse = { error: string };
 
-const UPSTREAM_URL =
-	(process.env.NEXT_PUBLIC_SERVER_URL ?? '').replace(/\/$/, '') +
-	'/.netlify/functions/ai-article-companion';
+const serverBaseUrl =
+	(process.env.SERVER_URL ?? process.env.NEXT_PUBLIC_SERVER_URL ?? '').replace(/\/$/, '');
+const UPSTREAM_URL = `${serverBaseUrl}/.netlify/functions/ai-article-companion`;
 
 export default async function handler(
 	req: NextApiRequest,
@@ -53,7 +53,7 @@ export default async function handler(
 	}
 
 	if (!UPSTREAM_URL.startsWith('http')) {
-		return res.status(503).json({ error: 'NEXT_PUBLIC_SERVER_URL env var not configured' });
+		return res.status(503).json({ error: 'SERVER_URL or NEXT_PUBLIC_SERVER_URL env var not configured' });
 	}
 
 	try {
@@ -64,12 +64,12 @@ export default async function handler(
 				'User-Agent': 'abstractalgorithms-personal-theme/1.0',
 			},
 			body: JSON.stringify(req.body),
-			signal: AbortSignal.timeout(15000),
+			signal: AbortSignal.timeout(45000),
 		});
 
 		if (!upstream.ok) {
 			const message = await upstream.text();
-			throw new Error(`Upstream responded ${upstream.status}: ${message.slice(0, 200)}`);
+			throw new Error(`Upstream responded ${upstream.status}: ${message.slice(0, 500)}`);
 		}
 
 		const body = (await upstream.json()) as {
