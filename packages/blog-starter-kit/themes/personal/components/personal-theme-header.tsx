@@ -229,15 +229,6 @@ export const PersonalHeader = () => {
 			],
 		},
 		{
-			label: 'Practice',
-			href: '/visualizations',
-			items: [
-				{ label: 'System Behavior', href: '/visualizations', description: 'Small simulations for difficult tradeoffs' },
-				{ label: 'Architecture Prompts', href: '/assistant?q=architecture%20tradeoff%20question', description: 'Reason through design choices' },
-				{ label: 'Failure Cases', href: '/assistant?q=production%20failure%20reasoning', description: 'Practice operational judgment' },
-			],
-		},
-		{
 			label: 'AI Mentor',
 			href: '/assistant',
 			items: [
