@@ -3,13 +3,22 @@
 /* Mermaid diagram container with improved UX */
 .mermaid-container {
 	position: relative;
-	display: inline-block;
+	display: block;
 	width: 100%;
+	max-width: 100%;
 	margin: 1.5rem 0;
+}
+
+.hashnode-content-style .mermaid,
+.hashnode-content-style .mermaid-container {
+	width: 100%;
+	max-width: 100%;
 }
 
 .diagram-wrapper {
 	position: relative;
+	width: 100%;
+	max-width: 100%;
 	overflow-x: auto;
 	overflow-y: auto;
 	scroll-behavior: smooth;
@@ -17,6 +26,8 @@
 }
 
 .diagram-wrapper svg {
+	width: 100% !important;
+	max-width: 100% !important;
 	transform-origin: center;
 	transition: transform 200ms ease-out;
 	cursor: grab;
@@ -140,6 +151,14 @@
 	border-radius: 0.5rem;
 	background-color: #282c34;
 	border: 1px solid #3c4147;
+}
+
+.hashnode-content-style pre.mermaid,
+.hashnode-content-style pre:has(> code.lang-mermaid),
+.hashnode-content-style pre:has(> code.language-mermaid) {
+	background-color: transparent !important;
+	border: none !important;
+	padding: 0 !important;
 }
 
 .dark .hashnode-content-style pre {

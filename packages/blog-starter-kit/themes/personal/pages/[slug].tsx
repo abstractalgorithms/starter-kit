@@ -113,6 +113,55 @@ const getAiSummaryBullets = (markdown: string, fallback: string) => {
 	return sentences.length > 0 ? sentences : [`This article explains ${fallback.toLowerCase()} in depth.`];
 };
 
+const normalizeTradeoffText = (value: string) =>
+	value
+		.replace(/```[\s\S]*?```/g, ' ')
+		.replace(/`+/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+
+const stripTldrPrefix = (value: string) =>
+	value
+		.replace(/^\s*tl;?dr\s*:\s*/i, '')
+		.replace(/^\s*tldr\s*:\s*/i, '')
+		.trim();
+
+const sanitizeTradeoffOptions = (options: Array<{ title: string; body: string }>) => {
+	const cleaned = options
+		.map((option) => {
+			const title = stripTldrPrefix(normalizeTradeoffText(option.title || ''));
+			const body = stripTldrPrefix(normalizeTradeoffText(option.body || ''));
+			return { title, body };
+		})
+		.filter((option) => {
+			const combined = `${option.title} ${option.body}`.toLowerCase();
+			if (!option.title || !option.body) return false;
+			if (combined.includes('tldr:') || combined.includes('tl;dr')) return false;
+			if (combined.includes('tool use') || combined.includes('function_call') || combined.includes('observation:')) return false;
+			if (combined.includes('->>')) return false;
+			if (/^why\s+["'`]/i.test(option.title)) return false;
+			if (/^📖/.test(option.title)) return false;
+			return true;
+		});
+
+	const deduped = cleaned.filter(
+		(option, index, arr) =>
+			arr.findIndex((item) => item.title.toLowerCase() === option.title.toLowerCase()) === index,
+	);
+
+	return deduped.slice(0, 2);
+};
+
+const isNoisyCompanionText = (value: string) => {
+	const text = normalizeTradeoffText(value).toLowerCase();
+	if (!text) return true;
+	if (/^tl;?dr\s*:/.test(text)) return true;
+	if (text.includes('function_call') || text.includes('observation:')) return true;
+	if (text.includes('tool use execution sequence') || text.includes('llm->>') || text.includes('->>')) return true;
+	if (text.includes('a tool is a single callable capability')) return true;
+	return false;
+};
+
 const GLOSSARY_TERMS: Record<string, string> = {
 	cap: 'Consistency, Availability, and Partition tolerance tradeoff model.',
 	quorum: 'Minimum number of distributed votes required for validity.',
@@ -188,7 +237,8 @@ const deriveDeepDiveSummaries = (markdown: string, tocItems: TocItem[]) => {
 	const allSentences = stripMarkdown(markdown)
 		.split(/(?<=[.!?])\s+/)
 		.map((line) => line.trim())
-		.filter((line) => line.length > 35);
+		.filter((line) => line.length > 35)
+		.filter((line) => !isNoisyCompanionText(line));
 
 	const titleKeywords = (title: string) =>
 		normalizeHeadingKey(title)
@@ -205,16 +255,33 @@ const deriveDeepDiveSummaries = (markdown: string, tocItems: TocItem[]) => {
 	};
 
 	const getExcerptMarkdown = (bodyLines: string[]) => {
-		const cleaned = bodyLines
-			.map((line) => line.trimEnd())
-			.filter((line) => {
-				const trimmed = line.trim();
-				if (!trimmed) return true;
-				// Avoid raw markdown table rows in summary excerpts; they render poorly in compact cards.
-				if (/^\|.*\|$/.test(trimmed)) return false;
-				if (/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(trimmed)) return false;
-				return true;
-			});
+		const cleaned: string[] = [];
+		let inCodeFence = false;
+
+		for (const rawLine of bodyLines) {
+			const line = rawLine.trimEnd();
+			const trimmed = line.trim();
+
+			if (/^```/.test(trimmed)) {
+				inCodeFence = !inCodeFence;
+				continue;
+			}
+			if (inCodeFence) continue;
+			if (!trimmed) {
+				cleaned.push(line);
+				continue;
+			}
+			// Avoid raw markdown table rows in summary excerpts; they render poorly in compact cards.
+			if (/^\|.*\|$/.test(trimmed)) continue;
+			if (/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(trimmed)) continue;
+			// Avoid raw Mermaid/diagram syntax leaking into compact deep-dive summaries.
+			if (/^(sequenceDiagram|flowchart|graph\s+(TD|TB|LR|RL|BT)|classDiagram|stateDiagram|erDiagram|journey|gantt|pie\s+title)\b/i.test(trimmed)) continue;
+			if (/^[A-Za-z0-9_.-]+\s*-{1,2}>{1,2}\s*[A-Za-z0-9_.-]+\s*:/.test(trimmed)) continue;
+			if (/^(participant|actor|autonumber|title)\b/i.test(trimmed)) continue;
+			if (isNoisyCompanionText(trimmed)) continue;
+
+			cleaned.push(line);
+		}
 		const chunks: string[] = [];
 		let chunk: string[] = [];
 
@@ -259,14 +326,17 @@ const deriveDeepDiveSummaries = (markdown: string, tocItems: TocItem[]) => {
 		const sentences = plain
 			.split(/(?<=[.!?])\s+/)
 			.map((line) => line.trim())
-			.filter((line) => line.length > 35);
+			.filter((line) => line.length > 35)
+			.filter((line) => !isNoisyCompanionText(line));
 		const semanticFallback = allSentences.find((sentence) =>
 			keywords.filter((keyword) => sentence.toLowerCase().includes(keyword)).length >= Math.min(2, Math.max(1, keywords.length)) &&
 			!sentence.includes('|'),
 		);
+		const safeExcerpt = stripTldrPrefix(excerptMarkdown || '');
+		const safeSemanticFallback = stripTldrPrefix(semanticFallback || '');
 		const summaryMarkdown =
-			excerptMarkdown ||
-			semanticFallback ||
+			(safeExcerpt && !isNoisyCompanionText(safeExcerpt) ? safeExcerpt : '') ||
+			(safeSemanticFallback && !isNoisyCompanionText(safeSemanticFallback) ? safeSemanticFallback : '') ||
 			`This section explains ${decodeHtml(item.title)} and connects it to the broader concept progression in this article.`;
 
 		const bulletLines = rawBody
@@ -279,6 +349,8 @@ const deriveDeepDiveSummaries = (markdown: string, tocItems: TocItem[]) => {
 				.filter((sentence) => keywords.some((keyword) => sentence.toLowerCase().includes(keyword)))
 				.slice(0, 2),
 		]
+			.map((point) => stripTldrPrefix(point))
+			.filter((point) => !isNoisyCompanionText(point))
 			.filter((point) => point.length < 180)
 			.filter((point) => !summaryMarkdown.includes(point))
 			.slice(0, 3)
@@ -1208,16 +1280,19 @@ const buildLocalArticleCompanion = ({
 		return warnings.slice(0, 3);
 	})();
 	const articleFlowNodes = deriveArticleFlowNodes(tocItems, tags, post.title);
-	const tradeoffOptions = [
+	const summaryCandidates = summaryBullets
+		.map((value) => stripTldrPrefix(normalizeTradeoffText(value)))
+		.filter((value) => value.length > 25 && !/tool use|function_call|observation:|->>/i.test(value));
+	const tradeoffOptions = sanitizeTradeoffOptions([
 		{
 			title: `${articleFlowNodes[0] || tags[0]?.name || 'Fast path'}: speed-first`,
-			body: summaryBullets[0] || 'Optimizes for faster understanding or delivery, but can hide edge cases.',
+			body: summaryCandidates[0] || 'Optimizes for faster understanding or delivery, but can hide edge cases.',
 		},
 		{
 			title: `${articleFlowNodes[1] || tags[1]?.name || 'Safer path'}: reliability-first`,
-			body: summaryBullets[1] || 'Optimizes for correctness and clarity, with more upfront structure.',
+			body: summaryCandidates[1] || 'Optimizes for correctness and clarity, with more upfront structure.',
 		},
-	];
+	]);
 	const failureScenarios = [
 		{
 			title: `${articleFlowNodes[0] || 'Core concept'} misunderstood`,
@@ -1504,7 +1579,11 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 	const aiSummaryBullets = articleCompanion.summaryBullets;
 	const articleFlowNodes = articleCompanion.flowNodes;
 	const conceptDependencies = articleCompanion.conceptDependencies;
-	const tradeoffOptions = articleCompanion.tradeoffOptions;
+	const tradeoffOptions = useMemo(() => {
+		const primary = sanitizeTradeoffOptions(articleCompanion.tradeoffOptions || []);
+		if (primary.length > 0) return primary;
+		return sanitizeTradeoffOptions(localArticleCompanion.tradeoffOptions || []);
+	}, [articleCompanion.tradeoffOptions, localArticleCompanion.tradeoffOptions]);
 	const failureScenarios = articleCompanion.failureScenarios;
 	const quizPrompts = articleCompanion.quizPrompts;
 	const interviewPrompts = articleCompanion.interviewPrompts;
@@ -1660,57 +1739,57 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 				<style dangerouslySetInnerHTML={{ __html: highlightJsMonokaiTheme }} />
 			</Head>
 
-			<div className="mx-auto max-w-3xl">
-				<div className="mb-3 flex flex-wrap items-center gap-2 text-[11px]">
-					<ContextualBreadcrumbs compact />
-				</div>
-				<div className="mb-4 flex flex-wrap items-center gap-2">
-					<span className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-						{post.readTimeInMinutes} min read
-					</span>
-					{tags.slice(0, 3).map((tag) => (
-						<Link
-							key={`hero-tag-${tag.id}`}
-							href={`/tag/${tag.slug}`}
-							className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-blue-800 dark:hover:text-blue-300"
-						>
-							{formatTagName(tag.name)}
-						</Link>
-					))}
-				</div>
-				<h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight text-neutral-950 dark:text-neutral-50 md:text-6xl">
-					{post.title}
-				</h1>
-				{post.subtitle ? (
-					<p className="mt-5 text-lg leading-relaxed text-neutral-600 dark:text-neutral-300 md:text-xl">
-						{post.subtitle}
-					</p>
-				) : null}
-				<div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-neutral-500 dark:text-neutral-400">
-					{post.author.profilePicture ? (
-						<img
-							src={resizeImage(post.author.profilePicture, { w: 80, h: 80, c: 'face' })}
-							alt={post.author.name}
-							className="h-8 w-8 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-800"
-						/>
-					) : null}
-					<span className="font-semibold text-neutral-700 dark:text-neutral-200">{post.author.name}</span>
-					<span className="text-neutral-300 dark:text-neutral-700">/</span>
-					<time><DateFormatter dateString={post.publishedAt} /></time>
-					{post.series ? (
-						<>
-							<span className="text-neutral-300 dark:text-neutral-700">/</span>
-							<Link href={`/series/${post.series.slug}`} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200">
-								{post.series.name}
-							</Link>
-						</>
-					) : null}
-				</div>
-			</div>
-
 			<div className="mx-auto mt-10 grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
 				<div className="min-w-0">
-					<section className="mx-auto max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 md:p-6">
+					<div className="mx-auto mb-10 w-full max-w-3xl">
+						<div className="mb-3 flex flex-wrap items-center gap-2 text-[11px]">
+							<ContextualBreadcrumbs compact />
+						</div>
+						<div className="mb-4 flex flex-wrap items-center gap-2">
+							<span className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
+								{post.readTimeInMinutes} min read
+							</span>
+							{tags.slice(0, 3).map((tag) => (
+								<Link
+									key={`hero-tag-${tag.id}`}
+									href={`/tag/${tag.slug}`}
+									className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-blue-800 dark:hover:text-blue-300"
+								>
+									{formatTagName(tag.name)}
+								</Link>
+							))}
+						</div>
+						<h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight text-neutral-950 dark:text-neutral-50 md:text-6xl">
+							{post.title}
+						</h1>
+						{post.subtitle ? (
+							<p className="mt-5 text-lg leading-relaxed text-neutral-600 dark:text-neutral-300 md:text-xl">
+								{post.subtitle}
+							</p>
+						) : null}
+						<div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-neutral-500 dark:text-neutral-400">
+							{post.author.profilePicture ? (
+								<img
+									src={resizeImage(post.author.profilePicture, { w: 80, h: 80, c: 'face' })}
+									alt={post.author.name}
+									className="h-8 w-8 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-800"
+								/>
+							) : null}
+							<span className="font-semibold text-neutral-700 dark:text-neutral-200">{post.author.name}</span>
+							<span className="text-neutral-300 dark:text-neutral-700">/</span>
+							<time><DateFormatter dateString={post.publishedAt} /></time>
+							{post.series ? (
+								<>
+									<span className="text-neutral-300 dark:text-neutral-700">/</span>
+									<Link href={`/series/${post.series.slug}`} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200">
+										{post.series.name}
+									</Link>
+								</>
+							) : null}
+						</div>
+					</div>
+
+					<section className="mx-auto w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 md:p-6">
 						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300">Executive TLDR</p>
 						<ul className="mt-4 space-y-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
 							{aiSummaryBullets.slice(0, 4).map((item) => (
@@ -1722,7 +1801,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</ul>
 					</section>
 
-					<section className="mx-auto mt-8 max-w-3xl">
+					<section className="mx-auto mt-8 w-full max-w-3xl">
 						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Core mental model</p>
 						<h2 className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
 							Read this as a system of state, constraints, and failure boundaries.
@@ -1740,7 +1819,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</div>
 					</section>
 
-					<section className="mx-auto mt-10 max-w-4xl rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900/60 md:p-6">
+					<section className="mx-auto mt-10 w-full max-w-3xl rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900/60 md:p-6">
 						<div className="mx-auto max-w-3xl">
 							<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Key systems visualization</p>
 							<h2 className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
@@ -1770,7 +1849,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 
 					{/* Expandable deep dives */}
 					{tocItems.length > 0 && (
-						<section className="mx-auto mt-12 max-w-3xl space-y-3">
+						<section className="mx-auto mt-12 w-full max-w-3xl space-y-3">
 							<div>
 								<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
 									Optional deep reference
@@ -1795,15 +1874,15 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 										const dive = deepDiveSummaries[item.slug];
 										return (
 											<div className="mt-2 space-y-2">
-												<div className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-300 [&_p]:text-xs [&_li]:text-xs [&_table]:text-xs [&_td]:text-xs [&_th]:text-xs [&_math]:text-xs">
+												<div className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-300 [&_p]:text-sm [&_li]:text-sm [&_table]:text-sm [&_td]:text-sm [&_th]:text-sm [&_math]:text-sm">
 													<MarkdownToHtml contentMarkdown={dive?.summaryMarkdown || ''} />
 												</div>
 												{dive?.bulletMarkdown ? (
-													<div className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-300 [&_p]:text-xs [&_li]:text-xs [&_table]:text-xs [&_td]:text-xs [&_th]:text-xs [&_math]:text-xs">
+													<div className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-300 [&_p]:text-sm [&_li]:text-sm [&_table]:text-sm [&_td]:text-sm [&_th]:text-sm [&_math]:text-sm">
 														<MarkdownToHtml contentMarkdown={dive.bulletMarkdown} />
 													</div>
 												) : null}
-												<Link href={`#heading-${item.slug}`} className="inline-flex text-xs font-semibold text-blue-600 dark:text-blue-400">
+												<Link href={`#heading-${item.slug}`} className="inline-flex text-sm font-semibold text-blue-600 dark:text-blue-400">
 													Jump to section
 												</Link>
 											</div>
@@ -1814,7 +1893,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</section>
 					)}
 
-					<section className="mx-auto mt-12 max-w-3xl">
+					<section className="mx-auto mt-12 w-full max-w-3xl">
 						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
 							Tradeoffs and production insights
 						</p>
@@ -1834,7 +1913,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 						</div>
 					</section>
 
-					<section className="mx-auto mt-10 max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+					<section className="mx-auto mt-10 w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
 						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Quiet AI help</p>
 						<div className="mt-4 grid gap-3 sm:grid-cols-3">
 							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(`Explain ${post.title} more simply, preserving the engineering details.`))}`} className="rounded-xl border border-neutral-200 px-3 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
@@ -1851,7 +1930,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 
 					{/* Tags */}
 					{tags.length > 0 && (
-						<div className="mt-10 pt-8 border-t border-neutral-100 dark:border-neutral-800">
+						<div className="mx-auto mt-10 w-full max-w-3xl border-t border-neutral-100 pt-8 dark:border-neutral-800">
 							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
 								Article metadata
 							</p>
@@ -1871,7 +1950,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 					)}
 
 					{/* Author Card */}
-					<div className="mt-10 p-5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-4">
+					<div className="mx-auto mt-10 flex w-full max-w-3xl items-center gap-4 rounded-xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
 						{post.author.profilePicture && (
 							<img
 								src={resizeImage(post.author.profilePicture, { w: 120, h: 120, c: 'face' })}
@@ -1896,7 +1975,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 
 					{/* Related deep dives */}
 					{morePosts.length > 1 ? (
-					<section className="mt-10 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5">
+					<section className="mx-auto mt-10 w-full max-w-3xl rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
 						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
 							Related deep dives
 						</p>
@@ -1931,7 +2010,7 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 					</section>
 					) : null}
 
-					<section className="mt-8 rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
+					<section className="mx-auto mt-8 w-full max-w-3xl rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
 						<p className="text-[10px] font-mono uppercase tracking-widest text-blue-600 dark:text-blue-300 mb-2">
 							Continue reading
 						</p>
