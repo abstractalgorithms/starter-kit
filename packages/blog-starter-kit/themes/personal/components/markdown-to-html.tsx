@@ -211,13 +211,25 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 					startOnLoad: false,
 					theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
 					securityLevel: 'loose',
+					flowchart: {
+						useMaxWidth: true,
+						htmlLabels: true,
+					},
+					sequence: {
+						useMaxWidth: true,
+					},
+					gantt: {
+						useMaxWidth: true,
+					},
 				});
 				
 				// Find all mermaid elements and render them
-				const mermaidElements = containerRef.current?.querySelectorAll('.mermaid');
+				const mermaidElements = containerRef.current?.querySelectorAll<HTMLElement>('.mermaid');
 				if (mermaidElements && mermaidElements.length > 0) {
 					mermaidElements.forEach((element, index) => {
 						element.classList.add('mermaid-container');
+						element.style.width = '100%';
+						element.style.maxWidth = '100%';
 						const id = `mermaid-${Date.now()}-${index}`;
 						// Decode HTML entities that the markdown pipeline may have encoded
 						// (e.g. &quot; → ", &lt; → <) before passing to Mermaid
@@ -289,7 +301,7 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 			});
 
 		containerRef.current
-			.querySelectorAll<HTMLElement>('.mermaid-container, figure, table')
+			.querySelectorAll<HTMLElement>('figure, table')
 			.forEach((node) => {
 				if (node.tagName.toLowerCase() === 'figure' && !node.querySelector('img')) return;
 				node.classList.add('aa-story-immersive-diagram');

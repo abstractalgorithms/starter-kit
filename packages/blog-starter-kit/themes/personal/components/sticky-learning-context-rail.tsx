@@ -105,14 +105,14 @@ export const StickyLearningContextRail = () => {
 								Explain This
 							</CTAButton>
 							<CTALink href={resumeHref} level={3} size="md" className="justify-start">
-								{hasPosition ? 'Continue Learning' : 'Open Current Context'}
+								{hasPosition ? 'Continue Reading' : 'Open Current Article'}
 							</CTALink>
 							<CTAMenu label="More Actions" className="w-full">
-								<CTALink href={roadmapHref} level={3} size="sm" className="w-full justify-start">Open Learning Graph</CTALink>
-								<CTALink href={simulationHref} level={3} size="sm" className="w-full justify-start">Launch Simulation</CTALink>
-								<CTALink href={tradeoffHref} level={3} size="sm" className="w-full justify-start">Practice Tradeoffs</CTALink>
+								<CTALink href={roadmapHref} level={3} size="sm" className="w-full justify-start">Related Concepts</CTALink>
+								<CTALink href={simulationHref} level={3} size="sm" className="w-full justify-start">Small Simulation</CTALink>
+								<CTALink href={tradeoffHref} level={3} size="sm" className="w-full justify-start">Tradeoff Prompt</CTALink>
 								{isInterviewPrepEnabled ? (
-									<CTALink href="/interview-prep" level={3} size="sm" className="w-full justify-start">Practice Interview</CTALink>
+									<CTALink href="/interview-prep" level={3} size="sm" className="w-full justify-start">Reasoning Prompt</CTALink>
 								) : null}
 							</CTAMenu>
 						</div>

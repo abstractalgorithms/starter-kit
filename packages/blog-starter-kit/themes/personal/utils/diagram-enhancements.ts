@@ -19,7 +19,9 @@ export const enhanceDiagramInteractivity = () => {
 
 		// Create wrapper for zoom controls
 		const wrapper = document.createElement('div');
-		wrapper.className = 'diagram-wrapper relative bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-auto group';
+		wrapper.className = 'diagram-wrapper relative overflow-auto group';
+		wrapper.style.width = '100%';
+		wrapper.style.maxWidth = '100%';
 		wrapper.style.maxHeight = '600px';
 		container.replaceWith(wrapper);
 		wrapper.appendChild(container);

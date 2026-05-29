@@ -572,13 +572,13 @@ export const LearnToday = ({ allPosts }: Props) => {
 			{/* Header */}
 			<div className="mb-8">
 				<p className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-2">
-					AI-Powered Discovery
+					Find a thread
 				</p>
 				<h2 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-neutral-50 mb-2">
 					What do you want to learn today?
 				</h2>
 				<p className="text-neutral-500 dark:text-neutral-400 text-sm">
-					Type any topic — we&apos;ll find articles, build a track, or generate a fresh post, depending on what fits best.
+					Type any topic and we&apos;ll surface the most useful articles and related concepts.
 				</p>
 			</div>
 

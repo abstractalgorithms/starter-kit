@@ -183,19 +183,20 @@ export const SystemsKnowledgeGraph = ({
 			other: graph.nodes.find((node) => node.id === (relationship.from === activeNode.id ? relationship.to : relationship.from)),
 		}))
 		.filter((item): item is { relationship: ConceptRelationship; other: ConceptGraphNode } => Boolean(item.other));
+	const graphLayoutClass = compact ? '2xl:grid-cols-[minmax(0,1fr)_360px]' : 'xl:grid-cols-[minmax(0,1fr)_360px]';
 
 	return (
 		<section className={`rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:p-5 ${className}`}>
 			<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 				<div>
 					<p className="text-[10px] font-mono uppercase tracking-[0.24em] text-blue-600 dark:text-blue-300">
-						Relationships
+						Related systems
 					</p>
 					<h2 className="mt-2 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50 md:text-3xl">
-						Follow the shape of the system
+						Follow the nearby ideas
 					</h2>
 					<p className="mt-2 max-w-3xl text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
-						Move through prerequisites, dependencies, tradeoffs, and adjacent concepts without losing the thread.
+						Use the map as a quiet orientation layer, then move back into the articles for depth.
 					</p>
 				</div>
 				<div className="flex flex-wrap gap-2">
@@ -216,7 +217,7 @@ export const SystemsKnowledgeGraph = ({
 				</div>
 			</div>
 
-			<div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+			<div className={`mt-5 grid gap-5 ${graphLayoutClass}`}>
 				<div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
 					<div className={`relative ${compact ? 'h-[380px] min-w-[1040px]' : 'h-[760px] min-w-[1120px]'}`}>
 						<svg
@@ -354,10 +355,10 @@ export const SystemsKnowledgeGraph = ({
 
 					<div className="mt-5 grid gap-2">
 						<CTALink href={getConceptHref(activeNode)} level={1} size="md" className="w-full">
-							Open Reading
+							Open Article
 						</CTALink>
 						<CTAButton type="button" level={2} size="md" className="w-full" onClick={() => toggleExpand(activeNode)}>
-							{expandedIds.includes(activeNode.id) ? 'Show Less' : 'Show What Comes Before'}
+							{expandedIds.includes(activeNode.id) ? 'Show Less' : 'Show Related Ideas'}
 						</CTAButton>
 						<CTALink
 							href={`/assistant?q=${encodeURIComponent(`Explain how ${activeNode.label} connects to the nearby concepts in this topic`)}`}

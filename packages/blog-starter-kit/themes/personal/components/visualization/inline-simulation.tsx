@@ -99,21 +99,21 @@ export const InlineSimulation = ({
 			className={`rounded-3xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900 dark:bg-neutral-950 ${className}`}
 			aria-label="Inline engineering simulation"
 		>
-			<div className="flex flex-wrap items-start justify-between gap-3">
+			<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
 				<div className="min-w-0">
 					<p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600 dark:text-blue-300">
 						System behavior
 					</p>
-					<h2 className={`${compact ? 'text-lg' : 'text-2xl'} mt-1 font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50`}>
+					<h2 className={`${compact ? 'text-lg' : 'text-2xl'} mt-1 max-w-full break-words font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50`}>
 						{scenario.title}
 					</h2>
-					<p className="mt-1 max-w-3xl text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+					<p className="mt-1 max-w-full text-sm leading-relaxed text-neutral-600 dark:text-neutral-300 md:max-w-3xl">
 						{scenario.summary}
 					</p>
 				</div>
 				<Link
 					href={`/visualizations?q=${encodeURIComponent(topic ?? scenario.title)}${node ? `&node=${encodeURIComponent(node)}` : ''}`}
-					className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:border-blue-300 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200"
+					className="justify-self-start rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:border-blue-300 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200 md:justify-self-end"
 				>
 					Open
 				</Link>

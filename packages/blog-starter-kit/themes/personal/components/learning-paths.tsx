@@ -216,7 +216,7 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 							: adaptiveNode?.description ?? 'Select a node to see the next recommended move.'}
 					</p>
 					<div className="mt-4 flex flex-wrap gap-2">
-						<CTALink href={topicHref} level={1} size="sm">Open Topic Journey</CTALink>
+						<CTALink href={topicHref} level={1} size="sm">Open Collection</CTALink>
 						<CTAButton type="button" level={2} size="sm" onClick={() => activeNode && updateNode(activeNode, { attempts: (progress[activeNode.id]?.attempts ?? 0) + 1, mastery: Math.max(progress[activeNode.id]?.mastery ?? 0, 45) })}>
 							Continue Practice
 						</CTAButton>
@@ -297,7 +297,7 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 
 							<div className="mt-5 space-y-2">
 								<CTALink href={resumeHref} level={1} size="md" className="w-full">Resume Learning</CTALink>
-								<CTALink href={topicHref} level={2} size="md" className="w-full">Open Topic Journey</CTALink>
+								<CTALink href={topicHref} level={2} size="md" className="w-full">Open Collection</CTALink>
 								<CTAButton type="button" level={2} size="md" className="w-full" onClick={() => updateNode(activeNode, { attempts: (progress[activeNode.id]?.attempts ?? 0) + 1, mastery: Math.min(84, Math.max(progress[activeNode.id]?.mastery ?? 0, 55)), weak: false })}>
 									Continue Practice
 								</CTAButton>

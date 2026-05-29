@@ -22,8 +22,6 @@ export const ArticleEngagement = ({ post, publication }: Props) => {
 	const [rating, setRating] = useState<number | null>(null);
 	const [hasFollowed, setHasFollowed] = useState(false);
 	const [hasSubscribed, setHasSubscribed] = useState(false);
-	const [showExitPrompt, setShowExitPrompt] = useState(false);
-	const [dismissedExitPrompt, setDismissedExitPrompt] = useState(false);
 	const followUrl = useMemo(() => getFollowUrl(publication), [publication]);
 	const newsletterUrl = useMemo(() => getNewsletterUrl(publication), [publication]);
 
@@ -33,45 +31,13 @@ export const ArticleEngagement = ({ post, publication }: Props) => {
 			if (storedRating > 0) setRating(storedRating);
 			setHasFollowed(localStorage.getItem(followKey) === '1');
 			setHasSubscribed(localStorage.getItem(subscribeKey) === '1');
-			setDismissedExitPrompt(localStorage.getItem(`${ratingKey}:dismissed`) === '1');
 		} catch {}
 	}, [followKey, ratingKey, subscribeKey]);
 
-	useEffect(() => {
-		if (rating || dismissedExitPrompt) return;
-
-		const onMouseLeave = (event: MouseEvent) => {
-			if (event.clientY <= 8) setShowExitPrompt(true);
-		};
-		const onVisibilityChange = () => {
-			if (document.visibilityState === 'hidden') {
-				try {
-					localStorage.setItem(`${ratingKey}:seen-exit`, '1');
-				} catch {}
-			}
-		};
-
-		document.addEventListener('mouseleave', onMouseLeave);
-		document.addEventListener('visibilitychange', onVisibilityChange);
-		return () => {
-			document.removeEventListener('mouseleave', onMouseLeave);
-			document.removeEventListener('visibilitychange', onVisibilityChange);
-		};
-	}, [dismissedExitPrompt, rating, ratingKey]);
-
 	const rateArticle = (value: number) => {
 		setRating(value);
-		setShowExitPrompt(false);
 		try {
 			localStorage.setItem(ratingKey, String(value));
-		} catch {}
-	};
-
-	const dismissExitPrompt = () => {
-		setShowExitPrompt(false);
-		setDismissedExitPrompt(true);
-		try {
-			localStorage.setItem(`${ratingKey}:dismissed`, '1');
 		} catch {}
 	};
 
@@ -114,9 +80,8 @@ export const ArticleEngagement = ({ post, publication }: Props) => {
 	);
 
 	return (
-		<>
-			<section id="article-feedback" className="mt-8 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-				<div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+		<section id="article-feedback" className="mx-auto mt-8 w-full max-w-3xl rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+			<div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
 					<div>
 						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
 							Reader feedback
@@ -125,7 +90,7 @@ export const ArticleEngagement = ({ post, publication }: Props) => {
 							Was this article useful?
 						</h2>
 						<p className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-							Rate it before you leave, then follow or subscribe for the next deep dive.
+							Rate it if it helped, then continue with the next deep dive when you are ready.
 						</p>
 						<div className="mt-3">
 							<RatingButtons />
@@ -154,40 +119,7 @@ export const ArticleEngagement = ({ post, publication }: Props) => {
 							</button>
 						) : null}
 					</div>
-				</div>
-			</section>
-
-			{showExitPrompt && !rating ? (
-				<div className="fixed inset-x-0 bottom-4 z-50 mx-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
-					<div className="flex items-start justify-between gap-3">
-						<div>
-							<p className="text-sm font-bold text-neutral-950 dark:text-neutral-50">Before you go</p>
-							<p className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-								How useful was this article?
-							</p>
-						</div>
-						<button
-							type="button"
-							onClick={dismissExitPrompt}
-							className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-500 dark:border-neutral-700 dark:text-neutral-400"
-						>
-							Close
-						</button>
-					</div>
-					<div className="mt-3 flex items-center justify-between gap-3">
-						<RatingButtons compact />
-						{isNewsletterSubscribeEnabled && newsletterUrl ? (
-							<button
-								type="button"
-								onClick={subscribe}
-								className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700"
-							>
-								Subscribe
-							</button>
-						) : null}
-					</div>
-				</div>
-			) : null}
-		</>
+			</div>
+		</section>
 	);
 };
