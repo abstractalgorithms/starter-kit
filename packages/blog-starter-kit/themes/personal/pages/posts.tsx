@@ -40,6 +40,7 @@ import { loadLearningPath, StoredLearningPath } from '../components/learn-today'
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const PAGE_SIZE = 12;
 const RECENTLY_VIEWED_KEY = 'aa:recently-viewed-posts';
+const FALLBACK_POST_IMAGE = '/assets/blog/post-fallback.svg';
 
 const TOPIC_COLLECTIONS = [
 	{ id: 'system-design', label: 'System Design', query: 'system design' },
@@ -106,6 +107,9 @@ const readRecentlyViewed = (): RecentlyViewedItem[] => {
 		return [];
 	}
 };
+
+const resolvePostImage = (post: Pick<PostFragment, 'coverImage'>) =>
+	post.coverImage?.url?.trim() || FALLBACK_POST_IMAGE;
 
 export default function AllPostsPage({ publication, initialPosts }: Props) {
 	const router = useRouter();
@@ -500,15 +504,13 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 										onClick={() => rememberPostView(featuredArticle)}
 										className="group overflow-hidden rounded-3xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
 									>
-										{featuredArticle.coverImage?.url ? (
-											<Image
-												src={featuredArticle.coverImage.url}
-												alt=""
-												width={960}
-												height={540}
-												className="aspect-[16/9] w-full object-cover"
-											/>
-										) : null}
+										<Image
+											src={resolvePostImage(featuredArticle)}
+											alt={featuredArticle.title}
+											width={960}
+											height={540}
+											className="aspect-[16/9] w-full object-cover"
+										/>
 										<div className="p-5 md:p-6">
 											<p className="text-[10px] font-black uppercase tracking-wide text-blue-600 dark:text-blue-300">
 												Featured deep dive
@@ -530,9 +532,18 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 												onClick={() => rememberPostView(post)}
 												className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 transition hover:border-blue-300 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-blue-700 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
 											>
-												<span>
+												<span className="flex items-center gap-3">
+													<Image
+														src={resolvePostImage(post)}
+														alt={post.title}
+														width={112}
+														height={72}
+														className="hidden h-[72px] w-[112px] rounded-xl object-cover sm:block"
+													/>
+													<span>
 													<span className="block text-sm font-black text-neutral-950 dark:text-neutral-50">{post.title}</span>
 													<span className="mt-1 line-clamp-2 block text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">{post.brief}</span>
+													</span>
 												</span>
 												<span className="text-xs font-bold text-neutral-400">{post.readTimeInMinutes} min</span>
 											</Link>
@@ -613,9 +624,18 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 													onClick={() => rememberPostView(post)}
 													className="grid gap-2 py-3 md:grid-cols-[minmax(0,1fr)_120px] md:items-center"
 												>
-													<span>
+													<span className="flex items-center gap-3">
+														<Image
+															src={resolvePostImage(post)}
+															alt={post.title}
+															width={96}
+															height={64}
+															className="hidden h-16 w-24 rounded-lg object-cover sm:block"
+														/>
+														<span>
 														<span className="block text-sm font-bold text-neutral-950 dark:text-neutral-50">{post.title}</span>
 														<span className="mt-1 line-clamp-1 block text-xs text-neutral-500 dark:text-neutral-400">{post.brief}</span>
+														</span>
 													</span>
 													<span className="text-xs font-semibold text-neutral-400 md:text-right">{post.readTimeInMinutes} min read</span>
 												</Link>
