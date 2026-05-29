@@ -224,7 +224,7 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 				});
 				
 				// Find all mermaid elements and render them
-				const mermaidElements = containerRef.current?.querySelectorAll('.mermaid');
+				const mermaidElements = containerRef.current?.querySelectorAll<HTMLElement>('.mermaid');
 				if (mermaidElements && mermaidElements.length > 0) {
 					mermaidElements.forEach((element, index) => {
 						element.classList.add('mermaid-container');
