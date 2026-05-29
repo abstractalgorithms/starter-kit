@@ -405,13 +405,9 @@ export const PersonalHeader = () => {
 					<div className="mt-6 space-y-2">
 						{navItems.map((item) => (
 							<div key={item.label} className="rounded-xl border border-neutral-200 px-4 py-3 dark:border-neutral-800">
-								<Link
-									href={item.href}
-									onClick={() => setIsMobileMenuOpen(false)}
-									className="block text-base font-semibold text-neutral-900 dark:text-neutral-50"
-								>
+								<p className="block text-base font-semibold text-neutral-900 dark:text-neutral-50">
 									{item.label}
-								</Link>
+								</p>
 								<div className="mt-3 grid gap-2">
 									{item.items.map((child) => (
 										<Link
@@ -446,16 +442,6 @@ export const PersonalHeader = () => {
 								Subscribe
 							</a>
 						) : null}
-					</div>
-					<div className="mt-8">
-						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Continue reading</p>
-						<div className="mt-2 space-y-2">
-							{trackLinks.map((item) => (
-								<Link key={item.label} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className="block rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm text-neutral-700 dark:text-neutral-200">
-									{item.label}
-								</Link>
-							))}
-						</div>
 					</div>
 				</div>
 			) : null}

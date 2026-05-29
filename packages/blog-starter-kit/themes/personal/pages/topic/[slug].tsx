@@ -49,10 +49,10 @@ export default function TopicLearningPage({ publication, posts, journey }: Props
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<main className="mx-auto w-full max-w-7xl px-5 pb-20 pt-10">
+					<main className="max-w-7xl mx-auto w-full px-4 sm:px-5 pt-4 pb-28 md:pt-5 md:pb-20 overflow-x-hidden">
 						<Link
 							href="/discover"
-							className="mb-10 inline-flex items-center gap-1.5 text-sm text-neutral-400 transition-colors hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+							className="mb-8 inline-flex items-center gap-1.5 text-sm text-neutral-400 transition-colors hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
 						>
 							<span aria-hidden="true">←</span>
 							Explore
