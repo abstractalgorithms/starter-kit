@@ -1463,19 +1463,21 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 		return () => window.removeEventListener('scroll', onScroll);
 	}, []);
 
-	const tocItems: TocItem[] =
-		post.features?.tableOfContents?.isEnabled &&
-		(post.features.tableOfContents.items ?? []).length > 0
-			? (post.features.tableOfContents.items ?? []).map((item) => ({
-					id: item.id,
-					slug: item.slug,
-					title: item.title,
-					level: item.level ?? 1,
-					parentId: item.parentId ?? null,
-				}))
-			: [];
+	const tocItems = useMemo<TocItem[]>(() => {
+		if (!post.features?.tableOfContents?.isEnabled) return [];
+		const items = post.features.tableOfContents.items ?? [];
+		if (items.length === 0) return [];
 
-	const tags = post.tags ?? [];
+		return items.map((item) => ({
+			id: item.id,
+			slug: item.slug,
+			title: item.title,
+			level: item.level ?? 1,
+			parentId: item.parentId ?? null,
+		}));
+	}, [post.features?.tableOfContents?.isEnabled, post.features?.tableOfContents?.items]);
+
+	const tags = useMemo(() => post.tags ?? [], [post.tags]);
 	const primaryArticleConcept = useMemo(() => inferPrimaryArticleConcept(post), [post]);
 	const articleConceptSeeds = useMemo(() => getArticleConceptSeeds(post), [post]);
 	const topicLearningSlug = useMemo(() => inferTopicSlugForPost(post), [post]);
