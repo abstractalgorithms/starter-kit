@@ -87,6 +87,78 @@ type TocItem = {
 	parentId?: string | null;
 };
 
+type ArticleBackmatter = {
+	executiveTldr?: string[];
+	keySystemsVisualization?: {
+		nodes?: string[];
+		title?: string;
+	};
+	mermaidDiagram?: string;
+};
+
+const BACKMATTER_BLOCK_REGEX = /\n?<!--\s*AA_BACKMATTER\s*([\s\S]*?)-->\s*$/;
+
+const normalizeBackmatterList = (value: unknown): string[] => {
+	if (!Array.isArray(value)) return [];
+	return value
+		.map((item) => (typeof item === 'string' ? item.trim() : ''))
+		.filter((item) => item.length > 0)
+		.slice(0, 8);
+};
+
+const parseArticleBackmatter = (
+	markdown: string,
+): { cleanMarkdown: string; backmatter: ArticleBackmatter | null } => {
+	const match = markdown.match(BACKMATTER_BLOCK_REGEX);
+	if (!match) return { cleanMarkdown: markdown, backmatter: null };
+
+	const raw = match[1]?.trim();
+	if (!raw) {
+		return {
+			cleanMarkdown: markdown.replace(BACKMATTER_BLOCK_REGEX, '').trimEnd(),
+			backmatter: null,
+		};
+	}
+
+	try {
+		const parsed = JSON.parse(raw) as {
+			executiveTldr?: unknown;
+			keySystemsVisualization?: { nodes?: unknown; title?: unknown };
+			mermaidDiagram?: unknown;
+		};
+		const executiveTldr = normalizeBackmatterList(parsed.executiveTldr);
+		const visualizationNodes = normalizeBackmatterList(parsed.keySystemsVisualization?.nodes);
+		const visualizationTitle =
+			typeof parsed.keySystemsVisualization?.title === 'string'
+				? parsed.keySystemsVisualization.title.trim()
+				: '';
+		const mermaidDiagram = typeof parsed.mermaidDiagram === 'string' ? parsed.mermaidDiagram.trim() : '';
+
+		const backmatter: ArticleBackmatter = {};
+		if (executiveTldr.length > 0) backmatter.executiveTldr = executiveTldr;
+		if (visualizationNodes.length > 0 || visualizationTitle) {
+			backmatter.keySystemsVisualization = {};
+			if (visualizationNodes.length > 0) backmatter.keySystemsVisualization.nodes = visualizationNodes;
+			if (visualizationTitle) backmatter.keySystemsVisualization.title = visualizationTitle;
+		}
+		if (mermaidDiagram) backmatter.mermaidDiagram = mermaidDiagram;
+
+		return {
+			cleanMarkdown: markdown.replace(BACKMATTER_BLOCK_REGEX, '').trimEnd(),
+			backmatter:
+				Object.keys(backmatter).length > 0
+					? backmatter
+					: null,
+		};
+	} catch (error) {
+		console.warn('[backmatter] Invalid AA_BACKMATTER JSON block:', error);
+		return {
+			cleanMarkdown: markdown.replace(BACKMATTER_BLOCK_REGEX, '').trimEnd(),
+			backmatter: null,
+		};
+	}
+};
+
 const stripMarkdown = (markdown: string) =>
 	markdown
 		.replace(/```[\s\S]*?```/g, ' ')
@@ -1409,6 +1481,7 @@ type PostProps = {
 	publication: PublicationFragment;
 	footerPosts: PostFragment[];
 	morePosts: PostFragment[];
+	backmatter?: ArticleBackmatter | null;
 };
 
 type PageProps = {
@@ -1420,7 +1493,7 @@ type PageProps = {
 
 type Props = PostProps | PageProps;
 
-const Post = ({ publication, post, morePosts }: PostProps) => {
+const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 	const highlightJsMonokaiTheme =
 		'.hljs{display:block;overflow-x:auto;padding:.5em;background:#23241f}.hljs,.hljs-subst,.hljs-tag{color:#f8f8f2}.hljs-emphasis,.hljs-strong{color:#a8a8a2}.hljs-bullet,.hljs-link,.hljs-literal,.hljs-number,.hljs-quote,.hljs-regexp{color:#ae81ff}.hljs-code,.hljs-section,.hljs-selector-class,.hljs-title{color:#a6e22e}.hljs-strong{font-weight:700}.hljs-emphasis{font-style:italic}.hljs-attr,.hljs-keyword,.hljs-name,.hljs-selector-tag{color:#f92672}.hljs-attribute,.hljs-symbol{color:#66d9ef}.hljs-class .hljs-title,.hljs-params{color:#f8f8f2}.hljs-addition,.hljs-built_in,.hljs-builtin-name,.hljs-selector-attr,.hljs-selector-id,.hljs-selector-pseudo,.hljs-string,.hljs-template-variable,.hljs-type,.hljs-variable{color:#e6db74}.hljs-comment,.hljs-deletion,.hljs-meta{color:#75715e}';
 	const [, setMobMount] = useState(false);
@@ -1578,8 +1651,16 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 	}, [morePosts, post.brief, post.content.markdown, post.readTimeInMinutes, post.slug, post.subtitle, post.title, tags, tocItems]);
 
 	const articleCompanion = articleCompanionState ?? localArticleCompanion;
-	const aiSummaryBullets = articleCompanion.summaryBullets;
-	const articleFlowNodes = articleCompanion.flowNodes;
+	const aiSummaryBullets = useMemo(() => {
+		const override = normalizeBackmatterList(backmatter?.executiveTldr);
+		if (override.length > 0) return override;
+		return articleCompanion.summaryBullets;
+	}, [articleCompanion.summaryBullets, backmatter?.executiveTldr]);
+	const articleFlowNodes = useMemo(() => {
+		const overrideNodes = normalizeBackmatterList(backmatter?.keySystemsVisualization?.nodes);
+		if (overrideNodes.length > 0) return overrideNodes;
+		return articleCompanion.flowNodes;
+	}, [articleCompanion.flowNodes, backmatter?.keySystemsVisualization?.nodes]);
 	const conceptDependencies = articleCompanion.conceptDependencies;
 	const tradeoffOptions = useMemo(() => {
 		const primary = sanitizeTradeoffOptions(articleCompanion.tradeoffOptions || []);
@@ -1828,92 +1909,40 @@ const Post = ({ publication, post, morePosts }: PostProps) => {
 								The article’s conceptual path
 							</h2>
 						</div>
-						<div className="mt-6 overflow-x-auto pb-2">
-							<div className="flex min-w-max items-stretch gap-3">
-								{articleFlowNodes.slice(0, 5).map((node, index) => (
-									<div key={`${node}-${index}`} className="flex items-center gap-3">
-										<div className="w-44 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
-											<p className="text-[11px] font-semibold text-blue-600 dark:text-blue-300">0{index + 1}</p>
-											<p className="mt-2 text-sm font-bold leading-snug text-neutral-950 dark:text-neutral-50">{decodeHtml(node)}</p>
-										</div>
-										{index < Math.min(articleFlowNodes.length, 5) - 1 ? (
-											<span className="text-neutral-300 dark:text-neutral-700">{'->'}</span>
-										) : null}
+						{backmatter?.mermaidDiagram ? (
+							<div className="mt-6 overflow-x-auto pb-2">
+								<div className="rounded-xl border border-blue-200 bg-white p-4 dark:border-blue-900 dark:bg-blue-950/20">
+									<div className="mermaid">
+										{backmatter.mermaidDiagram}
 									</div>
-								))}
+								</div>
 							</div>
-						</div>
+						) : (
+							<div className="mt-6 overflow-x-auto pb-2">
+								<div className="flex min-w-max items-stretch gap-3">
+									{articleFlowNodes.slice(0, 5).map((node, index) => (
+										<div key={`${node}-${index}`} className="flex items-center gap-3">
+											<div className="w-44 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+												<p className="text-[11px] font-semibold text-blue-600 dark:text-blue-300">0{index + 1}</p>
+												<p className="mt-2 text-sm font-bold leading-snug text-neutral-950 dark:text-neutral-50">{decodeHtml(node)}</p>
+											</div>
+											{index < Math.min(articleFlowNodes.length, 5) - 1 ? (
+												<span className="text-neutral-300 dark:text-neutral-700">{'->'}</span>
+											) : null}
+										</div>
+									))}
+								</div>
+							</div>
+						)}
 					</section>
 
 					<div className="article-doc mx-auto mt-12 w-full max-w-3xl min-w-0">
 						<MarkdownToHtml contentMarkdown={post.content.markdown} />
 					</div>
 
-					{/* Expandable deep dives */}
-					{tocItems.length > 0 && (
-						<section className="mx-auto mt-12 w-full max-w-3xl space-y-3">
-							<div>
-								<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
-									Optional deep reference
-								</p>
-								<h2 className="mt-2 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
-									Deep technical breakdown
-								</h2>
-								<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
-									Expand implementation internals, section notes, and dense reference material when you need a second pass.
-								</p>
-							</div>
-							{tocItems.slice(0, 4).map((item) => (
-								<details
-									key={item.id}
-									className="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4"
-								>
-									<summary className="cursor-pointer list-none text-sm font-semibold text-neutral-800 dark:text-neutral-100 flex items-center justify-between">
-										<span>{item.title}</span>
-										<span className="text-xs text-neutral-400 group-open:rotate-180 transition-transform">⌄</span>
-									</summary>
-									{(() => {
-										const dive = deepDiveSummaries[item.slug];
-										return (
-											<div className="mt-2 space-y-2">
-												<div className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-300 [&_p]:text-sm [&_li]:text-sm [&_table]:text-sm [&_td]:text-sm [&_th]:text-sm [&_math]:text-sm">
-													<MarkdownToHtml contentMarkdown={dive?.summaryMarkdown || ''} />
-												</div>
-												{dive?.bulletMarkdown ? (
-													<div className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-300 [&_p]:text-sm [&_li]:text-sm [&_table]:text-sm [&_td]:text-sm [&_th]:text-sm [&_math]:text-sm">
-														<MarkdownToHtml contentMarkdown={dive.bulletMarkdown} />
-													</div>
-												) : null}
-												<Link href={`#heading-${item.slug}`} className="inline-flex text-sm font-semibold text-blue-600 dark:text-blue-400">
-													Jump to section
-												</Link>
-											</div>
-										);
-									})()}
-								</details>
-							))}
-						</section>
-					)}
 
-					<section className="mx-auto mt-12 w-full max-w-3xl">
-						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
-							Tradeoffs and production insights
-						</p>
-						<div className="mt-4 grid gap-4 md:grid-cols-2">
-							{tradeoffOptions.slice(0, 2).map((option) => (
-								<div key={option.title} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-									<h3 className="text-base font-bold text-neutral-950 dark:text-neutral-50">{option.title}</h3>
-									<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">{option.body}</p>
-								</div>
-							))}
-						</div>
-						<div className="mt-4 rounded-xl border border-rose-200 bg-rose-50/50 p-4 dark:border-rose-950 dark:bg-rose-950/15">
-							<p className="text-sm font-bold text-neutral-950 dark:text-neutral-50">Failure case to keep in mind</p>
-							<p className="mt-2 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-								{failureScenarios[0]?.impact || 'The idea becomes risky when its assumptions are applied outside the conditions that make them true.'}
-							</p>
-						</div>
-					</section>
+
+
 
 					<section className="mx-auto mt-10 w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
 						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Quiet AI help</p>
@@ -2168,10 +2197,20 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 			.slice(0, 4)
 			.map(({ post }) => post);
 
+		const { cleanMarkdown, backmatter } = parseArticleBackmatter(currentPost.content.markdown);
+		const postWithBackmatter: PostFullFragment = {
+			...currentPost,
+			content: {
+				...currentPost.content,
+				markdown: cleanMarkdown,
+			},
+		};
+
 		return {
 			props: {
 				type: 'post',
-				post: currentPost,
+				post: postWithBackmatter,
+				backmatter,
 				publication: postData.publication,
 				footerPosts,
 				morePosts,
