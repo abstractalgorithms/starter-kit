@@ -1557,6 +1557,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 
 	useEffect(() => {
 		const primaryTag = tags[0] ? formatTagName(tags[0].name) : undefined;
+		const primaryTopicSlug = tags[0]?.slug ?? topicLearningSlug;
 		const secondaryTag = tags[1] ? formatTagName(tags[1].name) : undefined;
 		setContext({
 			source: 'article',
@@ -1568,7 +1569,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 			subtopic: post.series?.name ?? secondaryTag,
 			concept: primaryArticleConcept,
 			roadmapNode: primaryArticleConcept,
-			roadmapHref: `/topic/${topicLearningSlug}`,
+			roadmapHref: `/topic/${primaryTopicSlug}`,
 			simulationTopic: primaryArticleConcept,
 		});
 		recordConceptSeen({

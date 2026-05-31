@@ -29,6 +29,7 @@ export type TopicLearningJourney = {
 	domain: ArticleDomain;
 	concepts: string[];
 	articles: TopicLearningArticle[];
+	totalArticleCount: number;
 	stages: TopicLearningStage[];
 	semanticQuery: string;
 };
@@ -150,7 +151,7 @@ const getTopicProfile = (slug: string, posts: PostFragment[]) => {
 const scorePostForTopic = (post: PostFragment, profile: ReturnType<typeof getTopicProfile>, slug: string) => {
 	const text = getPostText(post);
 	const domain = inferArticleDomain(post);
-	let score = domain === profile.domain ? 12 : 0;
+	let score = profile.domain !== 'general' && domain === profile.domain ? 12 : 0;
 
 	for (const keyword of profile.keywords) {
 		const normalized = keyword.toLowerCase();
@@ -166,9 +167,7 @@ const scorePostForTopic = (post: PostFragment, profile: ReturnType<typeof getTop
 };
 
 export const inferTopicSlugForPost = (post: PostFragment) => {
-	const domain = inferArticleDomain(post);
-	if (domain !== 'general') return domain;
-	return post.tags?.[0]?.slug ?? normalizeTopicSlug(inferPrimaryArticleConcept(post));
+	return normalizeTopicSlug(post.tags?.[0]?.slug ?? inferPrimaryArticleConcept(post));
 };
 
 const buildStage = (
@@ -189,13 +188,15 @@ const buildStage = (
 export const buildTopicLearningJourney = (slugInput: string, posts: PostFragment[]): TopicLearningJourney => {
 	const slug = normalizeTopicSlug(slugInput);
 	const profile = getTopicProfile(slug, posts);
-	const articles = posts
+	const scoredArticles = posts
 		.map((post) => ({
 			post,
 			score: scorePostForTopic(post, profile, slug),
 		}))
 		.filter(({ score }) => score > 0)
-		.sort((a, b) => b.score - a.score)
+		.sort((a, b) => b.score - a.score);
+
+	const articles = scoredArticles
 		.slice(0, 12)
 		.map(({ post, score }) => ({
 			id: post.id,
@@ -232,24 +233,36 @@ export const buildTopicLearningJourney = (slugInput: string, posts: PostFragment
 		domain: profile.domain,
 		concepts,
 		articles,
+		totalArticleCount: scoredArticles.length,
 		stages,
 		semanticQuery: `${profile.label} ${concepts.slice(0, 5).join(' ')}`,
 	};
 };
 
 export const buildTopicCollectionSummaries = (posts: PostFragment[], limit = 8): TopicCollectionSummary[] => {
-	const tagSlugs = posts
-		.flatMap((post) => post.tags ?? [])
-		.reduce<Map<string, number>>((counts, tag) => {
-			const slug = normalizeTopicSlug(tag.slug || tag.name);
-			if (!slug) return counts;
-			counts.set(slug, (counts.get(slug) ?? 0) + 1);
+	const primaryTagSlugs = posts.reduce<Map<string, number>>((counts, post) => {
+		const tag = post.tags?.[0];
+		if (!tag) return counts;
+		const slug = normalizeTopicSlug(tag.slug || tag.name);
+		if (!slug) return counts;
+		counts.set(slug, (counts.get(slug) ?? 0) + 1);
+		return counts;
+	}, new Map<string, number>());
+
+	const secondaryProfileSlugs = posts
+		.reduce<Map<string, number>>((counts, post) => {
+			const domain = inferArticleDomain(post);
+			if (domain === 'general') return counts;
+			if (primaryTagSlugs.has(domain)) return counts;
+			counts.set(domain, (counts.get(domain) ?? 0) + 1);
 			return counts;
 		}, new Map<string, number>());
 
 	const candidateSlugs = [
-		...Object.keys(TOPIC_PROFILES),
-		...[...tagSlugs.entries()]
+		...[...primaryTagSlugs.entries()]
+			.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+			.map(([slug]) => slug),
+		...[...secondaryProfileSlugs.entries()]
 			.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 			.map(([slug]) => slug),
 	];
@@ -266,10 +279,10 @@ export const buildTopicCollectionSummaries = (posts: PostFragment[], limit = 8):
 			slug: journey.slug,
 			label: journey.label,
 			description: journey.description,
-			articleCount: journey.articles.length,
+			articleCount: journey.totalArticleCount,
 			concepts: journey.concepts.slice(0, 4),
 			featuredArticle: journey.articles[0],
 		}))
-		.sort((a, b) => b.articleCount - a.articleCount || a.label.localeCompare(b.label))
+		.filter((summary) => summary.articleCount > 0)
 		.slice(0, limit);
 };

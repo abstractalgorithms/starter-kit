@@ -15,15 +15,15 @@ export type ArticleDomain =
 	| 'general';
 
 const KNOWN_CONCEPT_PATTERNS: Array<{ pattern: RegExp; concept: string; domain: ArticleDomain }> = [
-	{ pattern: /hyperloglog/i, concept: 'HyperLogLog', domain: 'probabilistic-data-structures' },
-	{ pattern: /bloom filter/i, concept: 'Bloom Filter', domain: 'probabilistic-data-structures' },
-	{ pattern: /count-min sketch/i, concept: 'Count-Min Sketch', domain: 'probabilistic-data-structures' },
-	{ pattern: /softmax/i, concept: 'Softmax', domain: 'ai-systems' },
-	{ pattern: /dot product/i, concept: 'Dot Product', domain: 'ai-systems' },
-	{ pattern: /quorum/i, concept: 'Quorum', domain: 'distributed-systems' },
-	{ pattern: /consensus|raft|paxos/i, concept: 'Consensus', domain: 'distributed-systems' },
-	{ pattern: /replication/i, concept: 'Replication', domain: 'distributed-systems' },
-	{ pattern: /kafka/i, concept: 'Kafka', domain: 'distributed-systems' },
+	{ pattern: /\bhyperloglog\b/i, concept: 'HyperLogLog', domain: 'probabilistic-data-structures' },
+	{ pattern: /\bbloom filter\b/i, concept: 'Bloom Filter', domain: 'probabilistic-data-structures' },
+	{ pattern: /\bcount-min sketch\b/i, concept: 'Count-Min Sketch', domain: 'probabilistic-data-structures' },
+	{ pattern: /\bsoftmax\b/i, concept: 'Softmax', domain: 'ai-systems' },
+	{ pattern: /\bdot product\b/i, concept: 'Dot Product', domain: 'ai-systems' },
+	{ pattern: /\bquorum\b/i, concept: 'Quorum', domain: 'distributed-systems' },
+	{ pattern: /\b(?:consensus|raft|paxos)\b/i, concept: 'Consensus', domain: 'distributed-systems' },
+	{ pattern: /\breplication\b/i, concept: 'Replication', domain: 'distributed-systems' },
+	{ pattern: /\bkafka\b/i, concept: 'Kafka', domain: 'distributed-systems' },
 ];
 
 const domainPatterns: Array<{ domain: ArticleDomain; pattern: RegExp }> = [
