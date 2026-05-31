@@ -24,20 +24,20 @@ export const POST_VIEW_META: Record<
 	{ label: string; description: string }
 > = {
 	all: {
-		label: 'All articles',
-		description: 'Browse the full archive of systems essays and engineering deep dives.',
+		label: 'All chapters',
+		description: 'Browse the full archive of systems chapters.',
 	},
 	created: {
-		label: 'Newest articles',
-		description: 'The most recently published essays first.',
+		label: 'Newest chapters',
+		description: 'The most recently published chapters first.',
 	},
 	updated: {
 		label: 'Recently updated',
-		description: 'Essays that were recently revised or expanded.',
+		description: 'Chapters that were recently revised or expanded.',
 	},
 	top: {
 		label: 'Reader favorites',
-		description: 'Popular articles that readers return to most.',
+		description: 'Popular chapters that readers return to most.',
 	},
 };
 

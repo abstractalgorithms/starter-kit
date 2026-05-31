@@ -98,7 +98,7 @@ const HeaderSearch = () => {
 		<div ref={containerRef} className="relative">
 			<button
 				onClick={() => setIsOpen((o) => !o)}
-				aria-label="Search articles"
+				aria-label="Search chapters"
 				className="flex items-center justify-center hover:bg-background border-0"
 			>
 				<svg
@@ -122,7 +122,7 @@ const HeaderSearch = () => {
 						<input
 							ref={inputRef}
 							type="text"
-							placeholder="Search articles…"
+							placeholder="Search chapters..."
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
 							onKeyUp={onKeyUp}
@@ -188,7 +188,7 @@ const HeaderSearch = () => {
 
 						{!query && (
 							<div className="px-4 py-4 text-center">
-								<p className="text-xs text-neutral-500 dark:text-neutral-400">Type to search articles…</p>
+								<p className="text-xs text-neutral-500 dark:text-neutral-400">Type to search chapters...</p>
 							</div>
 						)}
 					</div>
@@ -210,22 +210,22 @@ export const PersonalHeader = () => {
 	const newsletterUrl = publication.url ? `${publication.url.replace(/\/$/, '')}/newsletter` : null;
 	const navItems = [
 		{
-			label: 'Articles',
+			label: 'Chapters',
 			href: '/posts',
 			items: [
-				{ label: 'Latest Articles', href: '/posts', description: 'Canonical engineering deep dives' },
-				{ label: 'Popular Deep Dives', href: '/posts?sort=popular-desc', description: 'What engineers are reading most' },
-				{ label: 'Recently Updated', href: '/posts?sort=updated-desc', description: 'Freshly revised systems ideas' },
-				{ label: 'Series', href: '/series', description: 'Author-curated reading sequences' },
+				{ label: 'Latest Chapters', href: '/posts', description: 'Canonical engineering chapters' },
+				{ label: 'Popular Chapters', href: '/posts?sort=popular-desc', description: 'What engineers are reading most' },
+				{ label: 'Revised Chapters', href: '/posts?sort=updated-desc', description: 'Freshly revised systems ideas' },
+				{ label: 'Books', href: '/series', description: 'Author-curated technical books' },
 			],
 		},
 		{
-			label: 'Explore',
+			label: 'Discovery',
 			href: '/discover',
 			items: [
-				{ label: 'Concept Collections', href: '/discover#topic-collections', description: 'Article-backed systems themes' },
+				{ label: 'Concept Collections', href: '/discover#topic-collections', description: 'Chapter-backed systems themes' },
 				{ label: 'Related Systems', href: '/discover', description: 'Follow adjacent engineering ideas' },
-				{ label: 'Architecture Deep Dives', href: '/posts?sort=popular-desc', description: 'Durable systems essays and patterns' },
+				{ label: 'Architecture Chapters', href: '/posts?sort=popular-desc', description: 'Durable systems essays and patterns' },
 			],
 		},
 		{

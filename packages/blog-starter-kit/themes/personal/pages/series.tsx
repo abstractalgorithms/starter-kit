@@ -4,12 +4,12 @@ import request from 'graphql-request';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { Footer } from '../components/footer';
 import { Layout } from '../components/layout';
 import { PersonalHeader } from '../components/personal-theme-header';
-import { formatTagName } from '../utils/format';
 import {
 	AllSeriesByPublicationDocument,
 	AllSeriesByPublicationQuery,
@@ -25,8 +25,14 @@ import {
 } from '../generated/graphql';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
+const RECENTLY_VIEWED_KEY = 'aa:recently-viewed-posts';
+const FALLBACK_POST_IMAGE = '/assets/blog/post-fallback.svg';
 
-type SeriesTag = { name: string; slug: string };
+type SeriesPost = {
+	slug: string;
+	title: string;
+	coverImage: string | null;
+};
 
 type Series = {
 	id: string;
@@ -36,7 +42,7 @@ type Series = {
 	coverImage: string | null;
 	postCount: number;
 	totalReadTime: number;
-	tags: SeriesTag[];
+	posts: SeriesPost[];
 };
 
 type Props = {
@@ -45,113 +51,215 @@ type Props = {
 	footerPosts: PostFragment[];
 };
 
+type RecentlyViewedItem = {
+	slug: string;
+	title: string;
+	seenAt: number;
+};
 
-const SeriesCard = ({ s }: { s: Series }) => {
+const FEATURED_SERIES = [
+	'system-design-interview-prep',
+	'llm-engineering',
+	'distributed-systems',
+	'modern-java',
+	'vector-databases',
+];
+
+const readRecentlyViewed = (): RecentlyViewedItem[] => {
+	if (typeof window === 'undefined') return [];
+	try {
+		const raw = localStorage.getItem(RECENTLY_VIEWED_KEY);
+		if (!raw) return [];
+		return JSON.parse(raw) as RecentlyViewedItem[];
+	} catch {
+		return [];
+	}
+};
+
+const formatDuration = (minutes: number) => {
+	if (minutes <= 0) return '';
+	const hours = Math.floor(minutes / 60);
+	const mins = minutes % 60;
+	if (hours <= 0) return `${mins} min`;
+	return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+};
+
+const resolveBookImage = (s: Series) =>
+	s.coverImage || s.posts.find((post) => post.coverImage)?.coverImage || FALLBACK_POST_IMAGE;
+
+const getBookOutcome = (s: Series) => {
+	const text = `${s.name} ${s.description}`.toLowerCase();
+	if (/kafka/.test(text)) return 'Understand Kafka from partitions and brokers through delivery guarantees.';
+	if (/distributed|consensus|replication/.test(text)) return 'Build intuition for coordination, consistency, failure, and recovery.';
+	if (/vector|embedding|rag/.test(text)) return 'Learn how semantic retrieval systems are modeled, queried, and operated.';
+	if (/java|jvm|spring/.test(text)) return 'Move through modern Java runtime behavior and production design choices.';
+	if (/system design|hld|interview/.test(text)) return 'Practice turning ambiguous requirements into durable architecture decisions.';
+	if (/llm|agent|ai/.test(text)) return 'Connect model behavior, agent design, evaluation, and production guardrails.';
+	return s.description || `Build progressive understanding of ${s.name}.`;
+};
+
+const getFeaturedSeries = (series: Series[]) => {
+	const bySlug = new Map(series.map((s) => [s.slug, s]));
+	const curated = FEATURED_SERIES.map((slug) => bySlug.get(slug)).filter((s): s is Series => Boolean(s));
+	const remaining = series.filter((s) => !curated.some((item) => item.id === s.id));
+	return [...curated, ...remaining].slice(0, Math.min(5, series.length));
+};
+
+const ContinueBook = ({ series }: { series: Series[] }) => {
+	const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedItem[]>([]);
+
+	useEffect(() => {
+		setRecentlyViewed(readRecentlyViewed());
+	}, []);
+
+	const progress = useMemo(() => {
+		for (const item of recentlyViewed) {
+			const book = series.find((s) => s.posts.some((post) => post.slug === item.slug));
+			if (!book) continue;
+			const chapterIndex = book.posts.findIndex((post) => post.slug === item.slug);
+			return {
+				book,
+				chapterIndex,
+				currentChapter: book.posts[chapterIndex],
+			};
+		}
+		return null;
+	}, [recentlyViewed, series]);
+
+	if (!progress) return null;
+
+	return (
+		<section className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900/60">
+			<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">
+				Continue book
+			</p>
+			<div className="mt-3 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+				<div>
+					<h2 className="text-2xl font-black tracking-tight text-neutral-950 dark:text-neutral-50">
+						{progress.book.name}
+					</h2>
+					<p className="mt-2 text-sm font-semibold text-neutral-500 dark:text-neutral-400">
+						Chapter {progress.chapterIndex + 1} of {progress.book.postCount}
+					</p>
+					<p className="mt-1 line-clamp-1 text-sm text-neutral-600 dark:text-neutral-300">
+						{progress.currentChapter.title}
+					</p>
+				</div>
+				<Link
+					href={`/${progress.currentChapter.slug}`}
+					className="inline-flex justify-center rounded-xl bg-neutral-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-blue-100"
+				>
+					Continue Book
+				</Link>
+			</div>
+		</section>
+	);
+};
+
+const FeaturedBookCard = ({ s }: { s: Series }) => {
 	const hours = Math.floor(s.totalReadTime / 60);
 	const mins = s.totalReadTime % 60;
 	const duration = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
 
 	return (
-		<Link
-			href={`/series/${s.slug}`}
-			className="group flex flex-col h-full rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 overflow-hidden"
-		>
-			{/* Cover image */}
-			{s.coverImage ? (
-				<div className="w-full h-48 overflow-hidden flex-shrink-0">
-					<img
-						src={s.coverImage}
-						alt={s.name}
-						className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-					/>
+		<article className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+			<img
+				src={resolveBookImage(s)}
+				alt={s.name}
+				className="aspect-[16/8] w-full object-cover"
+			/>
+			<div className="flex flex-1 flex-col p-5">
+				<h3 className="text-xl font-black leading-tight text-neutral-950 dark:text-neutral-50">{s.name}</h3>
+				<p className="mt-3 line-clamp-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+					{getBookOutcome(s)}
+				</p>
+				<div className="mt-5 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+					<span>{s.postCount} chapter{s.postCount !== 1 ? 's' : ''}</span>
+					{duration ? <span>{duration}</span> : null}
 				</div>
-			) : (
-				<div className="w-full h-20 flex-shrink-0 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800">
-					<svg className="w-8 h-8 text-neutral-300 dark:text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-					</svg>
-				</div>
-			)}
+				<Link
+					href={`/series/${s.slug}`}
+					className="mt-5 inline-flex justify-center rounded-xl bg-neutral-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-blue-100"
+				>
+					Start Book
+				</Link>
+			</div>
+		</article>
+	);
+};
 
-			<div className="flex flex-col flex-grow p-5 gap-3">
-				{/* Title */}
-				<h3 className="text-lg font-bold leading-tight tracking-tight text-black dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
-					{s.name}
-				</h3>
-
-				{/* Description */}
-				{s.description && (
-					<p className="text-neutral-600 dark:text-neutral-400 line-clamp-2 text-sm flex-grow">
-						{s.description}
+const BookRow = ({ s, index }: { s: Series; index: number }) => {
+	const duration = formatDuration(s.totalReadTime);
+	return (
+		<div className="grid gap-4 border-t border-neutral-100 py-5 first:border-t-0 dark:border-neutral-800 md:grid-cols-[72px_minmax(0,1fr)_auto] md:items-center">
+			<span className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-xs font-black text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
+				{index + 1}
+			</span>
+			<div className="grid min-w-0 gap-3 sm:grid-cols-[96px_minmax(0,1fr)] sm:items-center">
+				<img
+					src={resolveBookImage(s)}
+					alt={s.name}
+					className="hidden aspect-[4/3] w-24 rounded-xl object-cover sm:block"
+				/>
+				<div className="min-w-0">
+					<h3 className="text-base font-black text-neutral-950 dark:text-neutral-50">{s.name}</h3>
+					<p className="mt-1 line-clamp-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+						{getBookOutcome(s)}
 					</p>
-				)}
-
-				{/* Tags */}
-				{s.tags.length > 0 && (
-					<div className="flex flex-wrap gap-1.5">
-						{s.tags.slice(0, 4).map((tag) => (
-							<span
-								key={tag.slug}
-								className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
-							>
-								{formatTagName(tag.name)}
-							</span>
-						))}
-					</div>
-				)}
-
-				{/* Spacer */}
-				<div className="flex-1" />
-
-				{/* Footer stats */}
-				<div className="flex items-center justify-between pt-3 border-t border-neutral-200 dark:border-neutral-800">
-					<div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400">
-						<span className="inline-flex items-center gap-1">
-							<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-							</svg>
-							{s.postCount} article{s.postCount !== 1 ? 's' : ''}
-						</span>
-
-						{s.totalReadTime > 0 && (
-							<span className="inline-flex items-center gap-1">
-								<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-								</svg>
-								{duration}
-							</span>
-						)}
-					</div>
+					<p className="mt-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+						{s.postCount} chapter{s.postCount !== 1 ? 's' : ''}{duration ? ` · ${duration}` : ''}
+					</p>
 				</div>
 			</div>
-		</Link>
+			<div className="flex flex-wrap gap-3 md:justify-end">
+				<Link
+					href={`/series/${s.slug}`}
+					className="inline-flex rounded-xl bg-neutral-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-blue-100"
+				>
+					Start Book
+				</Link>
+				<Link
+					href={`/series/${s.slug}`}
+					className="inline-flex rounded-xl px-2 py-2 text-sm font-bold text-neutral-500 transition hover:text-blue-700 dark:text-neutral-400 dark:hover:text-blue-300"
+				>
+					View Chapters
+				</Link>
+			</div>
+		</div>
 	);
 };
 
 export default function SeriesPage({ publication, series, footerPosts }: Props) {
+	const featuredSeries = useMemo(() => getFeaturedSeries(series), [series]);
+	const featuredIds = useMemo(() => new Set(featuredSeries.map((s) => s.id)), [featuredSeries]);
+	const allBooks = useMemo(
+		() => [...featuredSeries, ...series.filter((s) => !featuredIds.has(s.id))],
+		[featuredIds, featuredSeries, series],
+	);
+
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
 				<Head>
-					<title>All Series - {publication.title}</title>
+					<title>Engineering Books - {publication.title}</title>
 					<meta
 						name="description"
-						content={`Explore all series on ${publication.title}. Comprehensive guides and tutorials.`}
+						content={`Curated engineering books from ${publication.title} that build understanding chapter by chapter.`}
 					/>
-					<meta property="og:title" content={`All Series - ${publication.title}`} />
+					<meta property="og:title" content={`Engineering Books - ${publication.title}`} />
 					<meta
 						property="og:description"
-						content={`Explore all series on ${publication.title}. Comprehensive guides and tutorials.`}
+						content={`Curated engineering books from ${publication.title} that build understanding chapter by chapter.`}
 					/>
 					<meta
 						property="og:image"
 						content={publication.ogMetaData?.image || getAutogeneratedPublicationOG(publication)}
 					/>
 					<meta property="twitter:card" content="summary_large_image" />
-					<meta property="twitter:title" content={`All Series - ${publication.title}`} />
+					<meta property="twitter:title" content={`Engineering Books - ${publication.title}`} />
 					<meta
 						property="twitter:description"
-						content={`Explore all series on ${publication.title}. Comprehensive guides and tutorials.`}
+						content={`Curated engineering books from ${publication.title} that build understanding chapter by chapter.`}
 					/>
 					<meta
 						property="twitter:image"
@@ -166,57 +274,81 @@ export default function SeriesPage({ publication, series, footerPosts }: Props) 
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-7xl mx-auto w-full px-5 pt-10 pb-20">
-						{/* Back nav */}
+					<main className="mx-auto w-full max-w-7xl px-4 pb-20 pt-10 sm:px-5">
 						<Link
 							href="/"
-							className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-10 group"
+							className="mb-10 inline-flex text-sm text-neutral-400 transition-colors hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform"
-							>
-								<path
-									fillRule="evenodd"
-									d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-									clipRule="evenodd"
-								/>
-							</svg>
 							Home
 						</Link>
 
-						{/* Page header */}
-						<div className="mb-10">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
-								Series
+						<section>
+							<p className="mb-2 text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+								Books
 							</p>
-							<h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3">
-								All Series
+							<h1 className="text-4xl font-black tracking-tight text-neutral-950 dark:text-neutral-50 md:text-5xl">
+								Engineering books
 							</h1>
-							<p className="text-lg text-neutral-500 dark:text-neutral-400 max-w-xl">
-								Structured, end-to-end guides — read them in order for the full picture.
+							<p className="mt-3 max-w-2xl text-base leading-relaxed text-neutral-600 dark:text-neutral-300">
+								Curated technical books that build understanding chapter by chapter.
 							</p>
-						</div>
+						</section>
 
 						{series.length > 0 ? (
-							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-								{series.map((s) => (
-									<SeriesCard key={s.id} s={s} />
-								))}
+							<div className="mt-10 space-y-14">
+								<ContinueBook series={series} />
+
+								<section>
+									<div className="mb-5">
+										<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-neutral-400 dark:text-neutral-500">
+											Featured books
+										</p>
+										<h2 className="mt-2 text-2xl font-black tracking-tight text-neutral-950 dark:text-neutral-50">
+											Start with a book
+										</h2>
+									</div>
+									<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+										{featuredSeries.slice(0, 5).map((s) => (
+											<FeaturedBookCard key={s.id} s={s} />
+										))}
+									</div>
+								</section>
+
+								<section>
+									<div className="mb-3">
+										<p className="text-[10px] font-mono uppercase tracking-[0.22em] text-neutral-400 dark:text-neutral-500">
+											All books
+										</p>
+										<h2 className="mt-2 text-2xl font-black tracking-tight text-neutral-950 dark:text-neutral-50">
+											Choose a book
+										</h2>
+									</div>
+									<div className="rounded-2xl border border-neutral-200 bg-white px-4 dark:border-neutral-800 dark:bg-neutral-900">
+										{allBooks.map((s, index) => (
+											<BookRow key={s.id} s={s} index={index} />
+										))}
+									</div>
+								</section>
+
+								<section className="border-t border-neutral-100 pt-6 dark:border-neutral-800">
+									<div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-bold">
+										<Link href="/posts" className="text-neutral-500 transition hover:text-blue-700 dark:text-neutral-400 dark:hover:text-blue-300">
+											Browse chapters
+										</Link>
+										<Link href="/discover#topic-collections" className="text-neutral-500 transition hover:text-blue-700 dark:text-neutral-400 dark:hover:text-blue-300">
+											Open Discovery
+										</Link>
+									</div>
+								</section>
 							</div>
 						) : (
-							<div className="flex flex-col items-center justify-center py-20 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
-								<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
-									Coming soon
-								</p>
+							<div className="mt-10 rounded-2xl border border-dashed border-neutral-200 px-6 py-16 text-center dark:border-neutral-800">
 								<p className="text-base text-neutral-500 dark:text-neutral-400">
-									No series available yet.
+									No books available yet.
 								</p>
 							</div>
 						)}
-					</div>
+					</main>
 					<Footer />
 				</Container>
 			</Layout>
@@ -292,19 +424,6 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 		const series: Series[] = [...rawSeriesMap.values()].map((s) => {
 			const seriesPosts = allPosts.filter((p) => p.series?.id === s.id);
 
-			const tagMap = new Map<string, { name: string; slug: string; count: number }>();
-			for (const post of seriesPosts) {
-				for (const tag of post.tags ?? []) {
-					if (!tag?.slug) continue;
-					const existing = tagMap.get(tag.slug);
-					tagMap.set(tag.slug, { name: tag.name, slug: tag.slug, count: (existing?.count ?? 0) + 1 });
-				}
-			}
-			const tags = [...tagMap.values()]
-				.sort((a, b) => b.count - a.count)
-				.slice(0, 4)
-				.map(({ name, slug }) => ({ name, slug }));
-
 			return {
 				id: s.id,
 				name: s.name,
@@ -313,7 +432,11 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 				coverImage: s.coverImage ?? null,
 				postCount: seriesPosts.length,
 				totalReadTime: seriesPosts.reduce((sum, p) => sum + (p.readTimeInMinutes ?? 0), 0),
-				tags,
+				posts: seriesPosts.map((post) => ({
+					slug: post.slug,
+					title: post.title,
+					coverImage: post.coverImage?.url ?? null,
+				})),
 			};
 		}).sort((a, b) => b.postCount - a.postCount);
 

@@ -80,7 +80,7 @@ export const ArticleEngagement = ({ post, publication }: Props) => {
 	);
 
 	return (
-		<section id="article-feedback" className="mx-auto mt-8 w-full max-w-3xl rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+		<section id="article-feedback" className="mx-auto mt-8 w-full max-w-none rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
 			<div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
 					<div>
 						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">

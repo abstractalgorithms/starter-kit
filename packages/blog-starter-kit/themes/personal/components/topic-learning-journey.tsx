@@ -188,7 +188,7 @@ export const TopicLearningJourneyView = ({ journey, posts }: Props) => {
 					<div className="mt-4 grid grid-cols-2 gap-2 text-center">
 						<div className="rounded-xl bg-white p-3 dark:bg-neutral-950">
 							<p className="text-2xl font-black text-neutral-950 dark:text-neutral-50">{journey.totalArticleCount}</p>
-							<p className="text-[10px] font-bold uppercase text-neutral-500">Articles</p>
+							<p className="text-[10px] font-bold uppercase text-neutral-500">Chapters</p>
 						</div>
 						<div className="rounded-xl bg-white p-3 dark:bg-neutral-950">
 							<p className="text-2xl font-black text-neutral-950 dark:text-neutral-50">{journey.concepts.length}</p>
@@ -271,7 +271,7 @@ export const TopicLearningJourneyView = ({ journey, posts }: Props) => {
 					</div>
 					{journey.totalArticleCount > journey.articles.length ? (
 						<p className="mt-4 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-							Showing the top {journey.articles.length} of {journey.totalArticleCount} matching articles.
+							Showing the top {journey.articles.length} of {journey.totalArticleCount} matching chapters.
 						</p>
 					) : null}
 				</div>

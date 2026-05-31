@@ -39,7 +39,7 @@ export default function DiscoverPage({ publication, posts, topicCollections }: P
 		setContext({
 			source: 'discover',
 			pathname: '/discover',
-			title: 'Explore',
+			title: 'Discovery',
 			domain: 'Engineering',
 			topic: 'Systems concepts',
 			roadmapHref: '/discover#topic-collections',
@@ -51,12 +51,12 @@ export default function DiscoverPage({ publication, posts, topicCollections }: P
 		<AppProvider publication={publication} footerPosts={posts}>
 			<Layout>
 				<Head>
-					<title>Explore Systems Concepts - {publication.title}</title>
+					<title>Discovery - {publication.title}</title>
 					<meta
 						name="description"
-						content={`Explore ${publication.title} through article-backed systems concepts, architecture deep dives, and related engineering themes.`}
+						content={`Discover ${publication.title} through chapter-backed systems concepts, architecture themes, and related engineering ideas.`}
 					/>
-					<meta property="og:title" content={`Explore Systems Concepts - ${publication.title}`} />
+					<meta property="og:title" content={`Discovery - ${publication.title}`} />
 					<meta
 						property="og:description"
 						content="Move through related systems ideas without leaving the editorial reading experience."
@@ -80,13 +80,13 @@ export default function DiscoverPage({ publication, posts, topicCollections }: P
 						</Link>
 						<div className="mb-8">
 							<p className="mb-2 text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
-								Explore
+								Discovery
 							</p>
 							<h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 md:text-5xl">
 								Related systems and concepts
 							</h1>
 							<p className="mt-3 max-w-3xl text-lg leading-relaxed text-neutral-500 dark:text-neutral-400">
-								Move from one durable engineering idea to the next through article-backed collections, architecture themes, and a small relationship view when it helps.
+								Move from one durable engineering idea to the next through chapter-backed collections, architecture themes, and a small relationship view when it helps.
 							</p>
 						</div>
 
@@ -104,7 +104,7 @@ export default function DiscoverPage({ publication, posts, topicCollections }: P
 									href="/posts"
 									className="text-sm font-bold text-blue-600 transition hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
 								>
-									Browse all articles
+									Browse chapters
 								</Link>
 							</div>
 							<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -154,7 +154,7 @@ export default function DiscoverPage({ publication, posts, topicCollections }: P
 									A light relationship map
 								</h2>
 								<p className="mt-2 max-w-3xl text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
-									Use this only as a quick orientation layer. The articles remain the source of depth.
+									Use this only as a quick orientation layer. The chapters remain the source of depth.
 								</p>
 							</div>
 							<SystemsKnowledgeGraph posts={posts} initialConcept="replication" compact />

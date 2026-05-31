@@ -142,7 +142,7 @@ const getTopicProfile = (slug: string, posts: PostFragment[]) => {
 	return {
 		label,
 		domain: 'general' as ArticleDomain,
-		description: `Learn ${label} as a connected topic across articles, concepts, simulations, and interview reasoning.`,
+		description: `Learn ${label} as a connected topic across chapters, concepts, simulations, and interview reasoning.`,
 		keywords,
 		concepts: [label, 'Mental Model', 'Tradeoffs', 'Failure Modes', 'Interview Reasoning'],
 	};
@@ -219,11 +219,11 @@ export const buildTopicLearningJourney = (slugInput: string, posts: PostFragment
 	const concepts = [...new Set([...profile.concepts, ...conceptSeeds])].slice(0, 10);
 
 	const stages: TopicLearningStage[] = [
-		buildStage('concept', 'Concept', 'Establish the topic mental model before choosing an article.', 'Start Reading', articles, 0),
+		buildStage('concept', 'Concept', 'Establish the topic mental model before choosing a chapter.', 'Start Reading', articles, 0),
 		buildStage('visual', 'Visual', 'See the nearby systems ideas when the relationship matters.', 'See Context', articles, 1),
-		buildStage('tradeoff', 'Tradeoff', 'Compare production constraints across related articles.', 'Compare Tradeoffs', articles, 2),
+		buildStage('tradeoff', 'Tradeoff', 'Compare production constraints across related chapters.', 'Compare Tradeoffs', articles, 2),
 		buildStage('challenge', 'Challenge', 'Practice the operational question behind the topic.', 'Practice Reasoning', articles, 3),
-		buildStage('continue', 'Continue', 'Move to the next article or related concept.', 'Continue Reading', articles, 4),
+		buildStage('continue', 'Continue', 'Move to the next chapter or related concept.', 'Continue Reading', articles, 4),
 	];
 
 	return {

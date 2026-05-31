@@ -25,6 +25,7 @@ export type LearningContextSnapshot = {
 	domain?: string;
 	topic?: string;
 	subtopic?: string;
+	subtopicHref?: string;
 	concept?: string;
 	sectionId?: string;
 	sectionTitle?: string;
@@ -129,7 +130,7 @@ export const buildLearningCrumbs = (context: LearningContextSnapshot): LearningC
 	const crumbs: LearningCrumb[] = [];
 	if (context.domain) crumbs.push({ label: context.domain, href: '/posts' });
 	if (context.topic) crumbs.push({ label: context.topic, href: context.roadmapHref ?? '/guided-topics' });
-	if (context.subtopic) crumbs.push({ label: context.subtopic, href: context.slug ? `/${context.slug}` : undefined });
+	if (context.subtopic) crumbs.push({ label: context.subtopic, href: context.subtopicHref });
 	if (context.concept) crumbs.push({ label: context.concept });
 	if (context.sectionTitle && context.sectionTitle !== context.concept) {
 		crumbs.push({

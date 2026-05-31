@@ -1559,6 +1559,11 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 		const primaryTag = tags[0] ? formatTagName(tags[0].name) : undefined;
 		const primaryTopicSlug = tags[0]?.slug ?? topicLearningSlug;
 		const secondaryTag = tags[1] ? formatTagName(tags[1].name) : undefined;
+		const subtopicHref = post.series?.slug
+			? `/series/${post.series.slug}`
+			: tags[1]?.slug
+				? `/topic/${tags[1].slug}`
+				: undefined;
 		setContext({
 			source: 'article',
 			pathname: `/${post.slug}`,
@@ -1567,6 +1572,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 			domain: primaryTag ? 'Engineering' : 'Abstract Algorithms',
 			topic: primaryTag ?? post.series?.name ?? post.title,
 			subtopic: post.series?.name ?? secondaryTag,
+			subtopicHref,
 			concept: primaryArticleConcept,
 			roadmapNode: primaryArticleConcept,
 			roadmapHref: `/topic/${primaryTopicSlug}`,
@@ -1577,7 +1583,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 			domain: primaryTag ?? post.series?.name,
 			slug: post.slug,
 		});
-	}, [post.series?.name, post.slug, post.title, primaryArticleConcept, recordConceptSeen, setContext, tags, topicLearningSlug]);
+	}, [post.series?.name, post.series?.slug, post.slug, post.title, primaryArticleConcept, recordConceptSeen, setContext, tags, topicLearningSlug]);
 
 	useEffect(() => {
 		completedMemoryRef.current = false;
@@ -1823,9 +1829,9 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 				<style dangerouslySetInnerHTML={{ __html: highlightJsMonokaiTheme }} />
 			</Head>
 
-			<div className="mx-auto mt-10 grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+			<div className="mx-auto mt-10 grid max-w-7xl gap-10 2xl:grid-cols-[minmax(0,1fr)_220px] 2xl:items-start">
 				<div className="min-w-0">
-					<div className="mx-auto mb-10 w-full max-w-3xl">
+					<div className="mx-auto mb-10 w-full max-w-none">
 						<div className="mb-3 flex flex-wrap items-center gap-2 text-[11px]">
 							<ContextualBreadcrumbs compact />
 						</div>
@@ -1873,7 +1879,26 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 						</div>
 					</div>
 
-					<section className="mx-auto w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 md:p-6">
+					{tocItems.length > 0 ? (
+						<section className="mx-auto mb-8 w-full max-w-none rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+							<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">On this page</p>
+							<div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+								{tocItems.slice(0, 9).map((item) => (
+									<a
+										key={`inline-toc-${item.id}`}
+										href={`#heading-${item.slug}`}
+										className="rounded-xl border border-neutral-100 px-3 py-2 text-sm font-semibold leading-snug text-neutral-600 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-blue-800 dark:hover:text-blue-300"
+									>
+										{decodeHtml(item.title)}
+									</a>
+								))}
+							</div>
+						</section>
+					) : null}
+
+					<ArticleEngagement post={post} publication={publication} />
+
+					<section className="mx-auto w-full max-w-none rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 md:p-6">
 						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300">Executive TLDR</p>
 						<ul className="mt-4 space-y-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
 							{aiSummaryBullets.slice(0, 4).map((item) => (
@@ -1885,7 +1910,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 						</ul>
 					</section>
 
-					<section className="mx-auto mt-8 w-full max-w-3xl">
+					<section className="mx-auto mt-8 w-full max-w-none">
 						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Core mental model</p>
 						<h2 className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
 							Read this as a system of state, constraints, and failure boundaries.
@@ -1903,8 +1928,8 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 						</div>
 					</section>
 
-					<section className="mx-auto mt-10 w-full max-w-3xl rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900/60 md:p-6">
-						<div className="mx-auto max-w-3xl">
+					<section className="mx-auto mt-10 w-full max-w-none rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900/60 md:p-6">
+						<div className="mx-auto max-w-none">
 							<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Key systems visualization</p>
 							<h2 className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
 								The article’s conceptual path
@@ -1937,7 +1962,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 						)}
 					</section>
 
-					<div className="article-doc mx-auto mt-12 w-full max-w-3xl min-w-0">
+					<div className="article-doc mx-auto mt-12 w-full max-w-none min-w-0">
 						<MarkdownToHtml contentMarkdown={post.content.markdown} />
 					</div>
 
@@ -1945,7 +1970,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 
 
 
-					<section className="mx-auto mt-10 w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+					<section className="mx-auto mt-10 w-full max-w-none rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
 						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Quiet AI help</p>
 						<div className="mt-4 grid gap-3 sm:grid-cols-3">
 							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(`Explain ${post.title} more simply, preserving the engineering details.`))}`} className="rounded-xl border border-neutral-200 px-3 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
@@ -1962,7 +1987,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 
 					{/* Tags */}
 					{tags.length > 0 && (
-						<div className="mx-auto mt-10 w-full max-w-3xl border-t border-neutral-100 pt-8 dark:border-neutral-800">
+						<div className="mx-auto mt-10 w-full max-w-none border-t border-neutral-100 pt-8 dark:border-neutral-800">
 							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
 								Article metadata
 							</p>
@@ -1982,7 +2007,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 					)}
 
 					{/* Author Card */}
-					<div className="mx-auto mt-10 flex w-full max-w-3xl items-center gap-4 rounded-xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
+					<div className="mx-auto mt-10 flex w-full max-w-none items-center gap-4 rounded-xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
 						{post.author.profilePicture && (
 							<img
 								src={resizeImage(post.author.profilePicture, { w: 120, h: 120, c: 'face' })}
@@ -2003,11 +2028,9 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 						</div>
 					</div>
 
-					<ArticleEngagement post={post} publication={publication} />
-
 					{/* Related deep dives */}
 					{morePosts.length > 1 ? (
-					<section className="mx-auto mt-10 w-full max-w-3xl rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+					<section className="mx-auto mt-10 w-full max-w-none rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
 						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
 							Related deep dives
 						</p>
@@ -2042,7 +2065,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 					</section>
 					) : null}
 
-					<section className="mx-auto mt-8 w-full max-w-3xl rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
+					<section className="mx-auto mt-8 w-full max-w-none rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
 						<p className="text-[10px] font-mono uppercase tracking-widest text-blue-600 dark:text-blue-300 mb-2">
 							Continue reading
 						</p>
@@ -2070,7 +2093,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 
 				</div>
 
-				<aside className="hidden lg:block">
+				<aside className="hidden 2xl:block">
 					<div className="sticky top-24 space-y-5">
 						<div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
 							<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">On this page</p>

@@ -4,15 +4,13 @@ import request from 'graphql-request';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Container } from '../../components/container';
 import { AppProvider } from '../../components/contexts/appContext';
-import { DateFormatter } from '../../components/date-formatter';
 import { Footer } from '../../components/footer';
 import { Layout } from '../../components/layout';
 import { MarkdownToHtml } from '../../components/markdown-to-html';
 import { PersonalHeader } from '../../components/personal-theme-header';
-import { SeriesAiLearningPath } from '../../components/series-ai-learning-path';
 import { getFooterPosts } from '../../lib/api/footerData';
 import {
 	PageByPublicationDocument,
@@ -24,6 +22,9 @@ import {
 	SeriesPostsByPublicationQuery,
 	SeriesPostsByPublicationQueryVariables,
 } from '../../generated/graphql';
+
+const RECENTLY_VIEWED_KEY = 'aa:recently-viewed-posts';
+const FALLBACK_POST_IMAGE = '/assets/blog/post-fallback.svg';
 
 type SeriesInfo = {
 	id: string;
@@ -46,124 +47,146 @@ type Props = {
 	footerPosts: PostFragment[];
 };
 
-const UNCATEGORIZED = '__uncategorized__';
+type RecentlyViewedItem = {
+	slug: string;
+	title: string;
+	seenAt: number;
+};
 
-const toTitleCase = (str: string) =>
-	str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+type RelatedBook = {
+	name: string;
+	slug: string;
+	postCount: number;
+	totalReadTime: number;
+};
+
+const readRecentlyViewed = (): RecentlyViewedItem[] => {
+	if (typeof window === 'undefined') return [];
+	try {
+		const raw = localStorage.getItem(RECENTLY_VIEWED_KEY);
+		if (!raw) return [];
+		return JSON.parse(raw) as RecentlyViewedItem[];
+	} catch {
+		return [];
+	}
+};
+
+const rememberPostView = (post: PostFragment) => {
+	if (typeof window === 'undefined') return;
+	try {
+		const next = [
+			{ slug: post.slug, title: post.title, seenAt: Date.now() },
+			...readRecentlyViewed().filter((entry) => entry.slug !== post.slug),
+		].slice(0, 8);
+		localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(next));
+	} catch {}
+};
+
+const stripHtml = (value?: string | null) => value?.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() ?? '';
+
+const formatDuration = (minutes: number) => {
+	if (minutes <= 0) return '';
+	const hours = Math.floor(minutes / 60);
+	const mins = minutes % 60;
+	if (hours <= 0) return `${mins} min`;
+	return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+};
+
+const getBookOutcome = (series: SeriesInfo) => {
+	const description = stripHtml(series.description);
+	const text = `${series.name} ${description}`.toLowerCase();
+	if (description) return description;
+	if (/kafka/.test(text)) return 'Understand Kafka from partitions to transactions and exactly-once processing.';
+	if (/distributed|consensus|replication/.test(text)) return 'Understand coordination, consistency, failure, and recovery in distributed systems.';
+	if (/vector|embedding|rag/.test(text)) return 'Understand semantic retrieval from embeddings to production query behavior.';
+	if (/java|jvm|spring/.test(text)) return 'Understand modern Java from runtime behavior to production design choices.';
+	if (/system design|hld|interview/.test(text)) return 'Build practical judgment for turning ambiguous requirements into durable architecture.';
+	if (/llm|agent|ai/.test(text)) return 'Understand model behavior, agent architecture, evaluation, and production guardrails.';
+	return `Build progressive understanding of ${series.name}.`;
+};
+
+const chapterTitle = (title: string) =>
+	title
+		.replace(/^(chapter|part)\s+\d+\s*[:.-]\s*/i, '')
+		.replace(/^\d+\s*[:.-]\s*/, '')
+		.trim();
+
+const buildOverviewSteps = (posts: PostFragment[]) => {
+	if (posts.length <= 5) return posts.map((post) => chapterTitle(post.title));
+	const indexes = [0, Math.floor(posts.length * 0.25), Math.floor(posts.length * 0.5), Math.floor(posts.length * 0.75), posts.length - 1];
+	return [...new Set(indexes)].map((index) => chapterTitle(posts[index].title));
+};
+
+const getRelatedBooks = (currentSeriesId: string, posts: PostFragment[]): RelatedBook[] => {
+	const map = new Map<string, RelatedBook>();
+	for (const post of posts) {
+		if (!post.series || post.series.id === currentSeriesId) continue;
+		const existing = map.get(post.series.id);
+		map.set(post.series.id, {
+			name: post.series.name,
+			slug: post.series.slug,
+			postCount: (existing?.postCount ?? 0) + 1,
+			totalReadTime: (existing?.totalReadTime ?? 0) + (post.readTimeInMinutes ?? 0),
+		});
+	}
+	return [...map.values()].sort((a, b) => b.postCount - a.postCount).slice(0, 2);
+};
 
 const SeriesPlanSection = ({ title, markdown }: { title: string; markdown: string }) => {
-	const [open, setOpen] = useState(true);
 	return (
-		<div className="mb-12 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
-			{/* Header */}
-			<button
-				onClick={() => setOpen((v) => !v)}
-				className="w-full flex items-center justify-between gap-4 px-6 py-4 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-			>
-				<div className="flex items-center gap-3">
-					<span className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400">
-						Series Plan
-					</span>
-					<span className="text-base font-bold text-neutral-900 dark:text-neutral-50">
-						{title}
-					</span>
+		<details className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+			<summary className="cursor-pointer list-none text-sm font-black text-neutral-950 dark:text-neutral-50">
+				{title}
+			</summary>
+			<div className="mt-4 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+				<div className="prose prose-neutral max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-code:text-sm dark:prose-invert dark:prose-a:text-blue-400">
+					<MarkdownToHtml contentMarkdown={markdown} />
 				</div>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					className={`w-5 h-5 flex-shrink-0 text-neutral-400 dark:text-neutral-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-				>
-					<path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-				</svg>
-			</button>
-			{/* Collapsible body */}
-			{open && (
-				<div className="px-6 pb-6 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-					<div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-code:text-sm">
-						<MarkdownToHtml contentMarkdown={markdown} />
-					</div>
-				</div>
-			)}
-		</div>
+			</div>
+		</details>
 	);
 };
 
 export default function SeriesDetailPage({ publication, posts, series, roadmap, footerPosts }: Props) {
 	const title = `${series.name} - ${publication.title}`;
 	const totalReadTime = posts.reduce((sum, p) => sum + (p.readTimeInMinutes ?? 0), 0);
-	const latestDate = posts.length > 0
-		? posts.reduce((latest, p) => (p.publishedAt > latest ? p.publishedAt : latest), posts[0].publishedAt)
-		: null;
-
-	// Build a stable global index map so step numbers always reflect series order
-	const globalIndexMap = useMemo(() => {
-		const m = new Map<string, number>();
-		posts.forEach((p, i) => m.set(p.id, i));
-		return m;
-	}, [posts]);
-
-	const [activeCategory, setActiveCategory] = useState<string | null>(null);
-
-	const { categories, grouped } = useMemo(() => {
-		const order: { slug: string; name: string }[] = [];
-		const seenCats = new Set<string>();
-		const map = new Map<string, PostFragment[]>();
-
-		// Each post is assigned to its FIRST valid tag only (primary category).
-		// This ensures every post appears exactly once — later groups show only the delta.
-		for (const post of posts) {
-			const tags = (post.tags ?? []).filter((t): t is NonNullable<typeof t> => !!t?.slug);
-			const primaryTag = tags[0];
-
-			if (!primaryTag) {
-				// No tags → Uncategorized
-				if (!seenCats.has(UNCATEGORIZED)) {
-					seenCats.add(UNCATEGORIZED);
-					order.push({ slug: UNCATEGORIZED, name: 'Uncategorized' });
-				}
-				map.set(UNCATEGORIZED, [...(map.get(UNCATEGORIZED) ?? []), post]);
-			} else {
-				// Only add to the primary (first) tag bucket
-				if (!seenCats.has(primaryTag.slug)) {
-					seenCats.add(primaryTag.slug);
-					order.push({ slug: primaryTag.slug, name: toTitleCase(primaryTag.name ?? primaryTag.slug) });
-				}
-				map.set(primaryTag.slug, [...(map.get(primaryTag.slug) ?? []), post]);
-			}
+	const firstPost = posts[0];
+	const coverImage = series.coverImage || firstPost?.coverImage?.url || FALLBACK_POST_IMAGE;
+	const overviewSteps = useMemo(() => buildOverviewSteps(posts), [posts]);
+	const relatedBooks = useMemo(() => getRelatedBooks(series.id, footerPosts), [footerPosts, series.id]);
+	const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedItem[]>([]);
+	const currentProgress = useMemo(() => {
+		for (const item of recentlyViewed) {
+			const index = posts.findIndex((post) => post.slug === item.slug);
+			if (index >= 0) return { post: posts[index], index };
 		}
+		return null;
+	}, [posts, recentlyViewed]);
+	const primaryPost = currentProgress?.post ?? firstPost;
+	const primaryLabel = currentProgress ? 'Continue Book' : 'Start Book';
+	const outcome = getBookOutcome(series);
 
-		// Sort by post count descending (majority first); Uncategorized always last
-		const sorted = order
-			.filter(c => c.slug !== UNCATEGORIZED)
-			.sort((a, b) => (map.get(b.slug)?.length ?? 0) - (map.get(a.slug)?.length ?? 0));
-		if (seenCats.has(UNCATEGORIZED)) sorted.push({ slug: UNCATEGORIZED, name: 'Uncategorized' });
-
-		return { categories: sorted, grouped: map };
-	}, [posts]);
-
-	const visibleCategories = useMemo(
-		() => (activeCategory ? categories.filter(c => c.slug === activeCategory) : categories),
-		[categories, activeCategory]
-	);
+	useEffect(() => {
+		setRecentlyViewed(readRecentlyViewed());
+	}, []);
 
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
 			<Layout>
 				<Head>
 					<title>{title}</title>
-					<meta name="description" content={series.description ?? `Posts in the ${series.name} series`} />
+					<meta name="description" content={outcome} />
 					<meta property="og:title" content={title} />
-					<meta property="og:description" content={series.description ?? `Posts in the ${series.name} series`} />
+					<meta property="og:description" content={outcome} />
 					<meta
 						property="og:image"
-						content={series.coverImage ?? publication.ogMetaData?.image ?? getAutogeneratedPublicationOG(publication)}
+						content={coverImage || publication.ogMetaData?.image || getAutogeneratedPublicationOG(publication)}
 					/>
 					<meta property="twitter:card" content="summary_large_image" />
 					<meta property="twitter:title" content={title} />
 					<meta
 						property="twitter:image"
-						content={series.coverImage ?? publication.ogMetaData?.image ?? getAutogeneratedPublicationOG(publication)}
+						content={coverImage || publication.ogMetaData?.image || getAutogeneratedPublicationOG(publication)}
 					/>
 					<script
 						type="application/ld+json"
@@ -172,95 +195,167 @@ export default function SeriesDetailPage({ publication, posts, series, roadmap, 
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-7xl mx-auto w-full px-5 pt-10 pb-20">
-
-						{/* ── Back Navigation ── */}
+					<main className="mx-auto w-full max-w-7xl px-4 pb-20 pt-10 sm:px-5">
 						<Link
 							href="/series"
-							className="inline-flex items-center gap-1.5 text-sm text-neutral-400 dark:text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-10 group"
+							className="mb-10 inline-flex text-sm text-neutral-400 transition-colors hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform"
-							>
-								<path
-									fillRule="evenodd"
-									d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-									clipRule="evenodd"
-								/>
-							</svg>
-							All Series
+							All Books
 						</Link>
 
-						{/* ── Series Hero ── */}
-						<div className={`flex flex-col ${series.coverImage ? 'md:flex-row md:items-center md:gap-10' : ''} mb-12`}>
-							{/* Left: label, title, description, meta */}
-							<div className={series.coverImage ? 'flex-1 min-w-0' : 'w-full'}>
-								<p className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-2">
-									Series
+						<section className="mx-auto grid w-full max-w-none gap-8 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
+							<div>
+								<p className="mb-2 text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+									Book
 								</p>
-								<h1 className="text-4xl md:text-5xl font-extrabold leading-[1.15] tracking-tight text-neutral-900 dark:text-neutral-50 mb-4 capitalize">
+								<h1 className="text-4xl font-black leading-tight tracking-tight text-neutral-950 dark:text-neutral-50 md:text-5xl">
 									{series.name}
 								</h1>
-								{series.description && (
-									<div
-										className="text-lg text-neutral-500 dark:text-neutral-400 leading-relaxed mb-4"
-										dangerouslySetInnerHTML={{ __html: series.description }}
-									/>
-								)}
-
-								{/* Meta row */}
-								<div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-5 border-t border-neutral-100 dark:border-neutral-800">
-									<span className="inline-flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400">
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-											<path d="M10.75 16.82A7.462 7.462 0 0115 15.5c.71 0 1.396.098 2.046.282A.75.75 0 0018 15.06v-11a.75.75 0 00-.546-.721A9.006 9.006 0 0015 3a8.963 8.963 0 00-4.25 1.065V16.82zM9.25 4.065A8.963 8.963 0 005 3c-.85 0-1.673.118-2.454.339A.75.75 0 002 4.06v11a.75.75 0 00.954.721A7.506 7.506 0 015 15.5c1.579 0 3.042.487 4.25 1.32V4.065z" />
-										</svg>
-										{posts.length} article{posts.length !== 1 ? 's' : ''}
-									</span>
-									{totalReadTime > 0 && (
-										<>
-											<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
-											<span className="inline-flex items-center gap-1 text-sm text-neutral-400 dark:text-neutral-500">
-												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-													<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" />
-												</svg>
-												~{totalReadTime} min total
-											</span>
-										</>
-									)}
-									{latestDate && (
-										<>
-											<span className="text-neutral-200 dark:text-neutral-700 select-none">·</span>
-											<span className="text-sm text-neutral-400 dark:text-neutral-500">
-												Updated <DateFormatter dateString={latestDate} />
-											</span>
-										</>
-									)}
+								<p className="mt-4 max-w-3xl text-base leading-relaxed text-neutral-600 dark:text-neutral-300">
+									{outcome}
+								</p>
+								<div className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold text-neutral-500 dark:text-neutral-400">
+									<span>{posts.length} chapter{posts.length !== 1 ? 's' : ''}</span>
+									{totalReadTime > 0 ? <span>{formatDuration(totalReadTime)}</span> : null}
 								</div>
 							</div>
-
-							{/* Right: cover image */}
-							{series.coverImage && (
-								<div className="w-full md:w-2/5 shrink-0 mt-8 md:mt-0 h-52 md:h-64 rounded-xl overflow-hidden ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-sm">
-									<img
-										src={series.coverImage}
-										alt={series.name}
-										className="w-full h-full object-cover"
-									/>
+							{primaryPost ? (
+								<div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+									{currentProgress ? (
+										<>
+											<p className="text-[10px] font-mono uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300">
+												Continue from
+											</p>
+											<p className="mt-2 text-sm font-black text-neutral-950 dark:text-neutral-50">
+												Chapter {currentProgress.index + 1}
+											</p>
+										</>
+									) : (
+										<p className="text-[10px] font-mono uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300">
+											Begin here
+										</p>
+									)}
+									<Link
+										href={`/${primaryPost.slug}`}
+										onClick={() => rememberPostView(primaryPost)}
+										className="mt-4 inline-flex w-full justify-center rounded-xl bg-neutral-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-blue-100"
+									>
+										{primaryLabel}
+									</Link>
 								</div>
-							)}
+							) : null}
+						</section>
+
+						<img
+							src={coverImage}
+							alt={series.name}
+							className="mx-auto mt-8 aspect-[16/7] w-full max-w-none rounded-2xl object-cover"
+						/>
+
+						<div className="mx-auto mt-10 w-full max-w-none space-y-12">
+							<section>
+								<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+									Book overview
+								</p>
+								<div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+									<ol className="space-y-3">
+										{overviewSteps.map((step, index) => (
+											<li key={`${step}-${index}`} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_24px] sm:items-center">
+												<span className="text-sm font-black text-neutral-950 dark:text-neutral-50">{step}</span>
+												{index < overviewSteps.length - 1 ? (
+													<span className="text-neutral-300 dark:text-neutral-700 sm:text-center" aria-hidden="true">↓</span>
+												) : null}
+											</li>
+										))}
+									</ol>
+								</div>
+							</section>
+
+							{roadmap ? <SeriesPlanSection title={roadmap.title} markdown={roadmap.markdown} /> : null}
+
+							<section>
+								<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+									<div>
+										<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+											Reading path
+										</p>
+										<h2 className="mt-2 text-2xl font-black tracking-tight text-neutral-950 dark:text-neutral-50">
+											Chapters
+										</h2>
+									</div>
+									<Link
+										href={`/assistant?q=${encodeURIComponent(`What should I know before starting ${series.name}?`)}`}
+										className="text-sm font-bold text-neutral-500 transition hover:text-blue-700 dark:text-neutral-400 dark:hover:text-blue-300"
+									>
+										Ask AI: before starting
+									</Link>
+								</div>
+								<div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-200 bg-white dark:divide-neutral-800 dark:border-neutral-800 dark:bg-neutral-900">
+									{posts.map((post, index) => (
+										<Link
+											key={post.id}
+											href={`/${post.slug}`}
+											onClick={() => rememberPostView(post)}
+											className="grid gap-3 p-4 transition hover:bg-neutral-50 dark:hover:bg-neutral-800/60 sm:grid-cols-[96px_minmax(0,1fr)_auto] sm:items-start"
+										>
+											<span className="text-xs font-black uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+												Chapter {index + 1}
+											</span>
+											<span className="min-w-0">
+												<span className="block text-base font-black text-neutral-950 dark:text-neutral-50">{post.title}</span>
+												<span className="mt-1 line-clamp-2 block text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+													{post.brief}
+												</span>
+											</span>
+											<span className="text-xs font-semibold text-neutral-400 dark:text-neutral-500">
+												{post.readTimeInMinutes} min
+											</span>
+										</Link>
+									))}
+								</div>
+							</section>
+
+							<section className="grid gap-4 border-t border-neutral-100 pt-6 dark:border-neutral-800 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+								<div>
+									<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+										Summarize
+									</p>
+									<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+										Get a short orientation before you start the chapters.
+									</p>
+								</div>
+								<Link
+									href={`/assistant?q=${encodeURIComponent(`Summarize the ${series.name} book and explain the chapter progression.`)}`}
+									className="inline-flex justify-center rounded-xl border border-neutral-200 px-4 py-2 text-sm font-bold text-neutral-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-blue-700 dark:hover:text-blue-300"
+								>
+									Summarize Book
+								</Link>
+							</section>
+
+							{relatedBooks.length > 0 ? (
+								<section>
+									<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+										Next
+									</p>
+									<div className="mt-4 grid gap-3 sm:grid-cols-2">
+										{relatedBooks.map((book) => (
+											<Link
+												key={book.slug}
+												href={`/series/${book.slug}`}
+												className="rounded-2xl border border-neutral-200 bg-white p-4 transition hover:border-blue-300 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-blue-700"
+											>
+												<p className="text-sm font-black text-neutral-950 dark:text-neutral-50">{book.name}</p>
+												<p className="mt-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+													{book.postCount} chapter{book.postCount !== 1 ? 's' : ''}{book.totalReadTime ? ` · ${formatDuration(book.totalReadTime)}` : ''}
+												</p>
+												<p className="mt-3 text-xs font-bold text-blue-600 dark:text-blue-300">View Related Book</p>
+											</Link>
+										))}
+									</div>
+								</section>
+							) : null}
 						</div>
-
-						{/* ── Series plan (static page) ── */}
-						{roadmap && <SeriesPlanSection title={roadmap.title} markdown={roadmap.markdown} />}
-
-						{/* ── AI Learning Path ── */}
-						{posts.length > 0 && (
-							<SeriesAiLearningPath seriesName={series.name} posts={posts} />
-						)}
-					</div>
+					</main>
 					<Footer />
 				</Container>
 			</Layout>
