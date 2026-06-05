@@ -15,6 +15,7 @@ import { PersonalHeader } from '../components/personal-theme-header';
 import { VisualizationStudio } from '../components/visualization/visualization-studio';
 import { PostFragment, PublicationByHostDocument, PublicationByHostQuery, PublicationByHostQueryVariables, PublicationFragment } from '../generated/graphql';
 import { getFooterPosts } from '../lib/api/footerData';
+import { CONTENT_REVALIDATE_SECONDS } from '../lib/cache-constants';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 
@@ -159,6 +160,6 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 			publication,
 			footerPosts,
 		},
-		revalidate: 1,
+		revalidate: CONTENT_REVALIDATE_SECONDS,
 	};
 };

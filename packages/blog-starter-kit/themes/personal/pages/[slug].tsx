@@ -48,6 +48,7 @@ import { CTAButton, CTALink } from '../components/cta-system';
 import { useLearningMemoryStore } from '../lib/learning-memory';
 import { getArticleConceptSeeds, inferArticleDomain, inferPrimaryArticleConcept } from '../lib/article-domain';
 import { inferTopicSlugForPost } from '../lib/topic-learning';
+import { ARTICLE_REVALIDATE_SECONDS } from '../lib/cache-constants';
 
 // ─── Reading Progress Bar ─────────────────────────────────────────────────────
 const ReadingProgressBar = () => {
@@ -2239,7 +2240,7 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 				footerPosts,
 				morePosts,
 			},
-			revalidate: 1,
+			revalidate: ARTICLE_REVALIDATE_SECONDS,
 		};
 	}
 
@@ -2254,13 +2255,13 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 				publication: pageData.publication,
 				footerPosts,
 			},
-			revalidate: 1,
+			revalidate: ARTICLE_REVALIDATE_SECONDS,
 		};
 	}
 
 	return {
 		notFound: true,
-		revalidate: 1,
+		revalidate: ARTICLE_REVALIDATE_SECONDS,
 	};
 };
 

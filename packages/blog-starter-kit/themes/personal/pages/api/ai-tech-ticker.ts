@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { setVercelApiCacheHeaders } from '../../lib/api/vercelCache';
+import { SHORT_LIVED_API_CACHE_SECONDS } from '../../lib/cache-constants';
 
-const TICKER_CACHE_SECONDS = 5 * 60;
+const TICKER_STALE_WHILE_REVALIDATE_SECONDS = 60 * 60;
 
 export type TickerCategory = 'LLM' | 'Vision' | 'NLP' | 'Robotics' | 'Generative AI' | 'ML/Research' | 'Hardware' | 'Multimodal';
 
@@ -59,8 +60,8 @@ export default async function handler(
 		}
 
 		setVercelApiCacheHeaders(res, {
-			sMaxAge: TICKER_CACHE_SECONDS,
-			staleWhileRevalidate: 15 * 60,
+			sMaxAge: SHORT_LIVED_API_CACHE_SECONDS,
+			staleWhileRevalidate: TICKER_STALE_WHILE_REVALIDATE_SECONDS,
 		});
 		res.setHeader('X-Ticker-Source', 'live');
 		return res.status(200).json(body.data);

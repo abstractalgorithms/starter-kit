@@ -13,6 +13,7 @@ import { MinimalPosts } from '../../components/minimal-posts';
 import { Pagination } from '../../components/pagination';
 import { PersonalHeader } from '../../components/personal-theme-header';
 import { getFooterPosts } from '../../lib/api/footerData';
+import { CONTENT_REVALIDATE_SECONDS } from '../../lib/cache-constants';
 import {
 PostFragment,
 PublicationFragment,
@@ -313,7 +314,7 @@ return {
     tag: params.slug,
     footerPosts,
   },
-  revalidate: 1,
+  revalidate: CONTENT_REVALIDATE_SECONDS,
 };
 };
 

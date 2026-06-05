@@ -9,6 +9,7 @@ import {
 	SitemapQuery,
 	SitemapQueryVariables,
 } from '../generated/graphql';
+import { FEED_CACHE_SECONDS, FEED_STALE_WHILE_REVALIDATE_SECONDS } from '../lib/cache-constants';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const MAX_POSTS = 1000;
@@ -71,7 +72,10 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 		posts,
 	});
 
-	res.setHeader('Cache-Control', 's-maxage=1, stale-while-revalidate');
+	res.setHeader(
+		'Cache-Control',
+		`s-maxage=${FEED_CACHE_SECONDS}, stale-while-revalidate=${FEED_STALE_WHILE_REVALIDATE_SECONDS}`,
+	);
 	res.setHeader('content-type', 'text/xml');
 	res.write(xml);
 	res.end();

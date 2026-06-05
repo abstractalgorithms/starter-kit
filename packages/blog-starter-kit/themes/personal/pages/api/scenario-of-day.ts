@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { setVercelApiCacheHeaders } from '../../lib/api/vercelCache';
+import { DAILY_API_CACHE_SECONDS } from '../../lib/cache-constants';
 
-const SCENARIO_CACHE_SECONDS = 60 * 60;
+const SCENARIO_STALE_WHILE_REVALIDATE_SECONDS = 24 * 60 * 60;
 
 export type ScenarioDifficulty = 'Mid' | 'Senior' | 'Staff';
 
@@ -62,7 +63,10 @@ export default async function handler(
 			throw new Error('Upstream returned empty or unsuccessful response');
 		}
 
-		setVercelApiCacheHeaders(res, { sMaxAge: SCENARIO_CACHE_SECONDS });
+		setVercelApiCacheHeaders(res, {
+			sMaxAge: DAILY_API_CACHE_SECONDS,
+			staleWhileRevalidate: SCENARIO_STALE_WHILE_REVALIDATE_SECONDS,
+		});
 		return res.status(200).json(body.data);
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);

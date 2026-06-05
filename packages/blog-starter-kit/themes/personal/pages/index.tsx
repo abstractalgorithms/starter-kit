@@ -12,6 +12,7 @@ import { PersonalHeader } from '../components/personal-theme-header';
 import { TopicCluster, buildTopicClusters } from '../components/topic-clusters';
 import { PostChatbot } from '../components/post-chatbot';
 import { LearnPost } from '../components/learn-today';
+import { CONTENT_REVALIDATE_SECONDS } from '../lib/cache-constants';
 import {
 	MorePostsByPublicationDocument,
 	MorePostsByPublicationQuery,
@@ -154,6 +155,6 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 				.slice(0, 12),
 			topicClusters,
 		},
-		revalidate: 1,
+		revalidate: CONTENT_REVALIDATE_SECONDS,
 	};
 };
