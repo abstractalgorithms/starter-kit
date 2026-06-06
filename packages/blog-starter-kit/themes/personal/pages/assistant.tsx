@@ -27,7 +27,7 @@ import { getHoverLift, getRevealVariants, getTapScale } from '../components/moti
 import { PremiumSkeleton } from '../components/premium-skeleton';
 import { useLearningContext } from '../components/learning-context-provider';
 import { CTAButton, CTALink } from '../components/cta-system';
-import type { AssistantResponse } from './api/learning-assistant';
+import type { AssistantResponse } from './api/learning-assistant-mentor';
 import { buildMemoryPromptContext, useLearningMemoryStore } from '../lib/learning-memory';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
@@ -52,6 +52,15 @@ type AssistantPost = {
 	views: number;
 	tags?: Array<{ name: string; slug: string }> | null;
 	coverImage?: { url?: string | null } | null;
+};
+
+type AssistantRequestPost = {
+	title: string;
+	slug: string;
+	brief: string;
+	readTimeInMinutes: number;
+	views: number;
+	tags?: Array<{ name: string }>;
 };
 
 type Turn = {
@@ -714,6 +723,18 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 			.filter((post) => `${post.title} ${post.brief}`.toLowerCase().includes(needle))
 			.slice(0, 6);
 	}, [posts, query]);
+	const assistantPostsPayload = useMemo<AssistantRequestPost[]>(
+		() =>
+			posts.map((post) => ({
+				title: post.title,
+				slug: post.slug,
+				brief: post.brief,
+				readTimeInMinutes: post.readTimeInMinutes,
+				views: post.views,
+				tags: (post.tags ?? []).map((tag) => ({ name: tag.name })),
+			})),
+		[posts],
+	);
 
 	const relatedArticles = useMemo(() => {
 		if (!currentTurn) return [];
@@ -795,6 +816,11 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		[learningMemory],
 	);
 	const shouldShowInitialQuestionComposer = !currentTurn && !loading && !query.trim();
+	const shouldUsePostAssistantApi = useMemo(() => {
+		if (learningContext.source === 'article') return true;
+		if (learningContext.pathname && learningContext.pathname !== '/assistant') return true;
+		return learningHistory.some((entry) => entry.source === 'article');
+	}, [learningContext.pathname, learningContext.source, learningHistory]);
 
 	const runAssistant = async (inputValue: string, options?: { replaceCurrent?: boolean }) => {
 		const parsed = parseSlashCommand(inputValue);
@@ -816,24 +842,29 @@ export default function LearningAssistantPage({ publication, posts = [], footerP
 		});
 
 		try {
-			const res = await fetch('/api/learning-assistant', {
+			const endpoint = shouldUsePostAssistantApi
+				? '/api/learning-assistant-post'
+				: '/api/learning-assistant-mentor';
+			const requestBody = {
+				query: normalizedQuery,
+				history,
+				persona: [
+					'engineering-learning',
+					`difficulty:${profile.difficultyPreference}`,
+					`feedback:${profile.feedbackMode}`,
+					parsed.personaBoost ? `mode:${parsed.personaBoost}` : null,
+				]
+					.filter(Boolean)
+					.join('|'),
+				memoryContext: memoryPromptContext,
+				learningContext,
+				...(shouldUsePostAssistantApi ? {} : { posts: assistantPostsPayload }),
+			};
+
+			const res = await fetch(endpoint, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					query: normalizedQuery,
-					posts,
-					history,
-					persona: [
-						'engineering-learning',
-						`difficulty:${profile.difficultyPreference}`,
-						`feedback:${profile.feedbackMode}`,
-						parsed.personaBoost ? `mode:${parsed.personaBoost}` : null,
-					]
-						.filter(Boolean)
-						.join('|'),
-					memoryContext: memoryPromptContext,
-					learningContext,
-				}),
+				body: JSON.stringify(requestBody),
 			});
 			if (!res.ok) throw new Error(`Assistant error ${res.status}`);
 			const payload = (await res.json()) as AssistantResponse;

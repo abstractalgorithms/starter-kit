@@ -1,6 +1,7 @@
 import { ThemeProvider } from 'next-themes';
 import { AppProps } from 'next/app';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import { Analytics as VercelAnalytics } from '@vercel/analytics/next';
 import { startTransition, useEffect } from 'react';
 import { AuthProvider } from '../components/contexts/authContext';
 import { GlobalBusyIndicator } from '../components/global-busy-indicator';
@@ -73,6 +74,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
 							<Component {...pageProps} />
 						</main>
 						<StickyLearningContextRail />
+						<VercelAnalytics />
 					</div>
 				</LearningContextProvider>
 			</AuthProvider>

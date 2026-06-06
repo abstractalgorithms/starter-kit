@@ -5,9 +5,8 @@ type ArticleCompanionRequest = {
 	subtitle?: string;
 	brief?: string;
 	markdown: string;
-	tocItems?: Array<{ id: string; slug: string; title: string; level: number }>;
-	tags?: Array<{ name: string; slug: string }>;
-	relatedPosts?: Array<{ title: string; slug: string; brief?: string; readTimeInMinutes?: number; tags?: Array<{ name: string; slug: string }> }>;
+	tocItems?: Array<{ slug: string; title: string; level: number }>;
+	tags?: Array<{ name: string }>;
 	readTimeInMinutes?: number;
 };
 
@@ -27,8 +26,6 @@ type ArticleCompanionResponse = {
 		mockDiscussionPrompt: string;
 		checkpoints: string[];
 	};
-	quizPrompts: string[];
-	relatedArticleRefs: Array<{ title: string; slug: string }>;
 	deepDiveSections: Array<{ slug: string; title: string; summaryMarkdown: string; bulletMarkdown: string }>;
 };
 
@@ -47,10 +44,42 @@ export default async function handler(
 		return res.status(405).json({ error: 'Method Not Allowed' });
 	}
 
-	const { title, markdown } = req.body as ArticleCompanionRequest;
+	const incoming = (req.body ?? {}) as Partial<ArticleCompanionRequest> & {
+		tocItems?: Array<{ title?: unknown; slug?: unknown; level?: unknown }>;
+		tags?: Array<{ name?: unknown }>;
+		readTimeInMinutes?: unknown;
+	};
+	const title = typeof incoming.title === 'string' ? incoming.title : '';
+	const markdown = typeof incoming.markdown === 'string' ? incoming.markdown : '';
 	if (!title?.trim() || !markdown?.trim()) {
 		return res.status(400).json({ error: 'title and markdown are required' });
 	}
+
+	const payload: ArticleCompanionRequest = {
+		title: title.trim(),
+		markdown: markdown.trim(),
+		subtitle: typeof incoming.subtitle === 'string' ? incoming.subtitle : undefined,
+		brief: typeof incoming.brief === 'string' ? incoming.brief : undefined,
+		tocItems: Array.isArray(incoming.tocItems)
+			? incoming.tocItems
+					.filter((item) => item && typeof item.title === 'string')
+					.slice(0, 12)
+					.map((item) => ({
+						title: String(item.title),
+						slug: typeof item.slug === 'string' ? item.slug : '',
+						level: Number.isFinite(item.level) ? Number(item.level) : 1,
+					}))
+			: undefined,
+		tags: Array.isArray(incoming.tags)
+			? incoming.tags
+					.filter((tag) => tag && typeof tag.name === 'string')
+					.slice(0, 12)
+					.map((tag) => ({ name: String(tag.name) }))
+			: undefined,
+		readTimeInMinutes: Number.isFinite(incoming.readTimeInMinutes)
+			? Number(incoming.readTimeInMinutes)
+			: undefined,
+	};
 
 	if (!UPSTREAM_URL.startsWith('http')) {
 		return res.status(503).json({ error: 'SERVER_URL or NEXT_PUBLIC_SERVER_URL env var not configured' });
@@ -63,7 +92,7 @@ export default async function handler(
 				'Content-Type': 'application/json',
 				'User-Agent': 'abstractalgorithms-personal-theme/1.0',
 			},
-			body: JSON.stringify(req.body),
+			body: JSON.stringify(payload),
 			signal: AbortSignal.timeout(45000),
 		});
 

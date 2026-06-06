@@ -41,6 +41,7 @@ import {
 import { triggerCustomWidgetEmbed } from '@starter-kit/utils/trigger-custom-widget-embed';
 import { getFooterPosts } from '../lib/api/footerData';
 import { ScrollButtons } from '../components/scroll-buttons';
+import { PostChatbot } from '../components/post-chatbot';
 import { ArticleEngagement } from '../components/article-engagement';
 import { ContextualBreadcrumbs } from '../components/contextual-breadcrumbs';
 import { useLearningContext } from '../components/learning-context-provider';
@@ -1273,8 +1274,6 @@ type ArticleCompanionData = {
 	tradeoffOptions: Array<{ title: string; body: string }>;
 	failureScenarios: Array<{ title: string; impact: string; mitigation: string; severity: number }>;
 	interviewPrompts: InterviewPromptSet;
-	quizPrompts: string[];
-	relatedArticleRefs: Array<{ title: string; slug: string }>;
 	deepDiveSections: Array<{ slug: string; title: string; summaryMarkdown: string; bulletMarkdown: string }>;
 };
 
@@ -1326,13 +1325,11 @@ const buildLocalArticleCompanion = ({
 	post,
 	tags,
 	tocItems,
-	morePosts,
 	primaryArticleConcept,
 }: {
 	post: PostFullFragment;
 	tags: NonNullable<PostFullFragment['tags']>;
 	tocItems: TocItem[];
-	morePosts: PostFragment[];
 	primaryArticleConcept: string;
 }): ArticleCompanionData => {
 	const summaryBullets = getAiSummaryBullets(post.content.markdown, post.title);
@@ -1388,11 +1385,6 @@ const buildLocalArticleCompanion = ({
 		failureScenarios,
 		tocItems,
 	});
-	const quizPrompts = [
-		`What is the core tradeoff explained in "${post.title}"?`,
-		`Which failure mode is most likely if this design is deployed at scale?`,
-		`How would you explain the architecture in a whiteboard interview?`,
-	];
 
 	return {
 		overview:
@@ -1406,8 +1398,6 @@ const buildLocalArticleCompanion = ({
 		tradeoffOptions,
 		failureScenarios,
 		interviewPrompts,
-		quizPrompts,
-		relatedArticleRefs: morePosts.slice(0, 4).map((item) => ({ title: item.title, slug: item.slug })),
 		deepDiveSections: tocItems.slice(0, 4).map((item) => {
 			const dive = deriveDeepDiveSummaries(post.content.markdown, tocItems)[item.slug];
 			return {
@@ -1610,8 +1600,8 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 	}, [post.readTimeInMinutes, post.series?.name, post.slug, post.title, readingProgress, recordConceptCompleted, tags]);
 
 	const localArticleCompanion = useMemo(
-		() => buildLocalArticleCompanion({ post, tags, tocItems, morePosts, primaryArticleConcept }),
-		[morePosts, post, primaryArticleConcept, tags, tocItems],
+		() => buildLocalArticleCompanion({ post, tags, tocItems, primaryArticleConcept }),
+		[post, primaryArticleConcept, tags, tocItems],
 	);
 
 	useEffect(() => {
@@ -1629,9 +1619,8 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 						subtitle: post.subtitle,
 						brief: post.brief,
 						markdown: post.content.markdown,
-						tocItems,
-						tags: tags.map((tag) => ({ name: tag.name, slug: tag.slug })),
-						relatedPosts: morePosts,
+						tocItems: tocItems.map((item) => ({ title: item.title, slug: item.slug, level: item.level })),
+						tags: tags.map((tag) => ({ name: tag.name })),
 						readTimeInMinutes: post.readTimeInMinutes,
 					}),
 					signal: controller.signal,
@@ -1656,7 +1645,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 			isActive = false;
 			controller.abort();
 		};
-	}, [morePosts, post.brief, post.content.markdown, post.readTimeInMinutes, post.slug, post.subtitle, post.title, tags, tocItems]);
+	}, [post.brief, post.content.markdown, post.readTimeInMinutes, post.slug, post.subtitle, post.title, tags, tocItems]);
 
 	const articleCompanion = articleCompanionState ?? localArticleCompanion;
 	const aiSummaryBullets = useMemo(() => {
@@ -1676,7 +1665,6 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 		return sanitizeTradeoffOptions(localArticleCompanion.tradeoffOptions || []);
 	}, [articleCompanion.tradeoffOptions, localArticleCompanion.tradeoffOptions]);
 	const failureScenarios = articleCompanion.failureScenarios;
-	const quizPrompts = articleCompanion.quizPrompts;
 	const interviewPrompts = articleCompanion.interviewPrompts;
 	const storyOverview = articleCompanion.overview;
 	const glossaryTerms = useMemo(() => detectGlossaryTerms(post.content.markdown), [post.content.markdown]);
@@ -2112,6 +2100,8 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 					</div>
 				</aside>
 			</div>
+
+			<PostChatbot postTitle={post.title} postContent={post.content.markdown} />
 
 			<ScrollButtons />
 		</>
