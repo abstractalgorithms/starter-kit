@@ -4,6 +4,7 @@ import request from 'graphql-request';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
@@ -34,18 +35,20 @@ type Props = {
 
 export default function DiscoverPage({ publication, posts, topicCollections }: Props) {
 	const { setContext } = useLearningContext();
+	const router = useRouter();
 
 	useEffect(() => {
+		router.replace('/learn');
 		setContext({
 			source: 'discover',
-			pathname: '/discover',
+			pathname: '/learn',
 			title: 'Discovery',
 			domain: 'Engineering',
 			topic: 'Systems concepts',
-			roadmapHref: '/discover#topic-collections',
+			roadmapHref: '/learn',
 			simulationTopic: 'systems relationships',
 		});
-	}, [setContext]);
+	}, [router, setContext]);
 
 	return (
 		<AppProvider publication={publication} footerPosts={posts}>
@@ -71,7 +74,7 @@ export default function DiscoverPage({ publication, posts, topicCollections }: P
 
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<main className="mx-auto w-full max-w-7xl px-5 pb-20 pt-10">
+					<main className="mx-auto w-full max-w-[1440px] px-5 pb-20 pt-10 md:px-8">
 						<Link
 							href="/"
 							className="mb-10 inline-flex items-center gap-1.5 text-sm text-neutral-400 transition-colors hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"

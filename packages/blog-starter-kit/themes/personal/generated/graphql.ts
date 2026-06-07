@@ -91,6 +91,71 @@ export type CoverImage = {
   url?: Maybe<Scalars['String']['output']>;
 };
 
+export type CoverImageOptionsInput = {
+  /** Attribution text for the cover image. */
+  coverImageAttribution?: InputMaybe<Scalars['String']['input']>;
+  /** Photographer credit for the cover image. */
+  coverImagePhotographer?: InputMaybe<Scalars['String']['input']>;
+  /** Cover image URL. */
+  coverImageURL?: InputMaybe<Scalars['String']['input']>;
+  /** Whether the cover image attribution should be hidden. */
+  isCoverAttributionHidden?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Whether the cover image is stuck to the bottom of the post header. */
+  stickCoverToBottom?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type CreateDraftInput = {
+  /** Co-authors (max 4). Must be members of the publication. */
+  coAuthors?: InputMaybe<Array<Scalars['ObjectId']['input']>>;
+  /** Draft content in markdown format. */
+  contentMarkdown?: InputMaybe<Scalars['String']['input']>;
+  /** Cover image options. */
+  coverImageOptions?: InputMaybe<CoverImageOptionsInput>;
+  /** Disable comments on the resulting post. */
+  disableComments?: InputMaybe<Scalars['Boolean']['input']>;
+  /** SEO metadata for the resulting post. */
+  metaTags?: InputMaybe<MetaTagsInput>;
+  /** Canonical URL for republished articles. */
+  originalArticleURL?: InputMaybe<Scalars['String']['input']>;
+  /** The publication ID the draft belongs to. */
+  publicationId: Scalars['ObjectId']['input'];
+  /** Author override. Must be a member of the publication. Only for team publications. */
+  publishAs?: InputMaybe<Scalars['ObjectId']['input']>;
+  /**
+   * Date the resulting post should be published with. Used for backdating
+   * when publishDraft runs.
+   */
+  publishedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Add the draft to a series by ID. */
+  seriesId?: InputMaybe<Scalars['ObjectId']['input']>;
+  /** Settings for the resulting draft like table of contents and newsletter activation. */
+  settings?: InputMaybe<CreateDraftSettingsInput>;
+  /** Custom slug. If not provided, generated from title when publishing. */
+  slug?: InputMaybe<Scalars['String']['input']>;
+  /** Draft subtitle. */
+  subtitle?: InputMaybe<Scalars['String']['input']>;
+  /** Tags as slugs (max 15). New tags will be created automatically. */
+  tags?: InputMaybe<Array<PublishPostTagInput>>;
+  /** Draft title. */
+  title?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CreateDraftPayload = {
+  __typename?: 'CreateDraftPayload';
+  draft: Draft;
+};
+
+export type CreateDraftSettingsInput = {
+  /** Send a newsletter to subscribers when the resulting post is published. */
+  activateNewsletter?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Whether to delist the resulting post from public feeds (still accessible via URL). */
+  delist?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Whether the resulting post should expose a table of contents. */
+  enableTableOfContent?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Whether the supplied slug overrides the slug generated from the title. */
+  slugOverridden?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type CreateImageUploadInput = {
   /** The content type of the image. Must start with "image/". Example: "image/png". */
   contentType: Scalars['String']['input'];
@@ -112,6 +177,17 @@ export type DarkModePreferences = {
   __typename?: 'DarkModePreferences';
   enabled: Scalars['Boolean']['output'];
   logo?: Maybe<Scalars['String']['output']>;
+};
+
+export type DeleteDraftInput = {
+  /** The draft ID to delete. */
+  draftId: Scalars['ID']['input'];
+};
+
+export type DeleteDraftPayload = {
+  __typename?: 'DeleteDraftPayload';
+  /** The deleted (soft-deleted, isActive=false) draft. */
+  draft?: Maybe<Draft>;
 };
 
 export type DocumentationProject = {
@@ -144,11 +220,32 @@ export type DomainInfo = {
 export type Draft = {
   __typename?: 'Draft';
   author: User;
+  /**
+   * Canonical URL for republished content, if the draft was imported from
+   * an external source.
+   */
+  canonicalUrl?: Maybe<Scalars['String']['output']>;
+  /** Co-authors of the draft. Set via createDraft/updateDraft input. */
+  coAuthors?: Maybe<Array<User>>;
   content?: Maybe<Content>;
   coverImage?: Maybe<CoverImage>;
+  /** Draft feature flags (e.g. table of contents preference). */
+  features?: Maybe<PostFeatures>;
   id: Scalars['ID']['output'];
+  /** Whether the draft has been submitted for review on a team publication. */
+  isSubmittedForReview?: Maybe<Scalars['Boolean']['output']>;
+  /** Open Graph metadata for the resulting post. */
+  ogMetaData?: Maybe<OpenGraphMetaData>;
+  /** The publication the draft belongs to. */
+  publication?: Maybe<Publication>;
   publishAs?: Maybe<User>;
+  /** Estimated read time of the draft's content in minutes. */
+  readTimeInMinutes?: Maybe<Scalars['Int']['output']>;
   scheduledDate?: Maybe<Scalars['DateTime']['output']>;
+  /** SEO metadata for the resulting post. */
+  seo?: Maybe<Seo>;
+  /** The series the draft will belong to once published. */
+  series?: Maybe<Series>;
   settings?: Maybe<DraftSettings>;
   slug?: Maybe<Scalars['String']['output']>;
   subtitle?: Maybe<Scalars['String']['output']>;
@@ -173,6 +270,11 @@ export type DraftEdge = {
 export type DraftSettings = {
   __typename?: 'DraftSettings';
   disableComments: Scalars['Boolean']['output'];
+  /**
+   * Deprecated. Use `Draft.features.tableOfContents.isEnabled` instead.
+   * Kept for backward compatibility with existing API consumers.
+   * @deprecated Use Draft.features.tableOfContents.isEnabled instead
+   */
   enableTableOfContents: Scalars['Boolean']['output'];
   isDelisted: Scalars['Boolean']['output'];
   stickCoverToBottom: Scalars['Boolean']['output'];
@@ -232,14 +334,54 @@ export type ImprintV2 = {
   html?: Maybe<Scalars['String']['output']>;
 };
 
+export type MetaTagsInput = {
+  /** SEO description override. */
+  description?: InputMaybe<Scalars['String']['input']>;
+  /** Open Graph image URL. */
+  image?: InputMaybe<Scalars['String']['input']>;
+  /** SEO title override. */
+  title?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
+  /** Create a new draft on a publication without publishing it. Requires authentication. */
+  createDraft: CreateDraftPayload;
   /** Returns a presigned URL for uploading an image to Hashnode's CDN. Requires authentication. */
   createImageUploadURL: CreateImageUploadPayload;
+  /**
+   * Soft-delete a draft (sets it inactive). The draft's author can delete their
+   * own draft; publication owners, admins, and authors can delete any draft in
+   * the publication. Requires authentication.
+   */
+  deleteDraft: DeleteDraftPayload;
+  /**
+   * Publish an existing draft as a post. The draft is soft-deleted once the
+   * post is created. Requires authentication.
+   */
+  publishDraft: PublishDraftPayload;
   /** Publish a new post to a publication. Requires authentication. */
   publishPost: PublishPostPayload;
+  /**
+   * Reject a draft that was previously submitted for review. Only publication
+   * owners, admins, and authors can reject. Requires authentication.
+   */
+  rejectDraftSubmission: RejectDraftSubmissionPayload;
+  /**
+   * Submit a draft on a team publication for editor review. Sets the
+   * pendingPublicationApproval flag so editors see the draft in their queue.
+   * Requires authentication.
+   */
+  submitDraftForReview: SubmitDraftForReviewPayload;
+  /** Update an existing draft. Requires authentication. */
+  updateDraft: UpdateDraftPayload;
   /** Update an existing post. Requires authentication. */
   updatePost: UpdatePostPayload;
+};
+
+
+export type MutationCreateDraftArgs = {
+  input: CreateDraftInput;
 };
 
 
@@ -248,8 +390,33 @@ export type MutationCreateImageUploadUrlArgs = {
 };
 
 
+export type MutationDeleteDraftArgs = {
+  input: DeleteDraftInput;
+};
+
+
+export type MutationPublishDraftArgs = {
+  input: PublishDraftInput;
+};
+
+
 export type MutationPublishPostArgs = {
   input: PublishPostInput;
+};
+
+
+export type MutationRejectDraftSubmissionArgs = {
+  input: RejectDraftSubmissionInput;
+};
+
+
+export type MutationSubmitDraftForReviewArgs = {
+  input: SubmitDraftForReviewInput;
+};
+
+
+export type MutationUpdateDraftArgs = {
+  input: UpdateDraftInput;
 };
 
 
@@ -698,6 +865,16 @@ export type PublicationPreferences = {
   navbarItems: Array<PublicationNavbarItem>;
 };
 
+export type PublishDraftInput = {
+  /** The draft ID to publish. */
+  draftId: Scalars['ID']['input'];
+};
+
+export type PublishDraftPayload = {
+  __typename?: 'PublishDraftPayload';
+  post: Post;
+};
+
 export type PublishPostInput = {
   /** IDs of co-authors (max 4). Must be members of the publication. */
   coAuthors?: InputMaybe<Array<Scalars['ObjectId']['input']>>;
@@ -707,6 +884,8 @@ export type PublishPostInput = {
   coverImage?: InputMaybe<Scalars['String']['input']>;
   /** Disable comments on this post. */
   disableComments?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Whether the resulting post should expose a table of contents. */
+  enableToc?: InputMaybe<Scalars['Boolean']['input']>;
   /** Whether to delist the post from feeds (still accessible via URL). */
   isDelisted?: InputMaybe<Scalars['Boolean']['input']>;
   /** SEO description override. */
@@ -868,6 +1047,16 @@ export type RedirectionRule = {
   type: Scalars['Int']['output'];
 };
 
+export type RejectDraftSubmissionInput = {
+  /** The draft ID whose submission should be rejected. */
+  draftId: Scalars['ID']['input'];
+};
+
+export type RejectDraftSubmissionPayload = {
+  __typename?: 'RejectDraftSubmissionPayload';
+  draft: Draft;
+};
+
 export type RelativeTimeRange = {
   n: Scalars['Int']['input'];
   relative: TimePeriod;
@@ -997,6 +1186,16 @@ export type StaticPageEdge = {
   node: StaticPage;
 };
 
+export type SubmitDraftForReviewInput = {
+  /** The draft ID to submit for review. */
+  draftId: Scalars['ID']['input'];
+};
+
+export type SubmitDraftForReviewPayload = {
+  __typename?: 'SubmitDraftForReviewPayload';
+  draft: Draft;
+};
+
 export type TableOfContents = {
   __typename?: 'TableOfContents';
   isEnabled: Scalars['Boolean']['output'];
@@ -1049,6 +1248,44 @@ export enum TimePeriod {
   LastNYears = 'LAST_N_YEARS'
 }
 
+export type UpdateDraftInput = {
+  /** Update co-authors (max 4). Must be members of the publication. */
+  coAuthors?: InputMaybe<Array<Scalars['ObjectId']['input']>>;
+  /** Updated content in markdown format. */
+  contentMarkdown?: InputMaybe<Scalars['String']['input']>;
+  /** Cover image options. */
+  coverImageOptions?: InputMaybe<CoverImageOptionsInput>;
+  /** Disable comments on the resulting post. */
+  disableComments?: InputMaybe<Scalars['Boolean']['input']>;
+  /** The draft ID to update. */
+  draftId: Scalars['ID']['input'];
+  /** SEO metadata for the resulting post. */
+  metaTags?: InputMaybe<MetaTagsInput>;
+  /** Updated canonical URL. */
+  originalArticleURL?: InputMaybe<Scalars['String']['input']>;
+  /** Change the author. Must be a member of the publication. */
+  publishAs?: InputMaybe<Scalars['ObjectId']['input']>;
+  /** Date the resulting post should be published with. */
+  publishedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Add or change the series. Must belong to the publication. */
+  seriesId?: InputMaybe<Scalars['ObjectId']['input']>;
+  /** Settings for the resulting draft. */
+  settings?: InputMaybe<CreateDraftSettingsInput>;
+  /** Updated slug. */
+  slug?: InputMaybe<Scalars['String']['input']>;
+  /** Updated subtitle. */
+  subtitle?: InputMaybe<Scalars['String']['input']>;
+  /** Updated tags as slugs (max 15). */
+  tags?: InputMaybe<Array<PublishPostTagInput>>;
+  /** Updated title. */
+  title?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateDraftPayload = {
+  __typename?: 'UpdateDraftPayload';
+  draft: Draft;
+};
+
 export type UpdatePostInput = {
   /** Update co-authors (max 4). Must be members of the publication. */
   coAuthors?: InputMaybe<Array<Scalars['ObjectId']['input']>>;
@@ -1058,6 +1295,8 @@ export type UpdatePostInput = {
   coverImage?: InputMaybe<Scalars['String']['input']>;
   /** Disable comments on this post. */
   disableComments?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Whether the post should expose a table of contents. */
+  enableToc?: InputMaybe<Scalars['Boolean']['input']>;
   /** The post ID to update. */
   id: Scalars['ID']['input'];
   /** Whether to delist the post from feeds. */

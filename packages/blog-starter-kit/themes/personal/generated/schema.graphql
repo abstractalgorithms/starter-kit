@@ -62,6 +62,76 @@ type CoverImage {
   url: String
 }
 
+input CoverImageOptionsInput {
+  """Attribution text for the cover image."""
+  coverImageAttribution: String
+  """Photographer credit for the cover image."""
+  coverImagePhotographer: String
+  """Cover image URL."""
+  coverImageURL: String
+  """Whether the cover image attribution should be hidden."""
+  isCoverAttributionHidden: Boolean
+  """Whether the cover image is stuck to the bottom of the post header."""
+  stickCoverToBottom: Boolean
+}
+
+input CreateDraftInput {
+  """Co-authors (max 4). Must be members of the publication."""
+  coAuthors: [ObjectId!]
+  """Draft content in markdown format."""
+  contentMarkdown: String
+  """Cover image options."""
+  coverImageOptions: CoverImageOptionsInput
+  """Disable comments on the resulting post."""
+  disableComments: Boolean
+  """SEO metadata for the resulting post."""
+  metaTags: MetaTagsInput
+  """Canonical URL for republished articles."""
+  originalArticleURL: String
+  """The publication ID the draft belongs to."""
+  publicationId: ObjectId!
+  """
+  Author override. Must be a member of the publication. Only for team publications.
+  """
+  publishAs: ObjectId
+  """
+  Date the resulting post should be published with. Used for backdating
+  when publishDraft runs.
+  """
+  publishedAt: DateTime
+  """Add the draft to a series by ID."""
+  seriesId: ObjectId
+  """
+  Settings for the resulting draft like table of contents and newsletter activation.
+  """
+  settings: CreateDraftSettingsInput
+  """Custom slug. If not provided, generated from title when publishing."""
+  slug: String
+  """Draft subtitle."""
+  subtitle: String
+  """Tags as slugs (max 15). New tags will be created automatically."""
+  tags: [PublishPostTagInput!]
+  """Draft title."""
+  title: String
+}
+
+type CreateDraftPayload {
+  draft: Draft!
+}
+
+input CreateDraftSettingsInput {
+  """Send a newsletter to subscribers when the resulting post is published."""
+  activateNewsletter: Boolean
+  """
+  Whether to delist the resulting post from public feeds (still accessible via URL).
+  """
+  delist: Boolean
+  """Whether the resulting post should expose a table of contents."""
+  enableTableOfContent: Boolean
+  """Whether the supplied slug overrides the slug generated from the title."""
+  slugOverridden: Boolean
+}
+
 input CreateImageUploadInput {
   """
   The content type of the image. Must start with "image/". Example: "image/png".
@@ -86,6 +156,16 @@ type DarkModePreferences {
 
 scalar DateTime
 
+input DeleteDraftInput {
+  """The draft ID to delete."""
+  draftId: ID!
+}
+
+type DeleteDraftPayload {
+  """The deleted (soft-deleted, isActive=false) draft."""
+  draft: Draft
+}
+
 type DocumentationProject {
   guides(after: String, first: Int!): GuideConnection!
   id: ID!
@@ -106,11 +186,32 @@ type DomainInfo {
 
 type Draft {
   author: User!
+  """
+  Canonical URL for republished content, if the draft was imported from
+  an external source.
+  """
+  canonicalUrl: String
+  """Co-authors of the draft. Set via createDraft/updateDraft input."""
+  coAuthors: [User!]
   content: Content
   coverImage: CoverImage
+  """Draft feature flags (e.g. table of contents preference)."""
+  features: PostFeatures
   id: ID!
+  """Whether the draft has been submitted for review on a team publication."""
+  isSubmittedForReview: Boolean
+  """Open Graph metadata for the resulting post."""
+  ogMetaData: OpenGraphMetaData
+  """The publication the draft belongs to."""
+  publication: Publication
   publishAs: User
+  """Estimated read time of the draft's content in minutes."""
+  readTimeInMinutes: Int
   scheduledDate: DateTime
+  """SEO metadata for the resulting post."""
+  seo: SEO
+  """The series the draft will belong to once published."""
+  series: Series
   settings: DraftSettings
   slug: String
   subtitle: String
@@ -132,7 +233,11 @@ type DraftEdge {
 
 type DraftSettings {
   disableComments: Boolean!
-  enableTableOfContents: Boolean!
+  """
+  Deprecated. Use `Draft.features.tableOfContents.isEnabled` instead.
+  Kept for backward compatibility with existing API consumers.
+  """
+  enableTableOfContents: Boolean! @deprecated(reason: "Use Draft.features.tableOfContents.isEnabled instead")
   isDelisted: Boolean!
   stickCoverToBottom: Boolean!
 }
@@ -186,13 +291,50 @@ type ImprintV2 {
 """Arbitrary JSON object"""
 scalar JSONObject
 
+input MetaTagsInput {
+  """SEO description override."""
+  description: String
+  """Open Graph image URL."""
+  image: String
+  """SEO title override."""
+  title: String
+}
+
 type Mutation {
+  """
+  Create a new draft on a publication without publishing it. Requires authentication.
+  """
+  createDraft(input: CreateDraftInput!): CreateDraftPayload!
   """
   Returns a presigned URL for uploading an image to Hashnode's CDN. Requires authentication.
   """
   createImageUploadURL(input: CreateImageUploadInput!): CreateImageUploadPayload!
+  """
+  Soft-delete a draft (sets it inactive). The draft's author can delete their
+  own draft; publication owners, admins, and authors can delete any draft in
+  the publication. Requires authentication.
+  """
+  deleteDraft(input: DeleteDraftInput!): DeleteDraftPayload!
+  """
+  Publish an existing draft as a post. The draft is soft-deleted once the
+  post is created. Requires authentication.
+  """
+  publishDraft(input: PublishDraftInput!): PublishDraftPayload!
   """Publish a new post to a publication. Requires authentication."""
   publishPost(input: PublishPostInput!): PublishPostPayload!
+  """
+  Reject a draft that was previously submitted for review. Only publication
+  owners, admins, and authors can reject. Requires authentication.
+  """
+  rejectDraftSubmission(input: RejectDraftSubmissionInput!): RejectDraftSubmissionPayload!
+  """
+  Submit a draft on a team publication for editor review. Sets the
+  pendingPublicationApproval flag so editors see the draft in their queue.
+  Requires authentication.
+  """
+  submitDraftForReview(input: SubmitDraftForReviewInput!): SubmitDraftForReviewPayload!
+  """Update an existing draft. Requires authentication."""
+  updateDraft(input: UpdateDraftInput!): UpdateDraftPayload!
   """Update an existing post. Requires authentication."""
   updatePost(input: UpdatePostInput!): UpdatePostPayload!
 }
@@ -489,6 +631,15 @@ type PublicationPreferences {
   navbarItems: [PublicationNavbarItem!]!
 }
 
+input PublishDraftInput {
+  """The draft ID to publish."""
+  draftId: ID!
+}
+
+type PublishDraftPayload {
+  post: Post!
+}
+
 input PublishPostInput {
   """IDs of co-authors (max 4). Must be members of the publication."""
   coAuthors: [ObjectId!]
@@ -498,6 +649,8 @@ input PublishPostInput {
   coverImage: String
   """Disable comments on this post."""
   disableComments: Boolean
+  """Whether the resulting post should expose a table of contents."""
+  enableToc: Boolean
   """Whether to delist the post from feeds (still accessible via URL)."""
   isDelisted: Boolean
   """SEO description override."""
@@ -585,6 +738,15 @@ type RedirectionRule {
   destination: String!
   source: String!
   type: Int!
+}
+
+input RejectDraftSubmissionInput {
+  """The draft ID whose submission should be rejected."""
+  draftId: ID!
+}
+
+type RejectDraftSubmissionPayload {
+  draft: Draft!
 }
 
 input RelativeTimeRange {
@@ -698,6 +860,15 @@ type StaticPageEdge {
   node: StaticPage!
 }
 
+input SubmitDraftForReviewInput {
+  """The draft ID to submit for review."""
+  draftId: ID!
+}
+
+type SubmitDraftForReviewPayload {
+  draft: Draft!
+}
+
 type TableOfContents {
   isEnabled: Boolean!
   items: [TableOfContentsItem!]!
@@ -740,6 +911,43 @@ enum TimePeriod {
   LAST_N_YEARS
 }
 
+input UpdateDraftInput {
+  """Update co-authors (max 4). Must be members of the publication."""
+  coAuthors: [ObjectId!]
+  """Updated content in markdown format."""
+  contentMarkdown: String
+  """Cover image options."""
+  coverImageOptions: CoverImageOptionsInput
+  """Disable comments on the resulting post."""
+  disableComments: Boolean
+  """The draft ID to update."""
+  draftId: ID!
+  """SEO metadata for the resulting post."""
+  metaTags: MetaTagsInput
+  """Updated canonical URL."""
+  originalArticleURL: String
+  """Change the author. Must be a member of the publication."""
+  publishAs: ObjectId
+  """Date the resulting post should be published with."""
+  publishedAt: DateTime
+  """Add or change the series. Must belong to the publication."""
+  seriesId: ObjectId
+  """Settings for the resulting draft."""
+  settings: CreateDraftSettingsInput
+  """Updated slug."""
+  slug: String
+  """Updated subtitle."""
+  subtitle: String
+  """Updated tags as slugs (max 15)."""
+  tags: [PublishPostTagInput!]
+  """Updated title."""
+  title: String
+}
+
+type UpdateDraftPayload {
+  draft: Draft!
+}
+
 input UpdatePostInput {
   """Update co-authors (max 4). Must be members of the publication."""
   coAuthors: [ObjectId!]
@@ -749,6 +957,8 @@ input UpdatePostInput {
   coverImage: String
   """Disable comments on this post."""
   disableComments: Boolean
+  """Whether the post should expose a table of contents."""
+  enableToc: Boolean
   """The post ID to update."""
   id: ID!
   """Whether to delist the post from feeds."""

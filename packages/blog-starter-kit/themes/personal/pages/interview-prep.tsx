@@ -469,7 +469,7 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 
 				<Container className="mx-auto w-full bg-[radial-gradient(circle_at_20%_0%,rgba(124,58,237,0.10),transparent_28%),radial-gradient(circle_at_80%_12%,rgba(37,99,235,0.10),transparent_28%)]">
 					<PersonalHeader />
-					<div className="mx-auto grid w-full max-w-[1480px] gap-5 px-4 pb-24 pt-5 md:grid-cols-[auto_minmax(0,1fr)] md:px-6 md:pb-12">
+					<div className="mx-auto grid w-full max-w-[1440px] gap-5 px-5 pb-24 pt-5 md:grid-cols-[auto_minmax(0,1fr)] md:px-8 md:pb-12">
 						<aside
 							className={`sticky top-[76px] hidden h-[calc(100vh-92px)] self-start rounded-2xl border border-white/70 bg-white/78 p-3 shadow-sm shadow-violet-100/70 backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-950/80 md:block ${
 								isSidebarCollapsed ? 'w-[76px]' : 'w-[250px]'
@@ -648,7 +648,7 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 												{item}
 											</div>
 										))}
-										<Link href={`/assistant?q=${encodeURIComponent('Create an interview improvement plan for system design coding behavioral communication')}`} className="inline-flex rounded-xl bg-neutral-950 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-neutral-950">
+										<Link href="/learn" className="inline-flex rounded-xl bg-neutral-950 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-neutral-950">
 											Ask AI Coach
 										</Link>
 									</div>
@@ -850,7 +850,7 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 																{bookmarks.includes(question.post.slug) ? 'Bookmarked' : 'Bookmark'}
 															</button>
 															<button type="button" onClick={() => setSavedAnswerSlug(question.post.slug)} className="rounded-xl border border-neutral-200 px-3 py-2 text-xs font-semibold dark:border-neutral-800">Save Answer</button>
-															<Link href={`/assistant?q=${encodeURIComponent(`Coach me through this interview question: ${question.title}`)}`} className="rounded-xl border border-neutral-200 px-3 py-2 text-xs font-semibold dark:border-neutral-800">Ask AI</Link>
+															<Link href={`/${question.post.slug}`} className="rounded-xl border border-neutral-200 px-3 py-2 text-xs font-semibold dark:border-neutral-800">Read Guide</Link>
 														</div>
 													</div>
 													<div className="mt-4 hidden grid-cols-2 gap-3 text-xs group-hover:grid">
@@ -877,7 +877,7 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 									eyebrow="Whiteboard"
 									title="System design whiteboard"
 									description="Reusable workspace for templates like URL shortener, rate limiter, chat, video, ride sharing, and notification systems."
-									action={<Link href="/assistant?q=Review%20my%20system%20design%20architecture" className="text-sm font-semibold text-violet-700">Get AI Review</Link>}
+									action={<a href="#recommendations" className="text-sm font-semibold text-violet-700">Review Recommendations</a>}
 								/>
 								<div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
 									<div className="relative min-h-[430px] overflow-hidden rounded-3xl border border-violet-100 bg-[linear-gradient(rgba(99,102,241,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.08)_1px,transparent_1px)] bg-[size:32px_32px] p-4 dark:border-neutral-800">
@@ -898,7 +898,7 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 										{['Start Designing', 'Share Design', 'Replay Session', 'Get AI Review', 'Practice Again'].map((action, index) => (
 											<Link
 												key={action}
-												href={index === 3 ? '/assistant?q=Review%20my%20rate%20limiter%20system%20design' : '#whiteboard'}
+												href="#whiteboard"
 												className={`block rounded-xl px-4 py-3 text-sm font-semibold ${
 													index === 0 ? 'bg-violet-600 text-white' : 'border border-neutral-200 text-neutral-700 hover:border-violet-300 dark:border-neutral-800 dark:text-neutral-200'
 												}`}
@@ -933,7 +933,7 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 										{['Improve My Answer', 'Generate Better Tradeoffs', 'Ask Follow-up Questions', 'Explain Simpler', 'Challenge My Design'].map((prompt) => (
 											<Link
 												key={prompt}
-												href={`/assistant?q=${encodeURIComponent(prompt)}`}
+												href="/learn"
 												className="block rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-violet-300 hover:text-violet-700 dark:border-neutral-800 dark:text-neutral-200"
 											>
 												{prompt}
@@ -950,8 +950,8 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 							<Link href="/" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">Home</Link>
 							<Link href="/posts" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">Learn</Link>
 							<Link href="/interview-prep" className="rounded-xl bg-violet-50 py-1.5 font-semibold text-violet-700 dark:bg-violet-950/30 dark:text-violet-300">Interview</Link>
-							<Link href="/assistant" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">AI Mentor</Link>
-							<Link href="/discover" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">Discover</Link>
+							<Link href="/learn" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">Learn</Link>
+							<Link href="/learn" className="rounded-xl py-1.5 text-neutral-600 dark:text-neutral-300">Learn</Link>
 						</div>
 					</nav>
 					<button

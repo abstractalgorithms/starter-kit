@@ -156,7 +156,7 @@ export const LearningPaths = ({ postCounts, posts = [] }: Props) => {
 	const simulationHref = `/visualizations?q=${encodeURIComponent(activeNode?.simulationTopic ?? activePath.title)}&node=${encodeURIComponent(activeNode?.title ?? activePath.title)}&from=/guided-topics`;
 	const interviewHref = isInterviewPrepEnabled
 		? `/interview-prep`
-		: `/assistant?q=${encodeURIComponent(activeNode?.interviewPrompt ?? `Interview drill for ${activePath.title}`)}`;
+		: `/learn?q=${encodeURIComponent(activeNode?.interviewPrompt ?? activePath.title)}`;
 
 	return (
 		<section className="space-y-6">

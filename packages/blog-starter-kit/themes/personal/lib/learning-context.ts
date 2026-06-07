@@ -171,7 +171,7 @@ export const contextAwareHref = (
 	positions: Record<string, LearningPosition>,
 ) => {
 	if (action === 'assistant') {
-		return `/assistant?q=${encodeURIComponent(buildContextPrompt('Help me continue learning from here.', context))}`;
+		return `/learn?q=${encodeURIComponent(buildContextPrompt('Help me continue learning from here.', context))}`;
 	}
 	if (action === 'simulation') {
 		const topic = context.simulationTopic ?? context.concept ?? context.subtopic ?? context.topic ?? context.title ?? '';

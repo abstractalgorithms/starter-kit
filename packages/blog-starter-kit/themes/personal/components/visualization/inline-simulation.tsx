@@ -96,7 +96,7 @@ export const InlineSimulation = ({
 
 	return (
 		<section
-			className={`rounded-3xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900 dark:bg-neutral-950 ${className}`}
+			className={`not-prose rounded-3xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900 dark:bg-neutral-950 ${className}`}
 			aria-label="Inline engineering simulation"
 		>
 			<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
@@ -122,7 +122,7 @@ export const InlineSimulation = ({
 			<div className={`mt-4 grid gap-4 ${compact ? '' : 'xl:grid-cols-[minmax(0,1fr)_320px]'}`}>
 				<div className="space-y-3">
 					<div className="rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
-						<div className="flex flex-wrap items-center gap-2">
+						<div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
 							<DiagramAffordanceBar
 								playing={playing}
 								hasFailure={(scenario.failureModes?.length ?? 0) > 0}
@@ -139,7 +139,7 @@ export const InlineSimulation = ({
 								type="button"
 								level={3}
 								size="sm"
-								className="ml-auto"
+								className="sm:ml-auto"
 								onClick={() => setPlaying((prev) => !prev)}
 							>
 								{playing ? 'Pause' : 'Play'}

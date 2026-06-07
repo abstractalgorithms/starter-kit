@@ -429,7 +429,7 @@ export const MobileShareBar = ({ url, title, excerpt = '', tags = [] }: Props) =
 	};
 
 	const askAi = () => {
-		window.location.href = `/assistant?q=${encodeURIComponent(title)}`;
+		window.location.href = `/learn?q=${encodeURIComponent(title)}`;
 	};
 
 	return (

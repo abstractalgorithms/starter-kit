@@ -1,16 +1,15 @@
 'use client';
 
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { resizeImage } from '@starter-kit/utils/image';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import request from 'graphql-request';
 import { KeyboardEventHandler, useCallback, useEffect, useRef, useState } from 'react';
 import {
 	SearchPostsOfPublicationDocument,
 	SearchPostsOfPublicationQuery,
 	SearchPostsOfPublicationQueryVariables,
-	PublicationNavbarItem,
 } from '../generated/graphql';
 import { useAppContext } from './contexts/appContext';
 import { ToggleTheme } from './toggle-theme';
@@ -22,12 +21,6 @@ const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const NO_OF_SEARCH_RESULTS = 5;
 
 type SearchPost = SearchPostsOfPublicationQuery['searchPostsOfPublication']['edges'][0]['node'];
-
-function hasUrl(
-	navbarItem: PublicationNavbarItem,
-): navbarItem is PublicationNavbarItem & { url: string } {
-	return !!navbarItem.url && navbarItem.url.length > 0;
-}
 
 const HeaderSearch = () => {
 	const { publication } = useAppContext();
@@ -98,11 +91,11 @@ const HeaderSearch = () => {
 		<div ref={containerRef} className="relative">
 			<button
 				onClick={() => setIsOpen((o) => !o)}
-				aria-label="Search chapters"
+				aria-label="Search topics and articles"
 				className="flex items-center justify-center hover:bg-background border-0"
 			>
 				<svg
-					className="w-6 h-6 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+					className="h-6 w-6 text-slate-700 transition-colors hover:text-blue-700 dark:text-neutral-400 dark:hover:text-neutral-100"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -122,7 +115,7 @@ const HeaderSearch = () => {
 						<input
 							ref={inputRef}
 							type="text"
-							placeholder="Search chapters..."
+							placeholder="Search topics, articles..."
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
 							onKeyUp={onKeyUp}
@@ -188,7 +181,7 @@ const HeaderSearch = () => {
 
 						{!query && (
 							<div className="px-4 py-4 text-center">
-								<p className="text-xs text-neutral-500 dark:text-neutral-400">Type to search chapters...</p>
+								<p className="text-xs text-neutral-500 dark:text-neutral-400">Type to search topics and articles...</p>
 							</div>
 						)}
 					</div>
@@ -200,51 +193,24 @@ const HeaderSearch = () => {
 
 export const PersonalHeader = () => {
 	const { publication } = useAppContext();
+	const router = useRouter();
 	const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
+	const isHome = router.pathname === '/';
 	const followUrl =
 		publication.links?.linkedin ||
 		publication.links?.hashnode ||
 		`https://hashnode.com/@${publication.author.username}`;
 	const newsletterUrl = publication.url ? `${publication.url.replace(/\/$/, '')}/newsletter` : null;
 	const navItems = [
-		{
-			label: 'Chapters',
-			href: '/posts',
-			items: [
-				{ label: 'Latest Chapters', href: '/posts', description: 'Canonical engineering chapters' },
-				{ label: 'Popular Chapters', href: '/posts?sort=popular-desc', description: 'What engineers are reading most' },
-				{ label: 'Revised Chapters', href: '/posts?sort=updated-desc', description: 'Freshly revised systems ideas' },
-				{ label: 'Books', href: '/series', description: 'Author-curated technical books' },
-			],
-		},
-		{
-			label: 'Discovery',
-			href: '/discover',
-			items: [
-				{ label: 'Concept Collections', href: '/discover#topic-collections', description: 'Chapter-backed systems themes' },
-				{ label: 'Related Systems', href: '/discover', description: 'Follow adjacent engineering ideas' },
-				{ label: 'Architecture Chapters', href: '/posts?sort=popular-desc', description: 'Durable systems essays and patterns' },
-			],
-		},
-		{
-			label: 'AI Mentor',
-			href: '/assistant',
-			items: [
-				{ label: 'Next Step', href: '/assistant?q=recommend%20what%20I%20should%20learn%20next', description: 'Continue from your current context' },
-				{ label: 'Weak Areas', href: '/assistant?q=identify%20my%20weak%20engineering%20concepts', description: 'Find gaps and prerequisites' },
-				{ label: 'Explain a Concept', href: '/assistant', description: 'Get a clearer model at your depth' },
-				{ label: 'Compare Tradeoffs', href: '/assistant?q=compare%20architecture%20tradeoffs', description: 'Reason through competing designs' },
-			],
-		},
+		{ label: 'Learn', href: '/learn' },
+		{ label: 'Series', href: '/series' },
+		{ label: 'Blog', href: '/posts' },
 	] as const;
-	const trackLinks = [
-		{ label: 'Distributed Systems', href: '/topic/distributed-systems' },
-		{ label: 'AI Systems', href: '/topic/ai-systems' },
-		{ label: 'System Design', href: '/topic/system-design' },
-		{ label: 'Probabilistic Data Structures', href: '/topic/probabilistic-data-structures' },
-	];
+
+	const isActive = (href: string) =>
+		href === '/' ? router.pathname === '/' : router.pathname === href || router.pathname.startsWith(`${href}/`);
 
 	useEffect(() => {
 		const onScroll = () => setIsScrolled(window.scrollY > 20);
@@ -256,14 +222,18 @@ export const PersonalHeader = () => {
 	return (
 		<header
 			className={`sticky top-0 z-40 w-full transition-all duration-300 ${
-				isScrolled
+				isHome
+					? isScrolled
+						? 'border-b border-slate-200 bg-white/92 shadow-sm backdrop-blur'
+						: 'border-b border-slate-100 bg-white'
+					: isScrolled
 					? 'bg-white/85 dark:bg-neutral-950/85 backdrop-blur border-b border-neutral-200/80 dark:border-neutral-800/80 shadow-sm'
 					: 'bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800'
 			}`}
 		>
 			{/* Desktop header */}
 			<div className={`mx-auto hidden max-w-[1440px] md:grid grid-cols-[1fr_auto_1fr] items-center px-7 ${isScrolled ? 'py-2.5' : 'py-3'} gap-4`}>
-				<h1 className="justify-self-start">
+				<div className="justify-self-start">
 					<Link
 						className="flex flex-row items-center gap-3 hover:opacity-90 transition-opacity"
 						href="/"
@@ -290,52 +260,30 @@ export const PersonalHeader = () => {
 							</span>
 						</div>
 					</Link>
-				</h1>
+				</div>
 				<nav className="justify-self-center flex items-center gap-1">
-					{navItems.map((item) => (
-						<DropdownMenu.Root key={item.label}>
-							<DropdownMenu.Trigger asChild>
-								<button
-									type="button"
-									className="rounded-lg px-3 py-1.5 font-sans text-sm font-semibold text-neutral-600 transition-colors hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 data-[state=open]:bg-blue-50 data-[state=open]:text-blue-700 dark:text-neutral-300 dark:hover:bg-blue-950/30 dark:hover:text-blue-400 dark:data-[state=open]:bg-blue-950/30 dark:data-[state=open]:text-blue-300"
-								>
-									{item.label}
-								</button>
-							</DropdownMenu.Trigger>
-							<DropdownMenu.Portal>
-								<DropdownMenu.Content
-									align="center"
-									sideOffset={10}
-									collisionPadding={16}
-									className="aa-nav-dropdown z-50 w-[21rem] rounded-2xl border border-neutral-200/80 bg-white/95 p-2.5 text-neutral-900 shadow-[0_18px_55px_rgba(15,23,42,0.16)] backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-950/95 dark:text-neutral-50"
-								>
-									{item.items.map((child) => (
-										<DropdownMenu.Item key={child.label} asChild>
-											<Link
-												href={child.href}
-												className="group block rounded-xl px-3.5 py-3 outline-none transition-colors hover:bg-blue-50 focus:bg-blue-50 dark:hover:bg-neutral-900 dark:focus:bg-neutral-900"
-											>
-												<span className="block text-[0.93rem] font-bold leading-5 tracking-normal text-neutral-950 group-hover:text-blue-700 dark:text-neutral-50 dark:group-hover:text-blue-300">{child.label}</span>
-												<span className="mt-1 block text-[0.78rem] font-medium leading-5 tracking-normal text-neutral-500 dark:text-neutral-400">{child.description}</span>
-											</Link>
-										</DropdownMenu.Item>
-									))}
-									<DropdownMenu.Arrow className="fill-white dark:fill-neutral-950" />
-								</DropdownMenu.Content>
-							</DropdownMenu.Portal>
-						</DropdownMenu.Root>
-					))}
+					{navItems.map((item) => {
+						const active = isActive(item.href);
+						return (
+							<Link
+								key={item.label}
+								href={item.href}
+								className={`relative px-3 py-3 font-sans text-sm font-semibold transition-colors ${
+									active
+										? 'text-blue-700'
+										: isHome
+										? 'text-slate-950 hover:text-blue-700'
+										: 'text-neutral-600 hover:text-blue-600 dark:text-neutral-300 dark:hover:text-blue-400'
+								}`}
+							>
+								{item.label}
+								{active ? <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-blue-600" /> : null}
+							</Link>
+						);
+					})}
 				</nav>
 				<div className="justify-self-end flex items-center gap-3">
 					<HeaderSearch />
-					<a
-						href={followUrl}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="hidden rounded-lg border border-neutral-200 px-3 py-1.5 text-sm font-semibold text-neutral-700 transition-colors hover:border-violet-300 hover:text-violet-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:text-violet-300 lg:inline-flex"
-					>
-						Follow
-					</a>
 					{isNewsletterSubscribeEnabled && newsletterUrl ? (
 						<a
 							href={newsletterUrl}
@@ -352,7 +300,7 @@ export const PersonalHeader = () => {
 			</div>
 
 			{/* Mobile header */}
-			<div className={`md:hidden max-w-7xl mx-auto px-4 ${isScrolled ? 'py-2.5' : 'py-3'} flex items-center justify-between`}>
+			<div className={`mx-auto max-w-[1440px] px-4 md:hidden ${isScrolled ? 'py-2.5' : 'py-3'} flex items-center justify-between`}>
 				<button
 					onClick={() => setIsMobileMenuOpen(true)}
 					aria-label="Open menu"
@@ -362,19 +310,7 @@ export const PersonalHeader = () => {
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
 					</svg>
 				</button>
-				<Link href="/" className="inline-flex items-center gap-2">
-					{publication.favicon ? (
-						<img
-							className="h-8 w-8 rounded-full"
-							alt={publication.title}
-							src={resizeImage(publication.favicon, { w: 32, h: 32, c: 'face' })}
-						/>
-					) : (
-						<span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 via-blue-500 to-emerald-400 text-sm font-black text-white">
-							A
-						</span>
-					)}
-				</Link>
+				<div aria-hidden="true" className="min-w-0 flex-1" />
 				<div className="flex items-center gap-2">
 					<HeaderSearch />
 					<UserProfile onLoginClick={() => setIsAuthModalOpen(true)} />
@@ -395,23 +331,14 @@ export const PersonalHeader = () => {
 					</div>
 					<div className="mt-6 space-y-2">
 						{navItems.map((item) => (
-							<div key={item.label} className="rounded-xl border border-neutral-200 px-4 py-3 dark:border-neutral-800">
-								<p className="block text-base font-semibold text-neutral-900 dark:text-neutral-50">
-									{item.label}
-								</p>
-								<div className="mt-3 grid gap-2">
-									{item.items.map((child) => (
-										<Link
-											key={child.label}
-											href={child.href}
-											onClick={() => setIsMobileMenuOpen(false)}
-											className="block rounded-lg bg-neutral-50 px-3 py-2 text-sm text-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
-										>
-											{child.label}
-										</Link>
-									))}
-								</div>
-							</div>
+							<Link
+								key={item.label}
+								href={item.href}
+								onClick={() => setIsMobileMenuOpen(false)}
+								className="block rounded-xl border border-neutral-200 px-4 py-3 text-base font-semibold text-neutral-900 dark:border-neutral-800 dark:text-neutral-50"
+							>
+								{item.label}
+							</Link>
 						))}
 						<a
 							href={followUrl}

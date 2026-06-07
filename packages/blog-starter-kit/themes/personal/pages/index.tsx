@@ -10,7 +10,6 @@ import { HomepageRedesign } from '../components/homepage-redesign';
 import { Layout } from '../components/layout';
 import { PersonalHeader } from '../components/personal-theme-header';
 import { TopicCluster, buildTopicClusters } from '../components/topic-clusters';
-import { PostChatbot } from '../components/post-chatbot';
 import { LearnPost } from '../components/learn-today';
 import { CONTENT_REVALIDATE_SECONDS } from '../lib/cache-constants';
 import {
@@ -66,7 +65,7 @@ export default function Index({ publication, initialPosts, allPosts, popularPost
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-7xl mx-auto w-full px-5">
+					<div className="w-full">
 						<HomepageRedesign
 							publication={publication}
 							allPosts={allPosts}
@@ -75,8 +74,6 @@ export default function Index({ publication, initialPosts, allPosts, popularPost
 							topicClusters={topicClusters}
 						/>
 					</div>
-					{/* Floating AI Chatbot */}
-					<PostChatbot />
 					<Footer />
 				</Container>
 			</Layout>

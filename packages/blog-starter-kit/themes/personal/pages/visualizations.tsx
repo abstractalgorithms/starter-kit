@@ -83,7 +83,7 @@ export default function VisualizationsPage({ publication, footerPosts }: Props) 
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-7xl mx-auto w-full px-5 py-10">
+					<div className="mx-auto w-full max-w-[1440px] px-5 py-10 md:px-8">
 						<section className="mb-8">
 							<p className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400">
 								Interactive learning lab

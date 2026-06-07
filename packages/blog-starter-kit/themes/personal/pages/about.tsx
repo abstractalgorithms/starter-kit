@@ -74,7 +74,7 @@ export default function AboutPage({ publication, footerPosts, heroStats }: Props
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-7xl mx-auto w-full px-5">
+					<div className="mx-auto w-full max-w-[1440px] px-5 md:px-8">
 						<section className="w-full py-12">
 							<div className="w-full">
 								<p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-4">

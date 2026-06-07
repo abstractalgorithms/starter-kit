@@ -361,7 +361,7 @@ export const SystemsKnowledgeGraph = ({
 							{expandedIds.includes(activeNode.id) ? 'Show Less' : 'Show Related Ideas'}
 						</CTAButton>
 						<CTALink
-							href={`/assistant?q=${encodeURIComponent(`Explain how ${activeNode.label} connects to the nearby concepts in this topic`)}`}
+							href={`/learn?q=${encodeURIComponent(activeNode.label)}`}
 							level={3}
 							size="md"
 							className="w-full"
@@ -369,7 +369,7 @@ export const SystemsKnowledgeGraph = ({
 							Explain This
 						</CTALink>
 						<CTALink
-							href={`/assistant?q=${encodeURIComponent(`Give me a tradeoff reasoning question about ${activeNode.label} and the concepts around it`)}`}
+							href={`/learn?q=${encodeURIComponent(activeNode.label)}`}
 							level={3}
 							size="md"
 							className="w-full"

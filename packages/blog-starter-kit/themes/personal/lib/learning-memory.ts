@@ -369,7 +369,7 @@ export const buildAdaptiveRecommendations = (
 			id: `review-${concept.id}`,
 			title: `Review ${concept.label}`,
 			description: `${concept.weakScore}% weak-area signal from recent learning activity.`,
-			href: `/assistant?q=${encodeURIComponent(`Explain ${concept.label} and quiz me on weak points`)}`,
+			href: `/learn?q=${encodeURIComponent(concept.label)}`,
 			priority: 82 - index * 4,
 			type: 'review',
 			concept: concept.label,
@@ -470,7 +470,7 @@ export const buildContextualMentorPrompt = ({
 		.join('\n\n');
 };
 
-export const mentorHref = (prompt: string) => `/assistant?q=${encodeURIComponent(prompt)}`;
+export const mentorHref = (prompt: string) => `/learn?q=${encodeURIComponent(prompt)}`;
 
 export const buildProactiveMentorNudges = (
 	memory: LearningMemorySnapshot,

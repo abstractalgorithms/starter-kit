@@ -261,18 +261,18 @@ export const DiagramAffordanceBar = ({
 	const reduceMotion = useReducedMotion();
 
 	return (
-		<div className="flex flex-wrap items-center gap-2">
-			<CTAButton type="button" level={1} size="sm" onClick={onReplay}>
+		<div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
+			<CTAButton type="button" level={1} size="sm" className="w-full lg:w-auto" onClick={onReplay}>
 				{playing ? 'Replay Flow' : 'Replay Flow'}
 			</CTAButton>
-			<CTAButton type="button" level={2} size="sm" onClick={onTriggerFailure} disabled={!hasFailure}>
+			<CTAButton type="button" level={2} size="sm" className="w-full lg:w-auto" onClick={onTriggerFailure} disabled={!hasFailure}>
 				Trigger Failure
 			</CTAButton>
 			<motion.button
 				type="button"
 				whileTap={getTapScale(reduceMotion)}
 				onClick={onStep}
-				className="rounded-xl px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-950/30"
+				className="w-full rounded-xl px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-950/30 lg:w-auto"
 			>
 				Step Through
 			</motion.button>
@@ -280,7 +280,7 @@ export const DiagramAffordanceBar = ({
 				type="button"
 				whileTap={getTapScale(reduceMotion)}
 				onClick={onSlowMotion}
-				className={`rounded-xl px-3 py-1.5 text-xs font-semibold ${
+				className={`w-full rounded-xl px-3 py-1.5 text-xs font-semibold lg:w-auto ${
 					slow
 						? 'bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-200'
 						: 'text-violet-700 hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-950/30'

@@ -225,7 +225,7 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 				</Head>
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-7xl mx-auto w-full px-5 py-8">
+					<div className="mx-auto w-full max-w-[1440px] px-5 py-8 md:px-8">
 						<div className="mb-8 flex flex-wrap items-end justify-between gap-4">
 							<div>
 								<p className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400">
@@ -287,16 +287,16 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 							</p>
 							<div className="mt-3 flex flex-wrap gap-3">
 								<Link
-									href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : '/assistant'}
+									href={savedPath?.readSlugs?.length ? `/${savedPath.readSlugs[savedPath.readSlugs.length - 1]}` : '/learn'}
 									className="inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
 								>
 									Resume Path
 								</Link>
 								<Link
-									href="/assistant"
+									href="/learn"
 									className="inline-flex rounded-xl border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 hover:border-blue-400 hover:text-blue-600 dark:border-neutral-700 dark:text-neutral-200 dark:hover:text-blue-400"
 								>
-									Generate New Plan
+									Find New Path
 								</Link>
 							</div>
 						</div>

@@ -120,7 +120,7 @@ return (
       </Head>
       <Container className="mx-auto w-full">
         <PersonalHeader />
-        <div className="max-w-7xl mx-auto w-full px-5 pt-10 pb-20">
+        <div className="mx-auto w-full max-w-[1440px] px-5 pt-10 pb-20 md:px-8">
 
           {/* ── Back nav ── */}
           <Link

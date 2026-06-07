@@ -317,7 +317,7 @@ export const buildConceptGraph = (posts: PostFragment[] = [], options: ConceptGr
 export const getConceptHref = (node: ConceptGraphNode) => {
 	if (node.postSlug) return `/${node.postSlug}`;
 	if (node.slug) return `/posts?tag=${encodeURIComponent(node.slug)}`;
-	return `/assistant?q=${encodeURIComponent(`Explain ${node.label}`)}`;
+	return `/learn?q=${encodeURIComponent(node.label)}`;
 };
 
 export const getRelationshipSummary = (

@@ -2,6 +2,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from './analytics';
 import { Integrations } from './integrations';
 import { Meta } from './meta';
+import { PostChatbot } from './post-chatbot';
 import { Scripts } from './scripts';
 
 type Props = {
@@ -16,6 +17,7 @@ export const Layout = ({ children }: Props) => {
 			<div className="min-h-screen bg-white dark:bg-neutral-950">
 				<main>{children}</main>
 			</div>
+			<PostChatbot />
 			<Analytics />
 			<Integrations />
 			<SpeedInsights />

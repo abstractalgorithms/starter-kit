@@ -115,7 +115,7 @@ export const EmbeddedAIMentor = ({
 				<CTALink href={mentorHref(tradeoffPrompt)} level={3} size="sm">
 					Practice Tradeoffs
 				</CTALink>
-				<CTALink href={`/assistant?q=${encodeURIComponent(`Recommend simulations and interview drills for ${target}`)}`} level={3} size="sm">
+				<CTALink href={`/learn?q=${encodeURIComponent(target)}`} level={3} size="sm">
 					Next Drill
 				</CTALink>
 			</div>

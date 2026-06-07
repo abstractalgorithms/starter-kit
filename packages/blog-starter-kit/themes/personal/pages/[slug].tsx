@@ -18,6 +18,7 @@ import request from 'graphql-request';
 import { motion, useReducedMotion } from 'framer-motion';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Container } from '../components/container';
@@ -41,7 +42,6 @@ import {
 import { triggerCustomWidgetEmbed } from '@starter-kit/utils/trigger-custom-widget-embed';
 import { getFooterPosts } from '../lib/api/footerData';
 import { ScrollButtons } from '../components/scroll-buttons';
-import { PostChatbot } from '../components/post-chatbot';
 import { ArticleEngagement } from '../components/article-engagement';
 import { ContextualBreadcrumbs } from '../components/contextual-breadcrumbs';
 import { useLearningContext } from '../components/learning-context-provider';
@@ -490,7 +490,7 @@ const ReadingNavigationSidebar = ({
 	}, [tocItems]);
 
 	return (
-		<aside className="hidden xl:block min-w-0">
+		<aside className="hidden 2xl:block min-w-0">
 			<div className="sticky top-24 space-y-4">
 				<div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.04)] dark:border-neutral-800 dark:bg-neutral-900">
 					<p className="mb-3 flex items-center gap-2 text-xs font-bold text-neutral-900 dark:text-neutral-100">
@@ -788,7 +788,7 @@ const StickyMiniArticleHeader = ({
 	if (!isVisible) return null;
 	return (
 		<div className="fixed top-14 inset-x-0 z-40 border-b border-neutral-200/80 bg-white/90 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/90 xl:hidden">
-			<div className="mx-auto max-w-7xl px-4 sm:px-5 py-2 flex items-center gap-3">
+			<div className="mx-auto max-w-[1440px] px-5 py-2 md:px-8 flex items-center gap-3">
 				<p className="flex-1 min-w-0 line-clamp-1 text-xs font-semibold text-neutral-700 dark:text-neutral-200">{title}</p>
 				<p className="text-[11px] text-neutral-500 dark:text-neutral-400">{readTimeInMinutes} min</p>
 				<div className="h-1.5 w-20 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
@@ -1083,7 +1083,7 @@ const ImmersiveArticleStory = ({
 	return (
 		<section className="my-10 space-y-10">
 			<div className="relative w-screen left-1/2 -translate-x-1/2 xl:w-auto xl:left-auto xl:translate-x-0 border-y xl:border border-violet-100 bg-gradient-to-br from-white via-violet-50/60 to-blue-50/70 py-8 dark:border-violet-950 dark:from-neutral-950 dark:via-violet-950/20 dark:to-blue-950/20 md:py-10 xl:rounded-3xl xl:px-6 xl:mx-0">
-				<div className="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,0.84fr)_minmax(520px,1.16fr)] xl:grid-cols-1 lg:items-center">
+				<div className="mx-auto grid max-w-[1440px] gap-6 px-5 md:px-8 lg:grid-cols-[minmax(0,0.84fr)_minmax(520px,1.16fr)] xl:grid-cols-1 lg:items-center">
 					<div>
 						<p className="text-[10px] font-mono uppercase tracking-[0.24em] text-violet-600 dark:text-violet-300">
 							System lens
@@ -1757,10 +1757,10 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 			simulationTopic: post.title,
 		});
 	};
-	const interviewAssistantHref = `/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.practiceQuestion))}`;
-	const whiteboardHref = `/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.whiteboardPrompt))}`;
+	const interviewAssistantHref = `/learn?q=${encodeURIComponent(buildPrompt(interviewPrompts.practiceQuestion))}`;
+	const whiteboardHref = `/learn?q=${encodeURIComponent(buildPrompt(interviewPrompts.whiteboardPrompt))}`;
 	const handleAiExplain = (section: string) => {
-		window.location.href = `/assistant?q=${encodeURIComponent(
+		window.location.href = `/learn?q=${encodeURIComponent(
 			buildPrompt(`Explain ${section} from ${post.title} in simpler terms.`),
 		)}`;
 	};
@@ -1818,290 +1818,246 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 				<style dangerouslySetInnerHTML={{ __html: highlightJsMonokaiTheme }} />
 			</Head>
 
-			<div className="mx-auto mt-10 grid max-w-7xl gap-10 2xl:grid-cols-[minmax(0,1fr)_220px] 2xl:items-start">
-				<div className="min-w-0">
-					<div className="mx-auto mb-10 w-full max-w-none">
-						<div className="mb-3 flex flex-wrap items-center gap-2 text-[11px]">
-							<ContextualBreadcrumbs compact />
-						</div>
-						<div className="mb-4 flex flex-wrap items-center gap-2">
-							<span className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-								{post.readTimeInMinutes} min read
-							</span>
-							{tags.slice(0, 3).map((tag) => (
-								<Link
-									key={`hero-tag-${tag.id}`}
-									href={`/tag/${tag.slug}`}
-									className="inline-flex rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-blue-800 dark:hover:text-blue-300"
-								>
-									{formatTagName(tag.name)}
-								</Link>
-							))}
-						</div>
-						<h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight text-neutral-950 dark:text-neutral-50 md:text-6xl">
-							{post.title}
-						</h1>
-						{post.subtitle ? (
-							<p className="mt-5 text-lg leading-relaxed text-neutral-600 dark:text-neutral-300 md:text-xl">
-								{post.subtitle}
-							</p>
+			<div className="mx-auto grid w-full max-w-[1500px] gap-6 pt-6 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[220px_minmax(0,900px)_300px] 2xl:items-start">
+				<aside className="hidden lg:block">
+					<div className="sticky top-24 space-y-6">
+						<Link href="/posts" className="inline-flex h-11 items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 shadow-sm hover:border-blue-300 hover:text-blue-700">
+							<span aria-hidden="true">&lt;-</span>
+							Back to all articles
+						</Link>
+
+						{tocItems.length > 0 ? (
+							<nav className="border-t border-slate-200 pt-6" aria-label="Article sections">
+								<p className="mb-3 text-[11px] font-black uppercase tracking-wide text-slate-700">In this article</p>
+								<ol className="space-y-1">
+									{tocItems.slice(0, 12).map((item, index) => (
+										<li key={`left-toc-${item.id}`}>
+											<a
+												href={`#heading-${item.slug}`}
+												className={`block rounded-md px-2 py-1.5 text-[13px] leading-5 transition hover:bg-blue-50 hover:text-blue-700 ${
+													index === 0 ? 'bg-blue-50 font-bold text-blue-700' : 'text-slate-700'
+												} ${item.level > 2 ? 'ml-4 text-slate-500' : ''}`}
+											>
+												{index + 1}. {decodeHtml(item.title)}
+											</a>
+										</li>
+									))}
+								</ol>
+							</nav>
 						) : null}
-						<div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-neutral-500 dark:text-neutral-400">
+
+						<section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+							<h2 className="text-sm font-black text-slate-950">Enjoying the article?</h2>
+							<p className="mt-2 text-sm leading-6 text-slate-600">Bookmark it to read later.</p>
+							<button
+								type="button"
+								onClick={() => setIsBookmarked((value) => !value)}
+								className="mt-4 inline-flex h-10 items-center rounded-lg border border-blue-200 px-4 text-sm font-bold text-blue-600 hover:bg-blue-50"
+							>
+								{isBookmarked ? 'Bookmarked' : 'Bookmark'}
+							</button>
+						</section>
+					</div>
+				</aside>
+
+				<main className="min-w-0">
+					<div className="mb-8 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+						<Link href="/" className="hover:text-blue-700">Home</Link>
+						<span>/</span>
+						<Link href="/posts" className="hover:text-blue-700">Blog</Link>
+						{tags[0] ? (
+							<>
+								<span>/</span>
+								<Link href={`/tag/${tags[0].slug}`} className="hover:text-blue-700">{formatTagName(tags[0].name)}</Link>
+							</>
+						) : null}
+						<span>/</span>
+						<span className="line-clamp-1 text-slate-700">{post.title}</span>
+					</div>
+
+					<div className="mb-4 flex flex-wrap items-center gap-3 text-[13px] text-slate-500">
+						{tags[0] ? (
+							<Link href={`/tag/${tags[0].slug}`} className="rounded-md bg-blue-50 px-2 py-1 text-xs font-black uppercase text-blue-600">
+								{formatTagName(tags[0].name)}
+							</Link>
+						) : null}
+						<span>{post.readTimeInMinutes > 12 ? 'Advanced' : 'Intermediate'}</span>
+						<span>•</span>
+						<span>{post.readTimeInMinutes} min read</span>
+						<span>•</span>
+						<time><DateFormatter dateString={post.publishedAt} /></time>
+					</div>
+
+					<h1 className="text-4xl font-black leading-tight tracking-normal text-slate-950 md:text-[2.75rem]">
+						{post.title}
+					</h1>
+					<p className="mt-4 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
+						{post.subtitle || post.brief}
+					</p>
+
+					<div className="mt-7 flex flex-col gap-4 border-b border-slate-100 pb-6 sm:flex-row sm:items-center sm:justify-between">
+						<div className="flex items-center gap-4">
 							{post.author.profilePicture ? (
-								<img
-									src={resizeImage(post.author.profilePicture, { w: 80, h: 80, c: 'face' })}
+								<Image
+									src={resizeImage(post.author.profilePicture, { w: 96, h: 96, c: 'face' })}
 									alt={post.author.name}
-									className="h-8 w-8 rounded-full ring-2 ring-neutral-100 dark:ring-neutral-800"
+									width={96}
+									height={96}
+									className="h-12 w-12 rounded-full ring-2 ring-blue-50"
 								/>
-							) : null}
-							<span className="font-semibold text-neutral-700 dark:text-neutral-200">{post.author.name}</span>
-							<span className="text-neutral-300 dark:text-neutral-700">/</span>
-							<time><DateFormatter dateString={post.publishedAt} /></time>
-							{post.series ? (
-								<>
-									<span className="text-neutral-300 dark:text-neutral-700">/</span>
-									<Link href={`/series/${post.series.slug}`} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200">
-										{post.series.name}
-									</Link>
-								</>
-							) : null}
+							) : (
+								<span className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-xl font-black text-blue-600">A</span>
+							)}
+							<div>
+								<p className="font-black text-slate-950">{post.author.name}</p>
+								<p className="text-sm text-slate-500">Helping engineers master software engineering topics.</p>
+							</div>
+						</div>
+						<div className="flex gap-2">
+							<button
+								type="button"
+								onClick={() => setIsBookmarked((value) => !value)}
+								className="inline-flex h-10 items-center rounded-lg border border-slate-300 px-4 text-sm font-bold text-slate-900 hover:border-blue-300 hover:text-blue-700"
+							>
+								{isBookmarked ? 'Bookmarked' : 'Bookmark'}
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									if (typeof navigator !== 'undefined' && navigator.share) {
+										navigator.share({ title: post.title, url: post.url }).catch(() => {});
+									}
+								}}
+								className="inline-flex h-10 items-center rounded-lg border border-slate-300 px-4 text-sm font-bold text-slate-900 hover:border-blue-300 hover:text-blue-700"
+							>
+								Share
+							</button>
 						</div>
 					</div>
 
-					{tocItems.length > 0 ? (
-						<section className="mx-auto mb-8 w-full max-w-none rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-							<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">On this page</p>
-							<div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-								{tocItems.slice(0, 9).map((item) => (
-									<a
-										key={`inline-toc-${item.id}`}
-										href={`#heading-${item.slug}`}
-										className="rounded-xl border border-neutral-100 px-3 py-2 text-sm font-semibold leading-snug text-neutral-600 transition-colors hover:border-blue-200 hover:text-blue-700 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-blue-800 dark:hover:text-blue-300"
-									>
-										{decodeHtml(item.title)}
-									</a>
-								))}
-							</div>
-						</section>
+					{post.coverImage?.url ? (
+						<div className="mt-8 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+							<Image
+								src={resizeImage(post.coverImage.url, { w: 1200, h: 680, c: 'thumb' })}
+								alt={post.title}
+								width={1200}
+								height={680}
+								className="aspect-[16/9] max-h-[430px] w-full object-cover"
+								priority
+							/>
+						</div>
 					) : null}
 
-					<ArticleEngagement post={post} publication={publication} />
-
-					<section className="mx-auto w-full max-w-none rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 md:p-6">
-						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300">Executive TLDR</p>
-						<ul className="mt-4 space-y-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-							{aiSummaryBullets.slice(0, 4).map((item) => (
-								<li key={item} className="flex gap-3">
-									<span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
-									<span>{item}</span>
-								</li>
-							))}
-						</ul>
-					</section>
-
-					<section className="mx-auto mt-8 w-full max-w-none">
-						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Core mental model</p>
-						<h2 className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
-							Read this as a system of state, constraints, and failure boundaries.
-						</h2>
-						<p className="mt-4 text-base leading-relaxed text-neutral-700 dark:text-neutral-300">
-							{storyOverview}
-						</p>
-						<div className="mt-5 flex flex-wrap gap-2">
-							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(`Explain the mental model behind ${post.title} in simpler terms.`))}`} className="inline-flex rounded-lg border border-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
-								Explain simpler
-							</Link>
-							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.tradeoffPrompt))}`} className="inline-flex rounded-lg border border-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
-								Compare tradeoffs
-							</Link>
-						</div>
-					</section>
-
-					<section className="mx-auto mt-10 w-full max-w-none rounded-2xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900/60 md:p-6">
-						<div className="mx-auto max-w-none">
-							<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Key systems visualization</p>
-							<h2 className="mt-3 text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-neutral-50">
-								The article’s conceptual path
-							</h2>
-						</div>
-						{backmatter?.mermaidDiagram ? (
-							<div className="mt-6 overflow-x-auto pb-2">
-								<div className="rounded-xl border border-blue-200 bg-white p-4 dark:border-blue-900 dark:bg-blue-950/20">
-									<div className="mermaid">
-										{backmatter.mermaidDiagram}
-									</div>
-								</div>
-							</div>
-						) : (
-							<div className="mt-6 overflow-x-auto pb-2">
-								<div className="flex min-w-max items-stretch gap-3">
-									{articleFlowNodes.slice(0, 5).map((node, index) => (
-										<div key={`${node}-${index}`} className="flex items-center gap-3">
-											<div className="w-44 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
-												<p className="text-[11px] font-semibold text-blue-600 dark:text-blue-300">0{index + 1}</p>
-												<p className="mt-2 text-sm font-bold leading-snug text-neutral-950 dark:text-neutral-50">{decodeHtml(node)}</p>
-											</div>
-											{index < Math.min(articleFlowNodes.length, 5) - 1 ? (
-												<span className="text-neutral-300 dark:text-neutral-700">{'->'}</span>
-											) : null}
-										</div>
-									))}
-								</div>
-							</div>
-						)}
-					</section>
-
-					<div className="article-doc mx-auto mt-12 w-full max-w-none min-w-0">
+					<div className="article-doc mx-auto mt-10 w-full min-w-0 max-w-none">
 						<MarkdownToHtml contentMarkdown={post.content.markdown} />
 					</div>
 
-
-
-
-
-					<section className="mx-auto mt-10 w-full max-w-none rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-						<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">Quiet AI help</p>
+					<section className="mt-10 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+						<p className="text-xs font-black uppercase tracking-wide text-slate-500">Article tools</p>
 						<div className="mt-4 grid gap-3 sm:grid-cols-3">
-							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(`Explain ${post.title} more simply, preserving the engineering details.`))}`} className="rounded-xl border border-neutral-200 px-3 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
+							<Link href={`/learn?q=${encodeURIComponent(post.title)}`} className="rounded-lg border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700">
 								Explain simpler
 							</Link>
-							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(interviewPrompts.tradeoffPrompt))}`} className="rounded-xl border border-neutral-200 px-3 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
+							<Link href={`/learn?q=${encodeURIComponent(post.title)}`} className="rounded-lg border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700">
 								Compare approaches
 							</Link>
-							<Link href={`/assistant?q=${encodeURIComponent(buildPrompt(`What should I read next after ${post.title}?`))}`} className="rounded-xl border border-neutral-200 px-3 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-blue-700 dark:hover:text-blue-300">
+							<Link href={`/learn?q=${encodeURIComponent(post.title)}`} className="rounded-lg border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700">
 								What next?
 							</Link>
 						</div>
 					</section>
 
-					{/* Tags */}
-					{tags.length > 0 && (
-						<div className="mx-auto mt-10 w-full max-w-none border-t border-neutral-100 pt-8 dark:border-neutral-800">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
-								Article metadata
-							</p>
-							<ul className="flex flex-wrap gap-2 list-none m-0 p-0">
+					<ArticleEngagement post={post} publication={publication} />
+
+					{tags.length > 0 ? (
+						<div className="mt-10 border-t border-slate-200 pt-8">
+							<p className="mb-3 text-xs font-black uppercase tracking-wide text-slate-500">Article metadata</p>
+							<ul className="flex list-none flex-wrap gap-2 p-0">
 								{tags.map((tag) => (
-									<li key={tag.id} className="m-0 p-0">
-										<Link
-											href={`/tag/${tag.slug}`}
-											className="inline-flex items-center px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full text-xs font-mono border border-neutral-200 dark:border-neutral-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 dark:hover:bg-blue-950 dark:hover:text-blue-300 dark:hover:border-blue-800 transition-colors"
-										>
+									<li key={tag.id}>
+										<Link href={`/tag/${tag.slug}`} className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600 hover:border-blue-200 hover:text-blue-700">
 											{formatTagName(tag.name)}
 										</Link>
 									</li>
 								))}
 							</ul>
 						</div>
-					)}
-
-					{/* Author Card */}
-					<div className="mx-auto mt-10 flex w-full max-w-none items-center gap-4 rounded-xl border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
-						{post.author.profilePicture && (
-							<img
-								src={resizeImage(post.author.profilePicture, { w: 120, h: 120, c: 'face' })}
-								alt={post.author.name}
-								className="w-14 h-14 rounded-full ring-2 ring-neutral-200 dark:ring-neutral-700 flex-shrink-0"
-							/>
-						)}
-						<div className="min-w-0 flex-1">
-							<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-0.5">
-								Written by
-							</p>
-							<p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">
-								{post.author.name}
-							</p>
-							<p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5 font-mono">
-								@{post.author.username}
-							</p>
-						</div>
-					</div>
-
-					{/* Related deep dives */}
-					{morePosts.length > 1 ? (
-					<section className="mx-auto mt-10 w-full max-w-none rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-						<p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-3">
-							Related deep dives
-						</p>
-						<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-							{morePosts.slice(1, 4).map((nextPost) => {
-								const nextCoverImage = normalizeCoverImageUrl(nextPost.coverImage?.url);
-								return (
-									<Link
-										key={nextPost.id}
-										href={`/${nextPost.slug}`}
-										className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
-									>
-										{nextCoverImage ? (
-											<img
-												src={nextCoverImage}
-												alt={nextPost.title}
-												className="mb-2 h-24 w-full rounded-md object-cover"
-											/>
-										) : (
-											<div className="mb-2 h-24 w-full rounded-md bg-gradient-to-br from-blue-100 via-indigo-100 to-teal-100 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-teal-950/30" />
-										)}
-										<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 line-clamp-2">
-											{nextPost.title}
-										</p>
-										<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-											{nextPost.readTimeInMinutes} min read
-										</p>
-									</Link>
-								);
-							})}
-						</div>
-					</section>
 					) : null}
+				</main>
 
-					<section className="mx-auto mt-8 w-full max-w-none rounded-xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
-						<p className="text-[10px] font-mono uppercase tracking-widest text-blue-600 dark:text-blue-300 mb-2">
-							Continue reading
-						</p>
-						{upNextPost ? (
-							<div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-								<Link href={`/${upNextPost.slug}`} className="block rounded-lg border border-blue-200 bg-white p-3 transition-colors hover:border-blue-400 dark:border-blue-900 dark:bg-neutral-950 dark:hover:border-blue-600">
-									<p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{upNextPost.title}</p>
-									<p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-										{upNextPost.readTimeInMinutes} min · {upNextPost.tags?.[0]?.name ? `${formatTagName(upNextPost.tags[0].name)} · ` : ''}best next step
-									</p>
-								</Link>
-								<CTALink href={`/topic/${topicLearningSlug}`} level={1} size="sm">
-									Open Collection
-								</CTALink>
-							</div>
-						) : (
-							<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-								<p className="text-xs text-neutral-500 dark:text-neutral-400">Continue through the broader topic instead of stopping at this article.</p>
-								<CTALink href={`/topic/${topicLearningSlug}`} level={1} size="sm">
-									Open Collection
-								</CTALink>
-							</div>
-						)}
-					</section>
-
-				</div>
-
-				<aside className="hidden 2xl:block">
+					<aside className="hidden 2xl:block">
 					<div className="sticky top-24 space-y-5">
-						<div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-							<p className="text-[11px] font-mono uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">On this page</p>
-							<div className="mt-3 space-y-2">
-								{tocItems.slice(0, 7).map((item) => (
-									<a key={`quiet-toc-${item.id}`} href={`#heading-${item.slug}`} className="block text-sm leading-snug text-neutral-600 transition-colors hover:text-blue-700 dark:text-neutral-300 dark:hover:text-blue-300">
-										{decodeHtml(item.title)}
-									</a>
-								))}
+						<section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+							<div className="mb-4 flex items-center justify-between text-[11px] font-bold uppercase tracking-wide text-slate-700">
+								<span>On this page</span>
+								<span className="normal-case tracking-normal text-slate-500">{Math.round(readingProgress)}% read</span>
 							</div>
-						</div>
-						<Link href={`/topic/${topicLearningSlug}`} className="block rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-sm font-semibold text-blue-800 transition-colors hover:border-blue-300 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-200">
-							Explore related concept
-						</Link>
+							<div className="h-2 overflow-hidden rounded-full bg-slate-100">
+								<div className="h-full rounded-full bg-blue-600" style={{ width: `${readingProgress}%` }} />
+							</div>
+						</section>
+
+						{post.series ? (
+							<section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+								<h2 className="text-base font-black leading-6 text-slate-950">Master {post.series.name}</h2>
+								<p className="mt-2 text-sm leading-6 text-slate-600">Explore the complete series with structured articles and interview-focused explanations.</p>
+								<Link href={`/series/${post.series.slug}`} className="mt-4 inline-flex h-10 items-center rounded-lg border border-blue-200 px-4 text-sm font-bold text-blue-600 hover:bg-blue-50">
+									Explore Series -&gt;
+								</Link>
+							</section>
+						) : null}
+
+						{morePosts.length > 0 ? (
+							<section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+								<div className="p-5">
+									<h2 className="text-base font-black text-slate-950">Related Articles</h2>
+									<div className="mt-5 space-y-4">
+										{morePosts.slice(0, 4).map((nextPost) => {
+											const image = normalizeCoverImageUrl(nextPost.coverImage?.url);
+											return (
+												<Link key={nextPost.id} href={`/${nextPost.slug}`} className="grid grid-cols-[56px_minmax(0,1fr)] gap-3">
+													{image ? (
+														<Image src={image} alt="" width={56} height={56} className="h-14 w-14 rounded-lg object-cover" />
+													) : (
+														<span className="h-14 w-14 rounded-lg bg-blue-50" />
+													)}
+													<span>
+														<span className="line-clamp-2 text-[13px] font-black leading-5 text-slate-950">{nextPost.title}</span>
+														<span className="mt-1 block text-xs text-slate-500">{nextPost.readTimeInMinutes} min read</span>
+													</span>
+												</Link>
+											);
+										})}
+									</div>
+								</div>
+								<Link href="/posts" className="block border-t border-slate-200 px-5 py-4 text-sm font-bold text-blue-600 hover:bg-blue-50">
+									View all related articles -&gt;
+								</Link>
+							</section>
+						) : null}
+
+						<section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+							<h2 className="text-base font-black text-slate-950">Was this article helpful?</h2>
+							<div className="mt-4 grid grid-cols-2 gap-3">
+								<button
+									type="button"
+									onClick={() => setMarkedHelpful(true)}
+									className={`h-11 rounded-lg text-sm font-bold ${markedHelpful ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+								>
+									Yes
+								</button>
+								<button
+									type="button"
+									onClick={() => setMarkedHelpful(false)}
+									className="h-11 rounded-lg bg-rose-50 text-sm font-bold text-rose-700 hover:bg-rose-100"
+								>
+									No
+								</button>
+							</div>
+						</section>
 					</div>
 				</aside>
 			</div>
-
-			<PostChatbot postTitle={post.title} postContent={post.content.markdown} />
 
 			<ScrollButtons />
 		</>
@@ -2131,7 +2087,7 @@ export default function PostOrPage(props: Props) {
 				{props.type === 'post' && <ReadingProgressBar />}
 				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="max-w-7xl mx-auto w-full px-4 sm:px-5 pt-4 pb-28 md:pt-5 md:pb-20 overflow-x-hidden">
+					<div className="mx-auto w-full max-w-[1500px] px-5 pb-28 pt-4 md:px-8 md:pb-20 md:pt-5 overflow-x-hidden">
 						<article className="w-full min-w-0">
 							{props.type === 'post' && <Post {...props} />}
 							{props.type === 'page' && <Page {...props} />}

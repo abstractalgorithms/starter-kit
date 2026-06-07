@@ -60,7 +60,7 @@ export const CategoriesSection = ({ posts = [] }: Props) => {
 					Explore Categories
 				</h2>
 				<Link
-					href="/discover"
+					href="/learn"
 					className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
 				>
 					Browse All

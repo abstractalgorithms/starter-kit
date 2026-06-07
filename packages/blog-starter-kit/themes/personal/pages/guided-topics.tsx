@@ -7,7 +7,7 @@ export default function GuidedTopicsCompatibilityPage() {
 	const router = useRouter();
 
 	useEffect(() => {
-		router.replace('/discover#topic-collections');
+		router.replace('/learn');
 	}, [router]);
 
 	return (
@@ -25,16 +25,16 @@ export default function GuidedTopicsCompatibilityPage() {
 					Explore
 				</p>
 				<h1 className="mt-3 text-3xl font-black tracking-tight text-neutral-950">
-					Concept collections moved to Explore.
+					Concept collections moved to Learn.
 				</h1>
 				<p className="mt-3 text-sm leading-relaxed text-neutral-500">
 					The publication now keeps discovery lighter and closer to the articles.
 				</p>
 				<Link
-					href="/discover#topic-collections"
+					href="/learn"
 					className="mt-6 rounded-xl bg-neutral-950 px-4 py-2 text-sm font-bold text-white"
 				>
-					Open Explore
+					Open Learn
 				</Link>
 			</main>
 		</>
