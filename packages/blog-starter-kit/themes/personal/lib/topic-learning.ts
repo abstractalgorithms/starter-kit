@@ -15,7 +15,7 @@ export type TopicLearningArticle = {
 };
 
 export type TopicLearningStage = {
-	id: 'concept' | 'visual' | 'tradeoff' | 'challenge' | 'continue';
+	id: string;
 	label: string;
 	intent: string;
 	primaryCta: string;
@@ -170,21 +170,6 @@ export const inferTopicSlugForPost = (post: PostFragment) => {
 	return normalizeTopicSlug(post.tags?.[0]?.slug ?? inferPrimaryArticleConcept(post));
 };
 
-const buildStage = (
-	id: TopicLearningStage['id'],
-	label: string,
-	intent: string,
-	primaryCta: string,
-	articles: TopicLearningArticle[],
-	offset: number,
-): TopicLearningStage => ({
-	id,
-	label,
-	intent,
-	primaryCta,
-	articleSlugs: articles.slice(offset, offset + 2).map((article) => article.slug),
-});
-
 export const buildTopicLearningJourney = (slugInput: string, posts: PostFragment[]): TopicLearningJourney => {
 	const slug = normalizeTopicSlug(slugInput);
 	const profile = getTopicProfile(slug, posts);
@@ -197,7 +182,6 @@ export const buildTopicLearningJourney = (slugInput: string, posts: PostFragment
 		.sort((a, b) => b.score - a.score);
 
 	const articles = scoredArticles
-		.slice(0, 12)
 		.map(({ post, score }) => ({
 			id: post.id,
 			title: post.title,
@@ -210,21 +194,49 @@ export const buildTopicLearningJourney = (slugInput: string, posts: PostFragment
 			relevance: score,
 		}));
 
-	const conceptSeeds = articles.length
-		? articles.flatMap((article) => {
-				const post = posts.find((item) => item.slug === article.slug);
-				return post ? getArticleConceptSeeds(post).slice(0, 4) : [article.primaryConcept];
-			})
-		: profile.concepts;
-	const concepts = [...new Set([...profile.concepts, ...conceptSeeds])].slice(0, 10);
+	const tagGroups = new Map<string, { slug: string; name: string; articleSlugs: string[] }>();
+	for (const article of articles) {
+		for (const tag of article.tags) {
+			const tagSlug = normalizeTopicSlug(tag.slug || tag.name);
+			if (!tagSlug || tagSlug === slug || tagSlug === profile.domain) continue;
+			const current = tagGroups.get(tagSlug) ?? {
+				slug: tagSlug,
+				name: formatTagName(tag.name),
+				articleSlugs: [],
+			};
+			if (!current.articleSlugs.includes(article.slug)) current.articleSlugs.push(article.slug);
+			tagGroups.set(tagSlug, current);
+		}
+	}
 
-	const stages: TopicLearningStage[] = [
-		buildStage('concept', 'Concept', 'Establish the topic mental model before choosing a chapter.', 'Start Reading', articles, 0),
-		buildStage('visual', 'Visual', 'See the nearby systems ideas when the relationship matters.', 'See Context', articles, 1),
-		buildStage('tradeoff', 'Tradeoff', 'Compare production constraints across related chapters.', 'Compare Tradeoffs', articles, 2),
-		buildStage('challenge', 'Challenge', 'Practice the operational question behind the topic.', 'Practice Reasoning', articles, 3),
-		buildStage('continue', 'Continue', 'Move to the next chapter or related concept.', 'Continue Reading', articles, 4),
-	];
+	const rankedTagGroups = [...tagGroups.values()]
+		.sort((a, b) => b.articleSlugs.length - a.articleSlugs.length || a.name.localeCompare(b.name));
+
+	const conceptSeeds = rankedTagGroups.length
+		? rankedTagGroups.map((group) => group.name)
+		: articles.flatMap((article) => {
+				const post = posts.find((item) => item.slug === article.slug);
+				return post ? getArticleConceptSeeds(post).slice(0, 2) : [article.primaryConcept];
+			});
+	const concepts = [...new Set([...conceptSeeds, ...profile.concepts])].slice(0, 10);
+
+	const stages: TopicLearningStage[] = rankedTagGroups.slice(0, 8).map((group) => ({
+		id: group.slug,
+		label: group.name,
+		intent: `${group.articleSlugs.length} article${group.articleSlugs.length === 1 ? '' : 's'} in this topic also tagged ${group.name}.`,
+		primaryCta: 'Filter Articles',
+		articleSlugs: group.articleSlugs,
+	}));
+
+	if (stages.length === 0 && articles.length > 0) {
+		stages.push({
+			id: 'all',
+			label: profile.label,
+			intent: `All ${articles.length} article${articles.length === 1 ? '' : 's'} matched to ${profile.label}.`,
+			primaryCta: 'View Articles',
+			articleSlugs: articles.map((article) => article.slug),
+		});
+	}
 
 	return {
 		slug,

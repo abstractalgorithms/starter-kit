@@ -6,7 +6,7 @@ const footerGroups = [
 		title: 'Learn',
 		links: [
 			{ label: 'System Design', href: '/topic/system-design' },
-			{ label: 'Software Architecture', href: '/topic/software-architecture' },
+			{ label: 'Software Architecture', href: '/topic/architecture' },
 			{ label: 'LLD', href: '/topic/low-level-design' },
 			{ label: 'DSA', href: '/topic/data-structures' },
 			{ label: 'AI Engineering', href: '/topic/ai-systems' },

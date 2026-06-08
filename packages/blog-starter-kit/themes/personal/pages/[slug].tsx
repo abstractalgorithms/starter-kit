@@ -1868,7 +1868,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 						{tags[0] ? (
 							<>
 								<span>/</span>
-								<Link href={`/tag/${tags[0].slug}`} className="hover:text-blue-700">{formatTagName(tags[0].name)}</Link>
+								<Link href={`/topic/${tags[0].slug}`} className="hover:text-blue-700">{formatTagName(tags[0].name)}</Link>
 							</>
 						) : null}
 						<span>/</span>
@@ -1877,7 +1877,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 
 					<div className="mb-4 flex flex-wrap items-center gap-3 text-[13px] text-slate-500">
 						{tags[0] ? (
-							<Link href={`/tag/${tags[0].slug}`} className="rounded-md bg-blue-50 px-2 py-1 text-xs font-black uppercase text-blue-600">
+							<Link href={`/topic/${tags[0].slug}`} className="rounded-md bg-blue-50 px-2 py-1 text-xs font-black uppercase text-blue-600">
 								{formatTagName(tags[0].name)}
 							</Link>
 						) : null}
@@ -1975,7 +1975,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 							<ul className="flex list-none flex-wrap gap-2 p-0">
 								{tags.map((tag) => (
 									<li key={tag.id}>
-										<Link href={`/tag/${tag.slug}`} className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600 hover:border-blue-200 hover:text-blue-700">
+										<Link href={`/topic/${tag.slug}`} className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600 hover:border-blue-200 hover:text-blue-700">
 											{formatTagName(tag.name)}
 										</Link>
 									</li>

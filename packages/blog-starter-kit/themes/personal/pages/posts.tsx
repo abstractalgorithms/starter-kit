@@ -311,6 +311,12 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 				.slice(0, 3),
 		[initialPosts, recentlyViewed],
 	);
+	const viewedPostCount = useMemo(() => {
+		const validViewedSlugs = new Set(initialPosts.map((post) => post.slug));
+		return recentlyViewed.filter((entry) => validViewedSlugs.has(entry.slug)).length;
+	}, [initialPosts, recentlyViewed]);
+	const articleProgress = initialPosts.length > 0 ? Math.round((viewedPostCount / initialPosts.length) * 100) : 0;
+	const remainingPostCount = Math.max(initialPosts.length - viewedPostCount, 0);
 	const popularPosts = useMemo(
 		() => sortPosts(initialPosts, 'popular-desc').filter((post) => (post.views ?? 0) > 0).slice(0, 4),
 		[initialPosts],
@@ -558,33 +564,35 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 								</div>
 
 								<aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-									<section id="newsletter" className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-										<div className="flex gap-4">
-											<span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-												<Icon name="mail" className="h-6 w-6" />
-											</span>
-											<div>
-												<p className="text-sm font-bold text-slate-700">Newsletter</p>
-												<h2 className="mt-1 text-2xl font-black text-slate-950">Stay in the loop</h2>
-												<p className="mt-2 text-sm leading-6 text-slate-600">
-													Get engineering articles and interview prep notes delivered to your inbox.
+									<section id="progress" className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+										<div className="mb-4 flex items-center justify-between gap-4">
+											<h2 className="text-lg font-black text-slate-950">Your Progress</h2>
+											<Link href="/progress" className="text-sm font-bold text-blue-600 hover:text-blue-800">
+												View all
+											</Link>
+										</div>
+										<div className="grid gap-5 sm:grid-cols-[120px_minmax(0,1fr)] sm:items-center lg:grid-cols-1 xl:grid-cols-[120px_minmax(0,1fr)]">
+											<div className="relative h-28 w-28 rounded-full bg-[conic-gradient(#2563eb_var(--progress),#e8eef8_0)] [--progress:0%]" style={{ '--progress': `${articleProgress}%` } as React.CSSProperties}>
+												<div className="absolute inset-3 flex flex-col items-center justify-center rounded-full bg-white">
+													<span className="text-2xl font-black text-slate-950">{articleProgress}%</span>
+													<span className="text-[11px] text-slate-500">Viewed</span>
+												</div>
+											</div>
+											<div className="space-y-3 text-sm">
+												<p className="flex items-center justify-between gap-3">
+													<span className="text-slate-600">Articles viewed</span>
+													<span className="font-black text-slate-950">{viewedPostCount}</span>
+												</p>
+												<p className="flex items-center justify-between gap-3">
+													<span className="text-slate-600">Remaining</span>
+													<span className="font-black text-slate-950">{remainingPostCount}</span>
+												</p>
+												<p className="flex items-center justify-between gap-3">
+													<span className="text-slate-600">Total articles</span>
+													<span className="font-black text-slate-950">{initialPosts.length}</span>
 												</p>
 											</div>
 										</div>
-										<form className="mt-5 flex gap-2" action="#" method="post">
-											<label className="sr-only" htmlFor="newsletter-email">
-												Email address
-											</label>
-											<input
-												id="newsletter-email"
-												type="email"
-												placeholder="Enter your email"
-												className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 px-4 text-sm outline-none transition focus:border-blue-500"
-											/>
-											<button type="submit" className="h-11 rounded-lg bg-blue-600 px-5 text-sm font-bold text-white transition hover:bg-blue-700">
-												Subscribe
-											</button>
-										</form>
 									</section>
 
 									<section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
@@ -647,14 +655,19 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 										<section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
 											<h2 className="text-lg font-black text-slate-950">Recently Viewed</h2>
 											<div className="mt-4 space-y-3">
-												{recentlyViewedPosts.map((post) => (
+												{recentlyViewedPosts.map((post, index) => (
 													<Link
 														key={post.id}
 														href={`/${post.slug}`}
 														onClick={() => rememberPostView(post)}
-														className="block text-sm font-bold leading-5 text-slate-800 hover:text-blue-600"
+														className="grid grid-cols-[24px_minmax(0,1fr)] gap-3 text-sm"
 													>
-														{post.title}
+														<span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-xs font-black text-slate-600">
+															{index + 1}
+														</span>
+														<span className="line-clamp-2 font-bold leading-5 text-slate-800 hover:text-blue-600">
+															{post.title}
+														</span>
 													</Link>
 												))}
 											</div>

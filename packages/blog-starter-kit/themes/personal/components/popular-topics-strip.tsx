@@ -388,7 +388,7 @@ const ExplorePanel = ({
 				{activeSubTopic && matchedPosts.length === 0 && !subAnswerLoading && (
 					<p className="text-sm text-neutral-500 dark:text-neutral-400">
 						No exact matches found.{' '}
-						<Link href={`/tag/${cluster.slug}`} className="underline hover:text-neutral-700 dark:hover:text-neutral-200">
+						<Link href={`/topic/${cluster.slug}`} className="underline hover:text-neutral-700 dark:hover:text-neutral-200">
 							Browse all {cluster.label} posts →
 						</Link>
 					</p>
@@ -397,7 +397,7 @@ const ExplorePanel = ({
 				{/* Footer: see all */}
 				<div className="pt-1 border-t border-neutral-100 dark:border-neutral-800">
 					<Link
-						href={`/tag/${cluster.slug}`}
+						href={`/topic/${cluster.slug}`}
 						className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
 					>
 						Browse all {topicPosts.length} {cluster.label} posts

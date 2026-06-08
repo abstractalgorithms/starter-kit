@@ -182,7 +182,7 @@ export const DiscoverFilters = ({ posts }: Props) => {
 											{tag?.name}
 										</h3>
 										<Link
-											href={`/tag/${tagSlug}`}
+											href={`/topic/${tagSlug}`}
 											className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
 										>
 											View All ({tag?.count})

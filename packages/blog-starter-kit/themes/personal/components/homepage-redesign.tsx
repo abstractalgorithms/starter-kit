@@ -51,7 +51,7 @@ const TOPIC_CARDS = [
 	},
 	{
 		title: 'Software Architecture',
-		href: '/topic/software-architecture',
+		href: '/topic/architecture',
 		icon: 'architecture',
 		items: ['Design Patterns', 'Microservices', 'Event Driven', 'Distributed Systems', 'Cloud Architecture'],
 	},

@@ -78,6 +78,10 @@ const INLINE_GLOSSARY: Array<{ term: string; definition: string }> = [
 	{ term: 'replication', definition: 'Maintaining synchronized copies of data across nodes.' },
 ];
 
+const MERMAID_START_RE = /^(---\s*\n[\s\S]*?\n---\s*\n)?\s*(graph\s+(TD|TB|BT|RL|LR)|flowchart\s+(TD|TB|BT|RL|LR)|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|journey|gantt|pie\s+title|mindmap|timeline|gitGraph)\b/i;
+
+const looksLikeMermaid = (text: string) => MERMAID_START_RE.test(text.trim());
+
 // ── Toast (lazy singleton) ────────────────────────────────────────────────
 let _toast: HTMLDivElement | null = null;
 let _toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -102,6 +106,23 @@ const MarkdownToHtmlComponent = ({ contentMarkdown }: Props) => {
 	useEmbeds({ enabled: true });
 	useQuizHandler();
 	const containerRef = useRef<HTMLDivElement>(null);
+
+	// Some existing posts have Mermaid syntax in an untyped code fence.
+	// Promote those blocks before the copy-button pass so they render as diagrams.
+	useEffect(() => {
+		if (!containerRef.current) return;
+		containerRef.current.querySelectorAll<HTMLPreElement>('pre').forEach((pre) => {
+			if (pre.classList.contains('mermaid')) return;
+			const codeEl = pre.querySelector('code');
+			const rawText = codeEl?.textContent ?? pre.textContent ?? '';
+			if (!looksLikeMermaid(rawText)) return;
+
+			pre.classList.add('mermaid');
+			pre.classList.add('mermaid-container');
+			pre.style.width = '100%';
+			pre.style.maxWidth = '100%';
+		});
+	}, [content]);
 
 	// Inject copy buttons into all <pre> code blocks
 	useEffect(() => {

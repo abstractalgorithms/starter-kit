@@ -27,6 +27,7 @@ import { formatTagName } from '../../utils/format';
 
 const RECENTLY_VIEWED_KEY = 'aa:recently-viewed-posts';
 const FALLBACK_POST_IMAGE = '/assets/blog/post-fallback.svg';
+const ARTICLES_PER_PAGE = 6;
 
 type RecentlyViewedItem = {
 	slug: string;
@@ -142,6 +143,8 @@ const TopicDiagram = ({ label }: { label: string }) => (
 
 export default function TopicLearningPage({ publication, posts, journey }: Props) {
 	const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedItem[]>([]);
+	const [activeFilterId, setActiveFilterId] = useState('all');
+	const [articlePage, setArticlePage] = useState(1);
 
 	useEffect(() => {
 		setRecentlyViewed(readRecentlyViewed());
@@ -160,7 +163,55 @@ export default function TopicLearningPage({ publication, posts, journey }: Props
 	const totalReadTime = articlePosts.reduce((sum, post) => sum + post.readTimeInMinutes, 0);
 	const primaryPost = articlePosts[0];
 	const popularPosts = [...articlePosts].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 3);
-	const stageArticles = journey.stages.flatMap((stage) => stage.articleSlugs).filter(Boolean);
+	const seriesGroups = useMemo(() => {
+		const groups = new Map<
+			string,
+			{
+				id: string;
+				name: string;
+				slug: string;
+				posts: PostFragment[];
+				totalReadTime: number;
+			}
+		>();
+
+		for (const post of articlePosts) {
+			if (!post.series?.slug || !post.series.name) continue;
+			const current = groups.get(post.series.slug) ?? {
+				id: post.series.id,
+				name: post.series.name,
+				slug: post.series.slug,
+				posts: [],
+				totalReadTime: 0,
+			};
+			current.posts.push(post);
+			current.totalReadTime += post.readTimeInMinutes;
+			groups.set(post.series.slug, current);
+		}
+
+		return [...groups.values()].sort((a, b) => b.posts.length - a.posts.length || a.name.localeCompare(b.name));
+	}, [articlePosts]);
+	const activeTag = activeFilterId.startsWith('tag:')
+		? journey.stages.find((stage) => stage.id === activeFilterId.replace(/^tag:/, '')) ?? null
+		: null;
+	const activeSeries = activeFilterId.startsWith('series:')
+		? seriesGroups.find((series) => series.slug === activeFilterId.replace(/^series:/, '')) ?? null
+		: null;
+	const filteredArticlePosts = activeSeries
+		? articlePosts.filter((post) => post.series?.slug === activeSeries.slug)
+		: activeTag
+		? articlePosts.filter((post) => activeTag.articleSlugs.includes(post.slug))
+		: articlePosts;
+	const totalArticlePages = Math.max(1, Math.ceil(filteredArticlePosts.length / ARTICLES_PER_PAGE));
+	const currentArticlePage = Math.min(articlePage, totalArticlePages);
+	const pagedArticlePosts = filteredArticlePosts.slice(
+		(currentArticlePage - 1) * ARTICLES_PER_PAGE,
+		currentArticlePage * ARTICLES_PER_PAGE,
+	);
+	const selectFilter = (filterId: string) => {
+		setActiveFilterId(filterId);
+		setArticlePage(1);
+	};
 
 	return (
 		<AppProvider publication={publication} footerPosts={posts}>
@@ -185,10 +236,15 @@ export default function TopicLearningPage({ publication, posts, journey }: Props
 					<main className="mx-auto grid w-full max-w-[1500px] gap-6 px-5 pb-20 pt-6 md:px-8 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[220px_minmax(0,900px)_300px]">
 						<aside className="hidden lg:block">
 							<div className="sticky top-24 space-y-5">
-								<Link href="/learn" className="inline-flex h-11 items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 shadow-sm hover:border-blue-300 hover:text-blue-700">
-									<span aria-hidden="true">&lt;-</span>
-									{journey.domain === 'general' ? 'Learn' : formatTagName(String(journey.domain))}
+								<Link href="/learn" className="inline-flex h-11 w-full items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 shadow-sm hover:border-blue-300 hover:text-blue-700">
+									<span aria-hidden="true" className="text-base leading-none">&lt;-</span>
+									<span>Back to Learn</span>
 								</Link>
+								<div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+									<p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Current topic</p>
+									<p className="mt-1 text-sm font-black text-slate-950">{journey.label}</p>
+									<p className="mt-1 text-xs text-slate-500">{formatTagName(String(journey.domain))}</p>
+								</div>
 								<section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
 									<p className="text-xs font-bold text-slate-600">Your progress in {journey.label}</p>
 									<div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -197,13 +253,19 @@ export default function TopicLearningPage({ publication, posts, journey }: Props
 									<p className="mt-2 text-right text-xs font-bold text-slate-500">{progressPercent}%</p>
 								</section>
 								<section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-									<p className="mb-4 text-xs font-black uppercase tracking-wide text-slate-700">Topics in this roadmap</p>
+									<p className="mb-4 text-xs font-black uppercase tracking-wide text-slate-700">Filter by sub-topics</p>
 									<ol className="space-y-2">
-										{journey.concepts.slice(0, 10).map((concept, index) => (
-											<li key={concept}>
-												<a href={index === 0 ? '#overview' : '#learning-path'} className={`flex items-center justify-between rounded-lg px-2 py-2 text-sm ${index === 0 ? 'bg-blue-50 font-bold text-blue-700' : 'text-slate-700 hover:bg-slate-50'}`}>
-													<span>{index + 1}. {concept}</span>
-													<span className={`h-3 w-3 rounded-full border ${index < Math.max(1, viewedCount) ? 'border-teal-500 bg-teal-500' : 'border-slate-300'}`} />
+										<li>
+											<a href="#articles" onClick={() => selectFilter('all')} className={`flex items-center justify-between rounded-lg px-2 py-2 text-sm ${activeFilterId === 'all' ? 'bg-blue-50 font-bold text-blue-700' : 'text-slate-700 hover:bg-slate-50'}`}>
+												<span>All Articles</span>
+												<span className="text-xs font-black">{articlePosts.length}</span>
+											</a>
+										</li>
+										{journey.stages.map((stage, index) => (
+											<li key={stage.id}>
+												<a href="#articles" onClick={() => selectFilter(`tag:${stage.id}`)} className={`flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm ${activeFilterId === `tag:${stage.id}` ? 'bg-blue-50 font-bold text-blue-700' : 'text-slate-700 hover:bg-slate-50'}`}>
+													<span className="line-clamp-1">{index + 1}. {stage.label}</span>
+													<span className="shrink-0 text-xs font-black">{stage.articleSlugs.length}</span>
 												</a>
 											</li>
 										))}
@@ -282,29 +344,64 @@ export default function TopicLearningPage({ publication, posts, journey }: Props
 
 							<section id="learning-path" className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
 								<h2 className="text-xl font-black text-slate-950">Learning Path in this Topic</h2>
-								<p className="mt-1 text-sm text-slate-500">Recommended order to master {journey.label}</p>
+								<p className="mt-1 text-sm text-slate-500">
+									Series that contain articles from {journey.label}. Select a path to filter the article list.
+								</p>
 								<div className="mt-6 flex gap-4 overflow-x-auto pb-2">
-									{journey.stages.map((stage, index) => {
-										const articleSlug = stage.articleSlugs[0] || stageArticles[index];
-										return (
-											<Link key={stage.id} href={articleSlug ? `/${articleSlug}` : '#articles'} className="grid min-w-[170px] gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm hover:border-blue-300">
-												<span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-slate-700">{index + 1}</span>
-												<span className="font-black text-slate-950">{stage.label}</span>
-												<span className="text-xs leading-5 text-slate-600">{stage.intent}</span>
-											</Link>
-										);
-									})}
+									<button type="button" onClick={() => selectFilter('all')} className={`grid min-w-[170px] gap-3 rounded-lg border p-4 text-left text-sm shadow-sm hover:border-blue-300 ${activeFilterId === 'all' ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white'}`}>
+										<span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-slate-700">All</span>
+										<span className="font-black text-slate-950">All Articles</span>
+										<span className="text-xs leading-5 text-slate-600">{articlePosts.length} matched article{articlePosts.length === 1 ? '' : 's'}.</span>
+									</button>
+									{seriesGroups.length > 0
+										? seriesGroups.map((series, index) => (
+												<button key={series.slug} type="button" onClick={() => selectFilter(`series:${series.slug}`)} className={`grid min-w-[220px] gap-3 rounded-lg border p-4 text-left text-sm shadow-sm hover:border-blue-300 ${activeFilterId === `series:${series.slug}` ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white'}`}>
+													<span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-slate-700">{index + 1}</span>
+													<span className="font-black text-slate-950">{series.name}</span>
+													<span className="text-xs leading-5 text-slate-600">
+														{series.posts.length} topic article{series.posts.length === 1 ? '' : 's'} - {formatDuration(series.totalReadTime) || '0 min'}
+													</span>
+												</button>
+										  ))
+										: journey.stages.map((stage, index) => (
+												<button key={stage.id} type="button" onClick={() => selectFilter(`tag:${stage.id}`)} className={`grid min-w-[190px] gap-3 rounded-lg border p-4 text-left text-sm shadow-sm hover:border-blue-300 ${activeFilterId === `tag:${stage.id}` ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white'}`}>
+													<span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-slate-700">{index + 1}</span>
+													<span className="font-black text-slate-950">{stage.label}</span>
+													<span className="text-xs leading-5 text-slate-600">{stage.intent}</span>
+												</button>
+										  ))}
 								</div>
+								{activeSeries ? (
+									<Link href={`/series/${activeSeries.slug}`} className="mt-4 inline-flex text-sm font-bold text-blue-600 hover:text-blue-800">
+										Open full series -&gt;
+									</Link>
+								) : null}
 							</section>
 
 							<section id="articles" className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-								<h2 className="text-xl font-black text-slate-950">Articles</h2>
+								<div className="flex flex-wrap items-center justify-between gap-3">
+									<div>
+										<h2 className="text-xl font-black text-slate-950">Articles</h2>
+										<p className="mt-1 text-sm text-slate-500">
+											{activeSeries
+												? `${filteredArticlePosts.length} article${filteredArticlePosts.length === 1 ? '' : 's'} from ${activeSeries.name}`
+												: activeTag
+												? `${filteredArticlePosts.length} article${filteredArticlePosts.length === 1 ? '' : 's'} tagged ${activeTag.label}`
+												: `${filteredArticlePosts.length} matched article${filteredArticlePosts.length === 1 ? '' : 's'}`}
+										</p>
+									</div>
+									{activeTag || activeSeries ? (
+										<button type="button" onClick={() => selectFilter('all')} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-blue-600 hover:border-blue-300">
+											Clear filter
+										</button>
+									) : null}
+								</div>
 								<div className="mt-5 grid gap-3">
-									{articlePosts.map((post, index) => (
+									{pagedArticlePosts.map((post, index) => (
 										<Link key={post.id} href={`/${post.slug}`} className="grid gap-4 rounded-lg border border-slate-200 p-3 hover:border-blue-300 sm:grid-cols-[92px_minmax(0,1fr)_auto] sm:items-center">
 											<Image src={resolvePostImage(post)} alt="" width={184} height={130} className="h-20 w-full rounded-lg object-cover sm:w-24" />
 											<span>
-												<span className="text-xs font-black uppercase text-blue-600">Step {index + 1}</span>
+												<span className="text-xs font-black uppercase text-blue-600">Article {(currentArticlePage - 1) * ARTICLES_PER_PAGE + index + 1}</span>
 												<span className="mt-1 block text-base font-black text-slate-950">{post.title}</span>
 												<span className="mt-1 line-clamp-2 block text-sm text-slate-600">{post.brief}</span>
 											</span>
@@ -312,6 +409,21 @@ export default function TopicLearningPage({ publication, posts, journey }: Props
 										</Link>
 									))}
 								</div>
+								{totalArticlePages > 1 ? (
+									<div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+										<p className="text-sm font-semibold text-slate-500">
+											Page {currentArticlePage} of {totalArticlePages}
+										</p>
+										<div className="flex gap-2">
+											<button type="button" disabled={currentArticlePage <= 1} onClick={() => setArticlePage((page) => Math.max(1, page - 1))} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40 hover:border-blue-300 hover:text-blue-700">
+												Previous
+											</button>
+											<button type="button" disabled={currentArticlePage >= totalArticlePages} onClick={() => setArticlePage((page) => Math.min(totalArticlePages, page + 1))} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40 hover:border-blue-300 hover:text-blue-700">
+												Next
+											</button>
+										</div>
+									</div>
+								) : null}
 							</section>
 						</div>
 

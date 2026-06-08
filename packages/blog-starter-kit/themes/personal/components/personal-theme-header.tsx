@@ -310,7 +310,27 @@ export const PersonalHeader = () => {
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
 					</svg>
 				</button>
-				<div aria-hidden="true" className="min-w-0 flex-1" />
+				<Link href="/" className="mx-2 flex min-w-0 flex-1 items-center gap-2" aria-label={`${publication.author.name}'s blog home page`}>
+					{publication.favicon ? (
+						<img
+							className="h-8 w-8 shrink-0 rounded-lg object-cover"
+							alt=""
+							src={resizeImage(publication.favicon, { w: 32, h: 32, c: 'face' })}
+						/>
+					) : (
+						<span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 via-blue-500 to-emerald-400 text-sm font-black text-white">
+							A
+						</span>
+					)}
+					<span className="min-w-0 leading-none">
+						<span className="block truncate text-[12px] font-black uppercase tracking-[0.08em] text-slate-950 dark:text-white">
+							Abstract
+						</span>
+						<span className="block truncate text-[10px] font-black uppercase tracking-[0.16em] text-slate-700 dark:text-neutral-300">
+							Algorithms
+						</span>
+					</span>
+				</Link>
 				<div className="flex items-center gap-2">
 					<HeaderSearch />
 					<UserProfile onLoginClick={() => setIsAuthModalOpen(true)} />
