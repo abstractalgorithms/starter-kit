@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { isNewsletterSubscribeEnabled } from '../lib/features';
 import type { PostFullFragment, PublicationFragment } from '../generated/graphql';
+import { useUserProgress } from '../hooks/useProgress';
+import { useAuth } from './contexts/authContext';
 
 type Props = {
 	post: PostFullFragment;
@@ -16,10 +18,12 @@ const getNewsletterUrl = (publication: PublicationFragment) =>
 	publication.url ? `${publication.url.replace(/\/$/, '')}/newsletter` : null;
 
 export const ArticleEngagement = ({ post, publication }: Props) => {
-	const ratingKey = `aa:article-rating:${post.slug}`;
 	const followKey = `aa:followed:${publication.id}`;
 	const subscribeKey = `aa:subscribed:${publication.id}`;
-	const [rating, setRating] = useState<number | null>(null);
+	const { user } = useAuth();
+	const { getPostRating, ratePost } = useUserProgress();
+	const rating = getPostRating(post.id);
+	const [savingRating, setSavingRating] = useState(false);
 	const [hasFollowed, setHasFollowed] = useState(false);
 	const [hasSubscribed, setHasSubscribed] = useState(false);
 	const followUrl = useMemo(() => getFollowUrl(publication), [publication]);
@@ -27,18 +31,21 @@ export const ArticleEngagement = ({ post, publication }: Props) => {
 
 	useEffect(() => {
 		try {
-			const storedRating = Number(localStorage.getItem(ratingKey));
-			if (storedRating > 0) setRating(storedRating);
 			setHasFollowed(localStorage.getItem(followKey) === '1');
 			setHasSubscribed(localStorage.getItem(subscribeKey) === '1');
 		} catch {}
-	}, [followKey, ratingKey, subscribeKey]);
+	}, [followKey, subscribeKey]);
 
-	const rateArticle = (value: number) => {
-		setRating(value);
+	const rateArticle = async (value: number) => {
+		if (!user || savingRating) return;
+		setSavingRating(true);
 		try {
-			localStorage.setItem(ratingKey, String(value));
-		} catch {}
+			await ratePost(post.id, value, post.title);
+		} catch (error) {
+			console.error('Unable to save article rating in Firebase:', error);
+		} finally {
+			setSavingRating(false);
+		}
 	};
 
 	const followPublication = () => {
@@ -63,9 +70,11 @@ export const ArticleEngagement = ({ post, publication }: Props) => {
 				<button
 					key={value}
 					type="button"
-					onClick={() => rateArticle(value)}
+					onClick={() => void rateArticle(value)}
+					disabled={!user || savingRating}
 					aria-label={`Rate ${value} out of 5`}
-					className={`inline-flex items-center justify-center rounded-lg border font-bold transition-colors ${
+					aria-pressed={rating === value}
+					className={`inline-flex items-center justify-center rounded-lg border font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
 						compact ? 'h-8 w-8 text-xs' : 'h-9 w-9 text-sm'
 					} ${
 						rating === value
@@ -97,8 +106,10 @@ export const ArticleEngagement = ({ post, publication }: Props) => {
 						</div>
 						{rating ? (
 							<p className="mt-2 text-xs font-semibold text-violet-700 dark:text-violet-300">
-								Thanks. Your rating was saved on this device.
+								Your saved rating: {rating} out of 5.
 							</p>
+						) : !user ? (
+							<p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Sign in to save your rating.</p>
 						) : null}
 					</div>
 					<div className="flex flex-col gap-2 sm:flex-row md:flex-col">

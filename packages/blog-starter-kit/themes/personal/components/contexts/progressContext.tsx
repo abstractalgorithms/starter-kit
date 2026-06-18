@@ -18,6 +18,10 @@ export type PostProgress = {
 	completedAt: number;
 	timeSpent: number;
 	lastReadAt: number;
+	isBookmarked: boolean;
+	bookmarkedAt: number;
+	rating: number | null;
+	ratedAt: number;
 	status: 'completed' | 'in-progress';
 };
 
@@ -36,6 +40,8 @@ type ProgressContextValue = {
 	loading: boolean;
 	error: Error | null;
 	recordPostOpened: (postId: string, postTitle?: string) => Promise<void>;
+	togglePostBookmark: (postId: string, postTitle?: string) => Promise<void>;
+	ratePost: (postId: string, rating: number, postTitle?: string) => Promise<void>;
 	markPostComplete: (postId: string, postTitle?: string) => Promise<void>;
 	trackPostTime: (postId: string, milliseconds: number, postTitle?: string) => Promise<void>;
 	getSeriesProgress: (seriesId: string) => Promise<SeriesProgress | null>;
@@ -111,6 +117,10 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 							completedAt: asNumber(data.completedAt),
 							timeSpent: asNumber(data.timeSpent),
 							lastReadAt: asNumber(data.lastReadAt),
+							isBookmarked: data.isBookmarked === true,
+							bookmarkedAt: asNumber(data.bookmarkedAt),
+							rating: asNumber(data.rating) || null,
+							ratedAt: asNumber(data.ratedAt),
 							status: data.status === 'completed' ? 'completed' : 'in-progress',
 						};
 					}),
@@ -142,6 +152,62 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 			},
 		);
 	}, [user]);
+
+	const ratePost = useCallback(
+		async (postId: string, rating: number, postTitle = '') => {
+			if (!user) throw new Error('User not authenticated');
+			if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+				throw new Error('Rating must be an integer from 1 to 5');
+			}
+			const progressRef = doc(db, 'users', user.uid, 'progressedPosts', postId);
+			await runTransaction(db, async (transaction) => {
+				const current = await transaction.get(progressRef);
+				const data = current.data();
+				transaction.set(
+					progressRef,
+					{
+						postId,
+						postTitle: postTitle || data?.postTitle || '',
+						timeSpent: asNumber(data?.timeSpent),
+						lastReadAt: asNumber(data?.lastReadAt),
+						status: data?.status === 'completed' ? 'completed' : 'in-progress',
+						rating,
+						ratedAt: Date.now(),
+						...(data?.status === 'completed' ? { completedAt: asNumber(data.completedAt) } : {}),
+					},
+					{ merge: true },
+				);
+			});
+		},
+		[user],
+	);
+
+	const togglePostBookmark = useCallback(
+		async (postId: string, postTitle = '') => {
+			if (!user) throw new Error('User not authenticated');
+			const progressRef = doc(db, 'users', user.uid, 'progressedPosts', postId);
+			await runTransaction(db, async (transaction) => {
+				const current = await transaction.get(progressRef);
+				const data = current.data();
+				const nextBookmarked = data?.isBookmarked !== true;
+				transaction.set(
+					progressRef,
+					{
+						postId,
+						postTitle: postTitle || data?.postTitle || '',
+						timeSpent: asNumber(data?.timeSpent),
+						lastReadAt: asNumber(data?.lastReadAt),
+						status: data?.status === 'completed' ? 'completed' : 'in-progress',
+						isBookmarked: nextBookmarked,
+						bookmarkedAt: nextBookmarked ? Date.now() : 0,
+						...(data?.status === 'completed' ? { completedAt: asNumber(data.completedAt) } : {}),
+					},
+					{ merge: true },
+				);
+			});
+		},
+		[user],
+	);
 
 	const recordPostOpened = useCallback(
 		async (postId: string, postTitle = '') => {
@@ -257,8 +323,8 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 	);
 
 	const value = useMemo(
-		() => ({ posts, learningStreak, loading, error, recordPostOpened, markPostComplete, trackPostTime, getSeriesProgress, updateSeriesProgress }),
-		[posts, learningStreak, loading, error, recordPostOpened, markPostComplete, trackPostTime, getSeriesProgress, updateSeriesProgress],
+		() => ({ posts, learningStreak, loading, error, recordPostOpened, togglePostBookmark, ratePost, markPostComplete, trackPostTime, getSeriesProgress, updateSeriesProgress }),
+		[posts, learningStreak, loading, error, recordPostOpened, togglePostBookmark, ratePost, markPostComplete, trackPostTime, getSeriesProgress, updateSeriesProgress],
 	);
 
 	return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;

@@ -35,6 +35,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 				completedAt: parseInt(fields.completedAt?.integerValue || '0'),
 				timeSpent: parseInt(fields.timeSpent?.integerValue || '0'),
 				lastReadAt: parseInt(fields.lastReadAt?.integerValue || '0'),
+				isBookmarked: fields.isBookmarked?.booleanValue === true,
+				bookmarkedAt: parseInt(fields.bookmarkedAt?.integerValue || '0'),
+				rating: parseInt(fields.rating?.integerValue || '0') || null,
+				ratedAt: parseInt(fields.ratedAt?.integerValue || '0'),
 				status: fields.status?.stringValue || 'in-progress',
 			};
 		}) || [];

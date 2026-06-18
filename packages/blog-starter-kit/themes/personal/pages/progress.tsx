@@ -116,10 +116,16 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 			trackedPosts
 				.map((entry) => ({ entry, post: postsById.get(entry.postId) }))
 				.filter((item): item is { entry: typeof trackedPosts[number]; post: ProgressPost } => Boolean(item.post))
-				.sort((a, b) => Math.max(b.entry.lastReadAt, b.entry.completedAt) - Math.max(a.entry.lastReadAt, a.entry.completedAt)),
+				.sort((a, b) => Math.max(b.entry.lastReadAt, b.entry.completedAt, b.entry.bookmarkedAt, b.entry.ratedAt) - Math.max(a.entry.lastReadAt, a.entry.completedAt, a.entry.bookmarkedAt, a.entry.ratedAt)),
 		[postsById, trackedPosts],
 	);
 	const continueReading = readingActivity.filter(({ entry }) => entry.status === 'in-progress');
+	const bookmarkedActivity = readingActivity
+		.filter(({ entry }) => entry.isBookmarked)
+		.sort((a, b) => b.entry.bookmarkedAt - a.entry.bookmarkedAt);
+	const ratedActivity = readingActivity
+		.filter(({ entry }) => entry.rating !== null)
+		.sort((a, b) => b.entry.ratedAt - a.entry.ratedAt);
 
 	const tagBuckets = useMemo(() => {
 		const map = new Map<string, { slug: string; label: string; total: number }>();
@@ -161,7 +167,7 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 	];
 	const unlockedAchievements = achievements.filter((achievement) => achievement.unlocked).length;
 	const navSections = [
-		{ label: 'PROGRESS', links: [['My Progress', '/progress'], ['Reading Activity', '#activity']] },
+		{ label: 'PROGRESS', links: [['My Progress', '/progress'], ['Reading Activity', '#activity'], ['Bookmarks', '#bookmarks'], ['Ratings', '#ratings']] },
 		{ label: 'CONTINUE LEARNING', links: [['Browse Articles', '/posts'], ['Browse Series', '/series']] },
 	];
 
@@ -177,9 +183,10 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 					content="Track reading activity, completion, streaks, and skill progress from your account."
 					/>
 				</Head>
-				<Container className="mx-auto w-full max-w-none px-0">
+				<Container className="mx-auto w-full">
 					<PersonalHeader />
-					<div className="flex min-h-screen border-t border-slate-200 bg-[#fbfdff] dark:border-slate-800 dark:bg-slate-950">
+					<div className="border-t border-slate-200 bg-[#fbfdff] dark:border-slate-800 dark:bg-slate-950">
+					<div className="mx-auto flex min-h-screen w-full max-w-[1440px]">
 						<aside className="hidden w-56 shrink-0 border-r border-slate-200 bg-white px-4 py-7 dark:border-slate-800 dark:bg-slate-950 lg:block">
 							{navSections.map((section) => <div key={section.label} className="mb-7"><p className="mb-2 px-3 text-[10px] font-bold tracking-wider text-slate-400">{section.label}</p><div className="space-y-1">{section.links.map(([label, href]) => <Link key={label} href={href} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold ${href === '/progress' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-900'}`}><span className="text-base">{href === '/progress' ? '▣' : '◇'}</span>{label}</Link>)}</div></div>)}
 							<div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100 p-4 dark:from-blue-950/60 dark:to-indigo-950/40"><p className="text-sm font-bold text-slate-900 dark:text-white">Stay consistent, keep learning!</p><p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">Your progress is saved from the articles you actually read.</p><Link href={continueReading[0] ? `/${continueReading[0].post.slug}` : '/posts'} className="mt-5 flex items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">Continue Learning →</Link></div>
@@ -192,7 +199,7 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 					{ icon: '✓', tone: 'teal' as const, label: 'Articles Completed', value: `${completedCount}`, note: 'Read to 85% or marked complete' },
 									{ icon: '▤', tone: 'violet' as const, label: 'In Progress', value: `${continueReading.length}`, note: `${trackedPosts.length} articles opened` },
 									{ icon: '♨', tone: 'orange' as const, label: 'Current Streak', value: `${learningStreak} days`, note: learningStreak ? 'Keep it up!' : 'Read today to begin' },
-									{ icon: '★', tone: 'blue' as const, label: 'Achievements', value: `${unlockedAchievements} / ${achievements.length}`, note: `${totalReadingMinutes} minutes read` },
+									{ icon: '🔖', tone: 'blue' as const, label: 'Bookmarks', value: `${bookmarkedActivity.length}`, note: `${unlockedAchievements} achievements unlocked` },
 								].map((card) => <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-100/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"><div className="flex gap-3"><DashboardIcon tone={card.tone}>{card.icon}</DashboardIcon><div><p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{card.label}</p><p className="mt-1 text-xl font-extrabold text-slate-950 dark:text-white">{card.value}</p><p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">{card.note}</p></div></div></div>)}
 							</div>
 
@@ -208,7 +215,12 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 							</div>
 
 							<section className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="flex items-center justify-between"><h2 className="text-sm font-bold text-slate-950 dark:text-white">Recently Continued</h2><Link href="/posts" className="text-xs font-semibold text-blue-600">View all →</Link></div>{readingActivity.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{readingActivity.slice(0, 4).map(({ entry, post }, index) => { const expected = Math.max(1, post.readTimeInMinutes * 60_000); const percent = entry.status === 'completed' ? 100 : Math.min(84, Math.max(5, Math.round((entry.timeSpent / expected) * 100))); return <Link key={entry.postId} href={`/${post.slug}`} className="flex min-w-0 gap-3 rounded-lg border border-slate-200 p-3 hover:border-blue-300 dark:border-slate-700"><span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-lg text-2xl ${['bg-blue-50 text-blue-500','bg-violet-50 text-violet-500','bg-teal-50 text-teal-500','bg-orange-50 text-orange-500'][index]}`}>◇</span><span className="min-w-0 flex-1"><span className="line-clamp-2 text-xs font-bold text-slate-800 dark:text-slate-100">{post.title}</span><span className="mt-1 block truncate text-[9px] text-blue-600">{post.tags?.[0]?.name ?? 'Article'}</span><span className="mt-2 block h-1 overflow-hidden rounded-full bg-slate-100"><span className="block h-full bg-blue-600" style={{ width: `${percent}%` }} /></span><span className="mt-1 block text-[9px] text-slate-400">{percent}%</span></span></Link>; })}</div> : <p className="mt-4 text-xs text-slate-500">Your recently read articles will appear here.</p>}</section>
+
+							<section id="bookmarks" className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="flex items-center justify-between"><div><h2 className="text-sm font-bold text-slate-950 dark:text-white">Bookmarks</h2><p className="mt-1 text-[11px] text-slate-500">Saved to your Firebase account and available across devices.</p></div><span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">{bookmarkedActivity.length} saved</span></div>{bookmarkedActivity.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{bookmarkedActivity.slice(0, 8).map(({ entry, post }) => <Link key={entry.postId} href={`/${post.slug}`} className="group rounded-lg border border-slate-200 p-3 hover:border-blue-300 dark:border-slate-700"><div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-base dark:bg-blue-950/50">🔖</span><span className="min-w-0"><span className="line-clamp-2 text-xs font-bold text-slate-800 group-hover:text-blue-600 dark:text-slate-100">{post.title}</span><span className="mt-1 block text-[9px] text-slate-400">Saved {relativeTime(entry.bookmarkedAt)}</span></span></div></Link>)}</div> : <p className="mt-4 text-xs text-slate-500">Bookmark an article and it will appear here.</p>}</section>
+
+							<section id="ratings" className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="flex items-center justify-between"><div><h2 className="text-sm font-bold text-slate-950 dark:text-white">Your Ratings</h2><p className="mt-1 text-[11px] text-slate-500">Feedback saved to your Firebase account.</p></div><span className="rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-bold text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">{ratedActivity.length} rated</span></div>{ratedActivity.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{ratedActivity.slice(0, 8).map(({ entry, post }) => <Link key={entry.postId} href={`/${post.slug}#article-feedback`} className="group rounded-lg border border-slate-200 p-3 hover:border-violet-300 dark:border-slate-700"><div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-sm font-black text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">{entry.rating}</span><span className="min-w-0"><span className="line-clamp-2 text-xs font-bold text-slate-800 group-hover:text-violet-600 dark:text-slate-100">{post.title}</span><span className="mt-1 block text-[9px] text-slate-400">{entry.rating} out of 5 · {relativeTime(entry.ratedAt)}</span></span></div></Link>)}</div> : <p className="mt-4 text-xs text-slate-500">Rate an article and your feedback will appear here.</p>}</section>
 						</main>
+					</div>
 					</div>
 					<Footer />
 				</Container>

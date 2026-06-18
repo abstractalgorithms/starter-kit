@@ -215,19 +215,21 @@ export const PostQuiz = ({ postTitle, postContent }: Props) => {
 	const allAnswered = answeredCount === questions.length && questions.length > 0;
 
 	return (
-		<div className="mt-12 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+		<section id="article-quiz" className="mt-10 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-950 dark:shadow-none">
 			{/* ── Header ── */}
-			<div className="flex items-center justify-between gap-4 px-5 py-4 bg-gradient-to-r from-sky-600 to-blue-600">
+			<div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 via-white to-indigo-50 px-5 py-5 dark:border-slate-800 dark:from-blue-950/40 dark:via-slate-950 dark:to-indigo-950/30">
 				<div className="flex items-center gap-2.5">
-					<svg className="w-5 h-5 text-white/80" fill="currentColor" viewBox="0 0 20 20">
+					<span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-500/30">
+					<svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
 						<path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
 					</svg>
-					<h3 className="text-white font-bold text-base tracking-tight">Test Your Knowledge</h3>
+					</span>
+					<div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">AI-generated article quiz</p><h3 className="mt-0.5 text-base font-extrabold tracking-tight text-slate-950 dark:text-white">Test your understanding</h3></div>
 				</div>
 				{status === 'ready' && (
 					<button
 						onClick={generate}
-						className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors"
+						className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300"
 					>
 						<RefreshIcon />
 						New quiz
@@ -236,23 +238,23 @@ export const PostQuiz = ({ postTitle, postContent }: Props) => {
 			</div>
 
 			{/* ── Body ── */}
-			<div className="bg-white dark:bg-neutral-950">
+			<div className="bg-white dark:bg-slate-950">
 
 				{/* Idle: teaser + CTA */}
 				{status === 'idle' && (
-					<div className="flex flex-col items-center gap-4 px-6 py-10 text-center">
-						<span className="text-4xl">🧠</span>
+					<div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
+						<span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-3xl dark:bg-blue-950/40">🧠</span>
 						<div>
 							<p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 mb-1">
 								Ready to test what you just learned?
 							</p>
 							<p className="text-xs text-neutral-500 dark:text-neutral-400">
-								AI will generate 4 questions based on this article&apos;s content.
+								Generate four focused questions from this article. Answers include immediate explanations.
 							</p>
 						</div>
 						<button
 							onClick={generate}
-							className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+							className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-blue-500/25 transition-colors hover:bg-blue-700"
 						>
 							<SparkleIcon />
 							Generate Quiz
@@ -296,7 +298,7 @@ export const PostQuiz = ({ postTitle, postContent }: Props) => {
 
 			{/* ── Footer ── */}
 			{status === 'ready' && (
-				<div className="px-5 py-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 flex items-center justify-between gap-4">
+				<div className="flex items-center justify-between gap-4 border-t border-slate-100 bg-slate-50 px-5 py-3 dark:border-slate-800 dark:bg-slate-900">
 					<p className="text-xs text-neutral-500 dark:text-neutral-400">
 						{allAnswered
 							? `${correctCount} of ${questions.length} correct`
@@ -307,6 +309,6 @@ export const PostQuiz = ({ postTitle, postContent }: Props) => {
 					</p>
 				</div>
 			)}
-		</div>
+		</section>
 	);
 };

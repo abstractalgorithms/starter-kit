@@ -43,6 +43,7 @@ import { triggerCustomWidgetEmbed } from '@starter-kit/utils/trigger-custom-widg
 import { getFooterPosts } from '../lib/api/footerData';
 import { ScrollButtons } from '../components/scroll-buttons';
 import { ArticleEngagement } from '../components/article-engagement';
+import { PostQuiz } from '../components/post-quiz';
 import { ContextualBreadcrumbs } from '../components/contextual-breadcrumbs';
 import { useLearningContext } from '../components/learning-context-provider';
 import { CTAButton, CTALink } from '../components/cta-system';
@@ -1493,8 +1494,6 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 	const [canLoadEmbeds, setCanLoadEmbeds] = useState(false);
 	const [animateArchitecture, setAnimateArchitecture] = useState(true);
 	const [readingProgress, setReadingProgress] = useState(0);
-	const [showQuizDrawer, setShowQuizDrawer] = useState(false);
-	const [isBookmarked, setIsBookmarked] = useState(false);
 	const [markedHelpful, setMarkedHelpful] = useState(false);
 	const [articleCompanionState, setArticleCompanionState] = useState<ArticleCompanionData | null>(null);
 	const completedMemoryRef = useRef(false);
@@ -1503,10 +1502,17 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 	const { context, setContext, buildPrompt, getContextHref } = useLearningContext();
 	const recordConceptSeen = useLearningMemoryStore((state) => state.recordConceptSeen);
 	const recordConceptCompleted = useLearningMemoryStore((state) => state.recordConceptCompleted);
-	const { markPostComplete, isPostCompleted } = useUserProgress();
+	const { markPostComplete, isPostCompleted, isPostBookmarked, togglePostBookmark } = useUserProgress();
+	const isBookmarked = isPostBookmarked(post.id);
 	const { user } = useAuth();
 	const { recordPostOpened, startTracking, endTracking } = usePostTimeTracking();
 	useEmbeds({ enabled: canLoadEmbeds });
+	const handleBookmark = () => {
+		if (!user) return;
+		void togglePostBookmark(post.id, post.title).catch((error) => {
+			console.error('Unable to save bookmark in Firebase:', error);
+		});
+	};
 
 	if (post.hasLatexInPost) {
 		setTimeout(() => handleMathJax(true), 500);
@@ -1893,7 +1899,8 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 							<p className="mt-2 text-sm leading-6 text-slate-600">Bookmark it to read later.</p>
 							<button
 								type="button"
-								onClick={() => setIsBookmarked((value) => !value)}
+								onClick={handleBookmark}
+								disabled={!user}
 								className="mt-4 inline-flex h-10 items-center rounded-lg border border-blue-200 px-4 text-sm font-bold text-blue-600 hover:bg-blue-50"
 							>
 								{isBookmarked ? 'Bookmarked' : 'Bookmark'}
@@ -1958,7 +1965,8 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 						<div className="flex gap-2">
 							<button
 								type="button"
-								onClick={() => setIsBookmarked((value) => !value)}
+								onClick={handleBookmark}
+								disabled={!user}
 								className="inline-flex h-10 items-center rounded-lg border border-slate-300 px-4 text-sm font-bold text-slate-900 hover:border-blue-300 hover:text-blue-700"
 							>
 								{isBookmarked ? 'Bookmarked' : 'Bookmark'}
@@ -1994,20 +2002,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 						<MarkdownToHtml contentMarkdown={post.content.markdown} />
 					</div>
 
-					<section className="mt-10 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-						<p className="text-xs font-black uppercase tracking-wide text-slate-500">Article tools</p>
-						<div className="mt-4 grid gap-3 sm:grid-cols-3">
-							<Link href={`/learn?q=${encodeURIComponent(post.title)}`} className="rounded-lg border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700">
-								Explain simpler
-							</Link>
-							<Link href={`/learn?q=${encodeURIComponent(post.title)}`} className="rounded-lg border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700">
-								Compare approaches
-							</Link>
-							<Link href={`/learn?q=${encodeURIComponent(post.title)}`} className="rounded-lg border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700">
-								What next?
-							</Link>
-						</div>
-					</section>
+					<PostQuiz postTitle={post.title} postContent={post.content.markdown} />
 
 					<ArticleEngagement post={post} publication={publication} />
 

@@ -15,7 +15,7 @@ import { EmbeddedAIMentor } from '../components/embedded-ai-mentor';
 import { useLearningContext } from '../components/learning-context-provider';
 import { InlineSimulation } from '../components/visualization/inline-simulation';
 import { PersonalHeader } from '../components/personal-theme-header';
-import { isInterviewPrepEnabled } from '../lib/features';
+import { useFeatureConfig } from '../components/contexts/featureConfigContext';
 import { useLearningMemoryStore } from '../lib/learning-memory';
 import {
 	MorePostsByPublicationDocument,
@@ -261,6 +261,7 @@ const ProgressBar = ({ value, tone = 'bg-violet-600' }: { value: number; tone?: 
 );
 
 export default function InterviewPrepPage({ publication, posts, footerPosts }: Props) {
+	const { features, loading: featureLoading } = useFeatureConfig();
 	const reduceMotion = useReducedMotion();
 	const [prepState, setPrepState] = useState<PrepState>(DEFAULT_PREP_STATE);
 	const [bookmarks, setBookmarks] = useState<string[]>([]);
@@ -451,6 +452,11 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 	const motionProps = reduceMotion
 		? { initial: { opacity: 1, y: 0 }, animate: { opacity: 1, y: 0 } }
 		: { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
+
+	if (featureLoading) return null;
+	if (!features.interviewPrep) {
+		return <AppProvider publication={publication} footerPosts={footerPosts}><Layout><Container><PersonalHeader /><div className="mx-auto max-w-2xl px-5 py-24 text-center"><h1 className="text-3xl font-black text-slate-950 dark:text-white">Interview Prep is currently unavailable</h1><p className="mt-3 text-slate-500">This feature can be enabled by an administrator.</p><Link href="/" className="mt-6 inline-flex rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white">Return home</Link></div><Footer /></Container></Layout></AppProvider>;
+	}
 
 	return (
 		<AppProvider publication={publication} footerPosts={footerPosts}>
@@ -969,12 +975,6 @@ export default function InterviewPrepPage({ publication, posts, footerPosts }: P
 }
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
-	if (!isInterviewPrepEnabled) {
-		return {
-			notFound: true,
-		};
-	}
-
 	try {
 		const first = await request<PostsByPublicationQuery, PostsByPublicationQueryVariables>(
 			GQL_ENDPOINT,

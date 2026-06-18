@@ -8,7 +8,7 @@ import {
 export type { PostProgress, SeriesProgress };
 
 export const useUserProgress = () => {
-	const { posts, learningStreak, loading, error, markPostComplete } = useProgressContext();
+	const { posts, learningStreak, loading, error, markPostComplete, togglePostBookmark, ratePost } = useProgressContext();
 
 	const getPostStatus = useCallback(
 		(postId: string) => posts.find((post) => post.postId === postId)?.status ?? null,
@@ -18,8 +18,16 @@ export const useUserProgress = () => {
 		(postId: string) => posts.some((post) => post.postId === postId && post.status === 'completed'),
 		[posts],
 	);
+	const isPostBookmarked = useCallback(
+		(postId: string) => posts.some((post) => post.postId === postId && post.isBookmarked),
+		[posts],
+	);
+	const getPostRating = useCallback(
+		(postId: string) => posts.find((post) => post.postId === postId)?.rating ?? null,
+		[posts],
+	);
 
-	return { posts, learningStreak, loading, error, markPostComplete, getPostStatus, isPostCompleted };
+	return { posts, learningStreak, loading, error, markPostComplete, togglePostBookmark, ratePost, getPostStatus, isPostCompleted, isPostBookmarked, getPostRating };
 };
 
 export const useSeriesProgress = () => {

@@ -5,6 +5,7 @@ import { Analytics as VercelAnalytics } from '@vercel/analytics/next';
 import { startTransition, useEffect } from 'react';
 import { AuthProvider } from '../components/contexts/authContext';
 import { ProgressProvider } from '../components/contexts/progressContext';
+import { FeatureConfigProvider } from '../components/contexts/featureConfigContext';
 import { GlobalBusyIndicator } from '../components/global-busy-indicator';
 import { LearningContextProvider } from '../components/learning-context-provider';
 import { StickyLearningContextRail } from '../components/sticky-learning-context-rail';
@@ -67,8 +68,9 @@ export default function MyApp({ Component, pageProps }: AppProps) {
 
 	return (
 		<ThemeProvider attribute="class">
-			<AuthProvider>
-				<ProgressProvider>
+			<FeatureConfigProvider>
+				<AuthProvider>
+					<ProgressProvider>
 					<LearningContextProvider>
 						<div className={`${plusJakartaSans.variable} font-sans`}>
 							<GlobalBusyIndicator />
@@ -79,8 +81,9 @@ export default function MyApp({ Component, pageProps }: AppProps) {
 							<VercelAnalytics />
 						</div>
 					</LearningContextProvider>
-				</ProgressProvider>
-			</AuthProvider>
+					</ProgressProvider>
+				</AuthProvider>
+			</FeatureConfigProvider>
 		</ThemeProvider>
 	);
 }

@@ -82,6 +82,10 @@ export async function initializeUserCollections(
  * │   │       ├── completedAt: number (timestamp in ms)
  * │   │       ├── timeSpent: number (milliseconds)
  * │   │       ├── lastReadAt: number (timestamp in ms)
+ * │   │       ├── isBookmarked: boolean
+ * │   │       ├── bookmarkedAt: number (timestamp in ms)
+ * │   │       ├── rating: number (1-5)
+ * │   │       ├── ratedAt: number (timestamp in ms)
  * │   │       └── status: 'completed' | 'in-progress'
  * │   └── seriesProgress/
  * │       └── {seriesId}
