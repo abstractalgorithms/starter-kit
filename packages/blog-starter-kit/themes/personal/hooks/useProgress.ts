@@ -62,7 +62,7 @@ export const useSeriesProgress = () => {
 };
 
 export const usePostTimeTracking = () => {
-	const { trackPostTime } = useProgressContext();
+	const { recordPostOpened, trackPostTime } = useProgressContext();
 	const startTimeRef = useRef<number | null>(null);
 
 	const startTracking = useCallback(() => {
@@ -79,5 +79,5 @@ export const usePostTimeTracking = () => {
 		[trackPostTime],
 	);
 
-	return { startTracking, endTracking };
+	return { recordPostOpened, startTracking, endTracking };
 };

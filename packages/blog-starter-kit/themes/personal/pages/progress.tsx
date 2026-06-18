@@ -88,7 +88,7 @@ const ProgressChart = ({ completedAt, total }: { completedAt: number[]; total: n
 export default function ProgressPage({ publication, posts, footerPosts }: Props) {
 	const router = useRouter();
 	const { user, loading: authLoading } = useAuth();
-	const { posts: trackedPosts, learningStreak } = useUserProgress();
+	const { posts: trackedPosts, learningStreak, error: progressError } = useUserProgress();
 
 	useEffect(() => {
 		if (!authLoading && !user) {
@@ -161,9 +161,8 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 	];
 	const unlockedAchievements = achievements.filter((achievement) => achievement.unlocked).length;
 	const navSections = [
-		{ label: 'MAIN', links: [['Overview', '/'], ['My Progress', '/progress'], ['Activity', '#activity']] },
-		{ label: 'LEARN', links: [['Topics', '/posts'], ['Roadmaps', '/learn'], ['Series', '/series'], ['Visual Library', '/visualizations']] },
-		{ label: 'PRACTICE', links: [['Interview Prep', '/interview-prep'], ['AI Assistant', '/assistant']] },
+		{ label: 'PROGRESS', links: [['My Progress', '/progress'], ['Reading Activity', '#activity']] },
+		{ label: 'CONTINUE LEARNING', links: [['Browse Articles', '/posts'], ['Browse Series', '/series']] },
 	];
 
 	if (!user && !authLoading) return null;
@@ -186,7 +185,7 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 							<div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100 p-4 dark:from-blue-950/60 dark:to-indigo-950/40"><p className="text-sm font-bold text-slate-900 dark:text-white">Stay consistent, keep learning!</p><p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">Your progress is saved from the articles you actually read.</p><Link href={continueReading[0] ? `/${continueReading[0].post.slug}` : '/posts'} className="mt-5 flex items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">Continue Learning →</Link></div>
 						</aside>
 						<main className="min-w-0 flex-1 px-4 py-7 sm:px-6 xl:px-9">
-							<div className="mb-6"><h1 className="text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white">My Progress</h1><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Track your learning journey and see how you’re growing every day.</p></div>
+							<div className="mb-6"><h1 className="text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white">My Progress</h1><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Track your learning journey and see how you’re growing every day.</p>{progressError ? <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">Firebase could not load your progress. Verify the deployed Firestore rules allow your signed-in UID to access users/{'{uid}'}/progressedPosts.</p> : null}</div>
 							<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
 								{[
 									{ icon: '◫', tone: 'blue' as const, label: 'Overall Progress', value: `${completionPercent}%`, note: `${completedCount} of ${posts.length} articles` },

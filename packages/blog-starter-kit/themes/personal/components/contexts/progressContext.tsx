@@ -35,6 +35,7 @@ type ProgressContextValue = {
 	learningStreak: number;
 	loading: boolean;
 	error: Error | null;
+	recordPostOpened: (postId: string, postTitle?: string) => Promise<void>;
 	markPostComplete: (postId: string, postTitle?: string) => Promise<void>;
 	trackPostTime: (postId: string, milliseconds: number, postTitle?: string) => Promise<void>;
 	getSeriesProgress: (seriesId: string) => Promise<SeriesProgress | null>;
@@ -127,6 +128,35 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 			},
 		);
 	}, [user]);
+
+	const recordPostOpened = useCallback(
+		async (postId: string, postTitle = '') => {
+			if (!user) return;
+			const progressRef = doc(db, 'users', user.uid, 'progressedPosts', postId);
+			const statsRef = doc(db, 'users', user.uid, 'profile', 'learningStats');
+			await runTransaction(db, async (transaction) => {
+				const [current, stats] = await Promise.all([
+					transaction.get(progressRef),
+					transaction.get(statsRef),
+				]);
+				const data = current.data();
+				transaction.set(
+					progressRef,
+					{
+						postId,
+						postTitle: postTitle || data?.postTitle || '',
+						timeSpent: asNumber(data?.timeSpent),
+						lastReadAt: Date.now(),
+						status: data?.status === 'completed' ? 'completed' : 'in-progress',
+						...(data?.status === 'completed' ? { completedAt: asNumber(data.completedAt) } : {}),
+					},
+					{ merge: true },
+				);
+				transaction.set(statsRef, getActivityUpdate(stats.data()), { merge: true });
+			});
+		},
+		[user],
+	);
 
 	const markPostComplete = useCallback(
 		async (postId: string, postTitle = '') => {
@@ -225,8 +255,8 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 	);
 
 	const value = useMemo(
-		() => ({ posts, learningStreak, loading, error, markPostComplete, trackPostTime, getSeriesProgress, updateSeriesProgress }),
-		[posts, learningStreak, loading, error, markPostComplete, trackPostTime, getSeriesProgress, updateSeriesProgress],
+		() => ({ posts, learningStreak, loading, error, recordPostOpened, markPostComplete, trackPostTime, getSeriesProgress, updateSeriesProgress }),
+		[posts, learningStreak, loading, error, recordPostOpened, markPostComplete, trackPostTime, getSeriesProgress, updateSeriesProgress],
 	);
 
 	return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;

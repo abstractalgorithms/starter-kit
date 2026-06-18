@@ -1505,7 +1505,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 	const recordConceptCompleted = useLearningMemoryStore((state) => state.recordConceptCompleted);
 	const { markPostComplete, isPostCompleted } = useUserProgress();
 	const { user } = useAuth();
-	const { startTracking, endTracking } = usePostTimeTracking();
+	const { recordPostOpened, startTracking, endTracking } = usePostTimeTracking();
 	useEmbeds({ enabled: canLoadEmbeds });
 
 	if (post.hasLatexInPost) {
@@ -1588,6 +1588,9 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 	}, [post.slug]);
 
 	useEffect(() => {
+		void recordPostOpened(post.id, post.title).catch((error) => {
+			console.error('Unable to record the opened article in Firebase:', error);
+		});
 		startTracking();
 		const flushTime = () => {
 			void endTracking(post.id, post.title).catch((error) => {
@@ -1608,7 +1611,7 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 			document.removeEventListener('visibilitychange', onVisibilityChange);
 			flushTime();
 		};
-	}, [endTracking, post.id, post.title, startTracking]);
+	}, [endTracking, post.id, post.title, recordPostOpened, startTracking]);
 
 	useEffect(() => {
 		if (readingProgress < 85) return;
