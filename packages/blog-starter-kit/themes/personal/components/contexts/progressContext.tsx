@@ -66,6 +66,20 @@ const getActivityUpdate = (data: Record<string, unknown> | undefined) => {
 	};
 };
 
+const updateLearningStats = async (userId: string) => {
+	try {
+		const statsRef = doc(db, 'users', userId, 'profile', 'metadata');
+		await runTransaction(db, async (transaction) => {
+			const stats = await transaction.get(statsRef);
+			transaction.set(statsRef, getActivityUpdate(stats.data()), { merge: true });
+		});
+	} catch (statsError) {
+		// Progress documents are authoritative. A profile/statistics rule must never
+		// prevent an article read or completion from being saved.
+		console.warn('Unable to update Firebase learning streak:', statsError);
+	}
+};
+
 export const ProgressProvider = ({ children }: { children: React.ReactNode }) => {
 	const { user, loading: authLoading } = useAuth();
 	const [posts, setPosts] = useState<PostProgress[]>([]);
@@ -119,7 +133,7 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 		}
 		setLearningStreak(0);
 		return onSnapshot(
-			doc(db, 'users', user.uid, 'profile', 'learningStats'),
+			doc(db, 'users', user.uid, 'profile', 'metadata'),
 			(snapshot) => {
 				setLearningStreak(Math.max(0, asNumber(snapshot.data()?.currentStreak)));
 			},
@@ -133,12 +147,8 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 		async (postId: string, postTitle = '') => {
 			if (!user) return;
 			const progressRef = doc(db, 'users', user.uid, 'progressedPosts', postId);
-			const statsRef = doc(db, 'users', user.uid, 'profile', 'learningStats');
 			await runTransaction(db, async (transaction) => {
-				const [current, stats] = await Promise.all([
-					transaction.get(progressRef),
-					transaction.get(statsRef),
-				]);
+				const current = await transaction.get(progressRef);
 				const data = current.data();
 				transaction.set(
 					progressRef,
@@ -152,8 +162,8 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 					},
 					{ merge: true },
 				);
-				transaction.set(statsRef, getActivityUpdate(stats.data()), { merge: true });
 			});
+			await updateLearningStats(user.uid);
 		},
 		[user],
 	);
@@ -162,12 +172,8 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 		async (postId: string, postTitle = '') => {
 			if (!user) throw new Error('User not authenticated');
 			const progressRef = doc(db, 'users', user.uid, 'progressedPosts', postId);
-			const statsRef = doc(db, 'users', user.uid, 'profile', 'learningStats');
 			await runTransaction(db, async (transaction) => {
-				const [current, stats] = await Promise.all([
-					transaction.get(progressRef),
-					transaction.get(statsRef),
-				]);
+				const current = await transaction.get(progressRef);
 				const data = current.data();
 				transaction.set(
 					progressRef,
@@ -181,8 +187,8 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 					},
 					{ merge: true },
 				);
-				transaction.set(statsRef, getActivityUpdate(stats.data()), { merge: true });
 			});
+			await updateLearningStats(user.uid);
 		},
 		[user],
 	);
@@ -192,12 +198,8 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 			if (!user || !Number.isFinite(milliseconds) || milliseconds <= 0) return;
 			const boundedTime = Math.min(Math.round(milliseconds), 30 * 60 * 1000);
 			const progressRef = doc(db, 'users', user.uid, 'progressedPosts', postId);
-			const statsRef = doc(db, 'users', user.uid, 'profile', 'learningStats');
 			await runTransaction(db, async (transaction) => {
-				const [current, stats] = await Promise.all([
-					transaction.get(progressRef),
-					transaction.get(statsRef),
-				]);
+				const current = await transaction.get(progressRef);
 				const data = current.data();
 				transaction.set(
 					progressRef,
@@ -211,8 +213,8 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 					},
 					{ merge: true },
 				);
-				transaction.set(statsRef, getActivityUpdate(stats.data()), { merge: true });
 			});
+			await updateLearningStats(user.uid);
 		},
 		[user],
 	);
