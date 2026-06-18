@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics as VercelAnalytics } from '@vercel/analytics/next';
 import { startTransition, useEffect } from 'react';
 import { AuthProvider } from '../components/contexts/authContext';
+import { ProgressProvider } from '../components/contexts/progressContext';
 import { GlobalBusyIndicator } from '../components/global-busy-indicator';
 import { LearningContextProvider } from '../components/learning-context-provider';
 import { StickyLearningContextRail } from '../components/sticky-learning-context-rail';
@@ -67,16 +68,18 @@ export default function MyApp({ Component, pageProps }: AppProps) {
 	return (
 		<ThemeProvider attribute="class">
 			<AuthProvider>
-				<LearningContextProvider>
-					<div className={`${plusJakartaSans.variable} font-sans`}>
-						<GlobalBusyIndicator />
-						<main className="font-sans">
-							<Component {...pageProps} />
-						</main>
-						<StickyLearningContextRail />
-						<VercelAnalytics />
-					</div>
-				</LearningContextProvider>
+				<ProgressProvider>
+					<LearningContextProvider>
+						<div className={`${plusJakartaSans.variable} font-sans`}>
+							<GlobalBusyIndicator />
+							<main className="font-sans">
+								<Component {...pageProps} />
+							</main>
+							<StickyLearningContextRail />
+							<VercelAnalytics />
+						</div>
+					</LearningContextProvider>
+				</ProgressProvider>
 			</AuthProvider>
 		</ThemeProvider>
 	);

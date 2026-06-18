@@ -24,6 +24,7 @@ import {
 } from '../../generated/graphql';
 import { buildTopicLearningJourney, type TopicLearningJourney } from '../../lib/topic-learning';
 import { formatTagName } from '../../utils/format';
+import { useUserProgress } from '../../hooks/useProgress';
 
 const RECENTLY_VIEWED_KEY = 'aa:recently-viewed-posts';
 const FALLBACK_POST_IMAGE = '/assets/blog/post-fallback.svg';
@@ -142,6 +143,7 @@ const TopicDiagram = ({ label }: { label: string }) => (
 );
 
 export default function TopicLearningPage({ publication, posts, journey }: Props) {
+	const { posts: trackedPosts } = useUserProgress();
 	const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedItem[]>([]);
 	const [activeFilterId, setActiveFilterId] = useState('all');
 	const [articlePage, setArticlePage] = useState(1);
@@ -157,8 +159,8 @@ export default function TopicLearningPage({ publication, posts, journey }: Props
 				.filter((post): post is PostFragment => Boolean(post)),
 		[journey.articles, posts],
 	);
-	const viewedSlugs = useMemo(() => new Set(recentlyViewed.map((item) => item.slug)), [recentlyViewed]);
-	const viewedCount = articlePosts.filter((post) => viewedSlugs.has(post.slug)).length;
+	const trackedPostIds = useMemo(() => new Set(trackedPosts.map((item) => item.postId)), [trackedPosts]);
+	const viewedCount = articlePosts.filter((post) => trackedPostIds.has(post.id)).length;
 	const progressPercent = articlePosts.length ? Math.round((viewedCount / articlePosts.length) * 100) : 0;
 	const totalReadTime = articlePosts.reduce((sum, post) => sum + post.readTimeInMinutes, 0);
 	const primaryPost = articlePosts[0];

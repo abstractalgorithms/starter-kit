@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		}
 
 		// Update with new time spent value
-		const updateResponse = await fetch(url, {
+		const updateResponse = await fetch(`${url}?updateMask.fieldPaths=timeSpent`, {
 			method: 'PATCH',
 			headers: {
 				Authorization: `Bearer ${token}`,

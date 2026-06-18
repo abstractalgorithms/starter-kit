@@ -50,6 +50,8 @@ import { useLearningMemoryStore } from '../lib/learning-memory';
 import { getArticleConceptSeeds, inferArticleDomain, inferPrimaryArticleConcept } from '../lib/article-domain';
 import { inferTopicSlugForPost } from '../lib/topic-learning';
 import { ARTICLE_REVALIDATE_SECONDS } from '../lib/cache-constants';
+import { usePostTimeTracking, useUserProgress } from '../hooks/useProgress';
+import { useAuth } from '../components/contexts/authContext';
 
 // ─── Reading Progress Bar ─────────────────────────────────────────────────────
 const ReadingProgressBar = () => {
@@ -1496,10 +1498,14 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 	const [markedHelpful, setMarkedHelpful] = useState(false);
 	const [articleCompanionState, setArticleCompanionState] = useState<ArticleCompanionData | null>(null);
 	const completedMemoryRef = useRef(false);
+	const firebaseCompletionRef = useRef(false);
 	const reduceMotion = useReducedMotion();
 	const { context, setContext, buildPrompt, getContextHref } = useLearningContext();
 	const recordConceptSeen = useLearningMemoryStore((state) => state.recordConceptSeen);
 	const recordConceptCompleted = useLearningMemoryStore((state) => state.recordConceptCompleted);
+	const { markPostComplete, isPostCompleted } = useUserProgress();
+	const { user } = useAuth();
+	const { startTracking, endTracking } = usePostTimeTracking();
 	useEmbeds({ enabled: canLoadEmbeds });
 
 	if (post.hasLatexInPost) {
@@ -1578,7 +1584,31 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 
 	useEffect(() => {
 		completedMemoryRef.current = false;
+		firebaseCompletionRef.current = false;
 	}, [post.slug]);
+
+	useEffect(() => {
+		startTracking();
+		const flushTime = () => {
+			void endTracking(post.id, post.title).catch((error) => {
+				console.error('Unable to persist article reading time:', error);
+			});
+		};
+		const onVisibilityChange = () => {
+			if (document.visibilityState === 'hidden') flushTime();
+			else startTracking();
+		};
+		const interval = window.setInterval(() => {
+			flushTime();
+			startTracking();
+		}, 30_000);
+		document.addEventListener('visibilitychange', onVisibilityChange);
+		return () => {
+			window.clearInterval(interval);
+			document.removeEventListener('visibilitychange', onVisibilityChange);
+			flushTime();
+		};
+	}, [endTracking, post.id, post.title, startTracking]);
 
 	useEffect(() => {
 		if (readingProgress < 85) return;
@@ -1598,6 +1628,15 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 			});
 		});
 	}, [post.readTimeInMinutes, post.series?.name, post.slug, post.title, readingProgress, recordConceptCompleted, tags]);
+
+	useEffect(() => {
+		if (!user || readingProgress < 85 || firebaseCompletionRef.current || isPostCompleted(post.id)) return;
+		firebaseCompletionRef.current = true;
+		void markPostComplete(post.id, post.title).catch((error) => {
+			firebaseCompletionRef.current = false;
+			console.error('Unable to mark Firebase article progress complete:', error);
+		});
+	}, [isPostCompleted, markPostComplete, post.id, post.title, readingProgress, user]);
 
 	const localArticleCompanion = useMemo(
 		() => buildLocalArticleCompanion({ post, tags, tocItems, primaryArticleConcept }),

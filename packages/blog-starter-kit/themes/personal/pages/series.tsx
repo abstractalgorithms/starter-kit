@@ -27,12 +27,14 @@ import {
 } from '../generated/graphql';
 import { CONTENT_REVALIDATE_SECONDS } from '../lib/cache-constants';
 import { formatTagName } from '../utils/format';
+import { useUserProgress } from '../hooks/useProgress';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const RECENTLY_VIEWED_KEY = 'aa:recently-viewed-posts';
 const FALLBACK_POST_IMAGE = '/assets/blog/post-fallback.svg';
 
 type SeriesPost = {
+	id: string;
 	slug: string;
 	title: string;
 	coverImage: string | null;
@@ -276,6 +278,7 @@ const SeriesCard = ({ s, featured }: { s: Series; featured?: boolean }) => {
 };
 
 export default function SeriesPage({ publication, series, footerPosts }: Props) {
+	const { posts: trackedPosts } = useUserProgress();
 	const [activeDomain, setActiveDomain] = useState('All');
 	const [sortMode, setSortMode] = useState<'popular' | 'articles' | 'reading'>('popular');
 	const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedItem[]>([]);
@@ -294,18 +297,18 @@ export default function SeriesPage({ publication, series, footerPosts }: Props) 
 		[series],
 	);
 
-	const viewedSlugs = useMemo(() => new Set(recentlyViewed.map((item) => item.slug)), [recentlyViewed]);
+	const trackedPostIds = useMemo(() => new Set(trackedPosts.map((item) => item.postId)), [trackedPosts]);
 	const progressBySeries = useMemo(
 		() =>
 			series.map((s) => {
-				const viewed = s.posts.filter((post) => viewedSlugs.has(post.slug)).length;
+				const viewed = s.posts.filter((post) => trackedPostIds.has(post.id)).length;
 				return {
 					series: s,
 					viewed,
 					percent: s.postCount > 0 ? Math.round((viewed / s.postCount) * 100) : 0,
 				};
 			}),
-		[series, viewedSlugs],
+		[series, trackedPostIds],
 	);
 	const startedCount = progressBySeries.filter((item) => item.viewed > 0 && item.viewed < item.series.postCount).length;
 	const completedCount = progressBySeries.filter((item) => item.series.postCount > 0 && item.viewed >= item.series.postCount).length;
@@ -587,6 +590,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 					domain: inferDomain(s.name, s.description?.text ?? '', seriesPosts),
 					level: getLevel(seriesPosts.length, totalReadTime),
 					posts: seriesPosts.map((post) => ({
+						id: post.id,
 						slug: post.slug,
 						title: post.title,
 						coverImage: post.coverImage?.url ?? null,

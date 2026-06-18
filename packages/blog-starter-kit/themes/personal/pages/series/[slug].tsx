@@ -26,6 +26,7 @@ import {
 	SeriesPostsByPublicationQuery,
 	SeriesPostsByPublicationQueryVariables,
 } from '../../generated/graphql';
+import { useUserProgress } from '../../hooks/useProgress';
 
 const RECENTLY_VIEWED_KEY = 'aa:recently-viewed-posts';
 const FALLBACK_POST_IMAGE = '/assets/blog/post-fallback.svg';
@@ -258,6 +259,7 @@ const SeriesPlanSection = ({ title, markdown }: { title: string; markdown: strin
 );
 
 export default function SeriesDetailPage({ publication, posts, series, roadmap, footerPosts }: Props) {
+	const { posts: trackedPosts } = useUserProgress();
 	const title = `${series.name} - ${publication.title}`;
 	const totalReadTime = posts.reduce((sum, post) => sum + post.readTimeInMinutes, 0);
 	const totalViews = posts.reduce((sum, post) => sum + (post.views ?? 0), 0);
@@ -275,10 +277,13 @@ export default function SeriesDetailPage({ publication, posts, series, roadmap, 
 		setRecentlyViewed(readRecentlyViewed());
 	}, []);
 
-	const viewedSlugs = useMemo(() => new Set(recentlyViewed.map((item) => item.slug)), [recentlyViewed]);
-	const completedCount = posts.filter((post) => viewedSlugs.has(post.slug)).length;
+	const completedPostIds = useMemo(
+		() => new Set(trackedPosts.filter((item) => item.status === 'completed').map((item) => item.postId)),
+		[trackedPosts],
+	);
+	const completedCount = posts.filter((post) => completedPostIds.has(post.id)).length;
 	const progressPercent = posts.length > 0 ? Math.round((completedCount / posts.length) * 100) : 0;
-	const continueIndex = posts.findIndex((post) => !viewedSlugs.has(post.slug));
+	const continueIndex = posts.findIndex((post) => !completedPostIds.has(post.id));
 	const continuePost = posts[continueIndex >= 0 ? continueIndex : 0];
 
 	return (

@@ -9,6 +9,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
+import { useUserProgress } from '../hooks/useProgress';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { Footer } from '../components/footer';
@@ -234,6 +235,7 @@ const BlogHeroGraphic = () => (
 );
 
 export default function AllPostsPage({ publication, initialPosts }: Props) {
+	const { posts: trackedPosts } = useUserProgress();
 	const router = useRouter();
 	const [searchTerm, setSearchTerm] = useState('');
 	const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedItem[]>([]);
@@ -312,9 +314,9 @@ export default function AllPostsPage({ publication, initialPosts }: Props) {
 		[initialPosts, recentlyViewed],
 	);
 	const viewedPostCount = useMemo(() => {
-		const validViewedSlugs = new Set(initialPosts.map((post) => post.slug));
-		return recentlyViewed.filter((entry) => validViewedSlugs.has(entry.slug)).length;
-	}, [initialPosts, recentlyViewed]);
+		const trackedIds = new Set(trackedPosts.map((entry) => entry.postId));
+		return initialPosts.filter((post) => trackedIds.has(post.id)).length;
+	}, [initialPosts, trackedPosts]);
 	const articleProgress = initialPosts.length > 0 ? Math.round((viewedPostCount / initialPosts.length) * 100) : 0;
 	const remainingPostCount = Math.max(initialPosts.length - viewedPostCount, 0);
 	const popularPosts = useMemo(

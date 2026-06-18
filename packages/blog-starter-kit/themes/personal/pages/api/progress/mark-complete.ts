@@ -14,7 +14,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	}
 
 	try {
-		const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${userId}/progressedPosts/${postId}`;
+		const fieldMask = ['postId', 'postTitle', 'completedAt', 'status']
+			.map((field) => `updateMask.fieldPaths=${field}`)
+			.join('&');
+		const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${userId}/progressedPosts/${postId}?${fieldMask}`;
 		const response = await fetch(url, {
 			method: 'PATCH',
 			headers: {
@@ -26,7 +29,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 					postId: { stringValue: postId },
 					postTitle: { stringValue: postTitle || '' },
 					completedAt: { integerValue: Date.now().toString() },
-					timeSpent: { integerValue: '0' },
 					status: { stringValue: 'completed' },
 				},
 			}),

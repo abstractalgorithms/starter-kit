@@ -30,8 +30,6 @@ import { getFooterPosts } from '../lib/api/footerData';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const BOOKMARK_COLLECTIONS_KEY = 'aa:bookmark-collections';
-const LEARNING_STREAK_KEY = 'aa:learning-streak';
-const LEARNING_STREAK_DATE_KEY = 'aa:learning-streak-date';
 
 type ProgressPost = {
 	id: string;
@@ -72,9 +70,8 @@ const normalizeCoverImageUrl = (raw?: string | null) => {
 export default function ProgressPage({ publication, posts, footerPosts }: Props) {
 	const router = useRouter();
 	const { user, loading: authLoading } = useAuth();
-	const { posts: trackedPosts } = useUserProgress();
+	const { posts: trackedPosts, learningStreak } = useUserProgress();
 	const [savedPath, setSavedPath] = useState<ReturnType<typeof loadLearningPath>>(null);
-	const [learningStreak, setLearningStreak] = useState(1);
 	const [selectedPersona, setSelectedPersona] = useState(PERSONAS[0].id);
 	const [bookmarkCollections, setBookmarkCollections] = useState<BookmarkCollections>({
 		fundamentals: [],
@@ -105,24 +102,6 @@ export default function ProgressPage({ publication, posts, footerPosts }: Props)
 			}
 		}
 
-		const today = new Date().toISOString().slice(0, 10);
-		const lastSeen = localStorage.getItem(LEARNING_STREAK_DATE_KEY);
-		const streakRaw = Number(localStorage.getItem(LEARNING_STREAK_KEY) ?? '1');
-		const safeStreak = Number.isFinite(streakRaw) && streakRaw > 0 ? streakRaw : 1;
-		if (!lastSeen) {
-			localStorage.setItem(LEARNING_STREAK_DATE_KEY, today);
-			localStorage.setItem(LEARNING_STREAK_KEY, '1');
-			setLearningStreak(1);
-		} else if (lastSeen !== today) {
-			const prevDate = new Date(lastSeen);
-			const dayDiff = Math.floor((new Date(today).getTime() - prevDate.getTime()) / 86400000);
-			const nextStreak = dayDiff === 1 ? safeStreak + 1 : 1;
-			localStorage.setItem(LEARNING_STREAK_DATE_KEY, today);
-			localStorage.setItem(LEARNING_STREAK_KEY, String(nextStreak));
-			setLearningStreak(nextStreak);
-		} else {
-			setLearningStreak(safeStreak);
-		}
 	}, []);
 
 	const completedPosts = useMemo(
