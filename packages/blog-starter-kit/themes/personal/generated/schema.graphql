@@ -532,6 +532,11 @@ type Publication {
   totalRecommendedPublications: Int!
   url: String
   urlPattern: String
+  """
+  Active custom widgets for this publication. Pinned widgets render on
+  every article; others are embedded inline via %%[widgetId] tokens.
+  """
+  widgets: [Widget!]!
 }
 
 type PublicationConnection {
@@ -1036,4 +1041,21 @@ enum UserPublicationRole {
 
 type ViewCountFeature {
   isEnabled: Boolean!
+}
+
+"""
+A custom HTML widget an author can pin to all articles or embed inline.
+"""
+type Widget {
+  content: String!
+  id: ID!
+  isPinned: Boolean!
+  pinLocation: WidgetPinLocation
+  """The author-defined slug used in %%[widgetId] embed tokens."""
+  widgetId: String!
+}
+
+enum WidgetPinLocation {
+  bottom
+  top
 }

@@ -655,6 +655,11 @@ export type Publication = {
   totalRecommendedPublications: Scalars['Int']['output'];
   url?: Maybe<Scalars['String']['output']>;
   urlPattern?: Maybe<Scalars['String']['output']>;
+  /**
+   * Active custom widgets for this publication. Pinned widgets render on
+   * every article; others are embedded inline via %%[widgetId] tokens.
+   */
+  widgets: Array<Widget>;
 };
 
 
@@ -1402,6 +1407,22 @@ export type ViewCountFeature = {
   __typename?: 'ViewCountFeature';
   isEnabled: Scalars['Boolean']['output'];
 };
+
+/** A custom HTML widget an author can pin to all articles or embed inline. */
+export type Widget = {
+  __typename?: 'Widget';
+  content: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  isPinned: Scalars['Boolean']['output'];
+  pinLocation?: Maybe<WidgetPinLocation>;
+  /** The author-defined slug used in %%[widgetId] embed tokens. */
+  widgetId: Scalars['String']['output'];
+};
+
+export enum WidgetPinLocation {
+  Bottom = 'bottom',
+  Top = 'top'
+}
 
 export type PageInfoFragment = { __typename?: 'PageInfo', endCursor?: string | null, hasNextPage: boolean };
 

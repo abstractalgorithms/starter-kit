@@ -9,7 +9,7 @@
  */
 
 import { db } from './firebase';
-import { collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 
 /**
  * Initialize user profile document
@@ -25,54 +25,16 @@ export async function initializeUserProfile(
     
     await setDoc(userRef, {
       email,
-      displayName: displayName || email.split('@')[0],
+      displayName: displayName || email.split('@')[0] || 'Learner',
       avatar: null,
       createdAt: new Date().getTime(),
       updatedAt: new Date().getTime(),
-    });
+    }, { merge: true });
 
     console.log(`✓ Initialized profile for user: ${userId}`);
     return true;
   } catch (error) {
     console.error('Error initializing user profile:', error);
-    throw error;
-  }
-}
-
-/**
- * Ensure progressedPosts collection exists for user
- * (Auto-created when first post is marked, but this ensures structure)
- */
-export async function ensureProgressedPostsCollection(userId: string) {
-  try {
-    const collectionRef = collection(db, 'users', userId, 'progressedPosts');
-    
-    // Try to fetch documents (collection auto-creates on first write)
-    const snapshot = await getDocs(collectionRef);
-    
-    console.log(`✓ Verified progressedPosts collection for user: ${userId}`);
-    return true;
-  } catch (error) {
-    console.error('Error verifying progressedPosts collection:', error);
-    throw error;
-  }
-}
-
-/**
- * Ensure seriesProgress collection exists for user
- * (Auto-created when first series is tracked, but this ensures structure)
- */
-export async function ensureSeriesProgressCollection(userId: string) {
-  try {
-    const collectionRef = collection(db, 'users', userId, 'seriesProgress');
-    
-    // Try to fetch documents (collection auto-creates on first write)
-    const snapshot = await getDocs(collectionRef);
-    
-    console.log(`✓ Verified seriesProgress collection for user: ${userId}`);
-    return true;
-  } catch (error) {
-    console.error('Error verifying seriesProgress collection:', error);
     throw error;
   }
 }
@@ -89,11 +51,10 @@ export async function initializeUserCollections(
   try {
     // Initialize profile
     await initializeUserProfile(userId, email, displayName);
-    
-    // Verify other collections (they'll auto-create on first write)
-    await ensureProgressedPostsCollection(userId);
-    await ensureSeriesProgressCollection(userId);
-    
+
+    // Firestore collections are created automatically on first document write.
+    // Avoid probing empty collections here because restrictive security rules can
+    // block collection reads even when later document-level writes are allowed.
     console.log(`✓ All collections initialized for user: ${userId}`);
     return true;
   } catch (error) {

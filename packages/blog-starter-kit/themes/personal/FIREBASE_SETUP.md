@@ -7,7 +7,8 @@ This blog starter kit now includes Firebase integration for user authentication 
 ## Features Implemented
 
 ### 1. **User Authentication**
-- Email/password signup and login
+- Social sign-in/signup with Google
+- Optional GitHub and Facebook social providers
 - Session persistence across browser refreshes
 - Automatic user state management
 - Logout functionality
@@ -36,7 +37,9 @@ This blog starter kit now includes Firebase integration for user authentication 
 2. Create a new project or select an existing one
 3. Enable Authentication:
    - Go to Authentication → Sign-in method
-   - Enable "Email/Password"
+   - Enable "Google" for social login/signup
+   - Optional: enable "GitHub" and "Facebook" if you want those secondary buttons to work
+   - In Authentication → Settings → Authorized domains, add your production domain and `localhost` for local development
 4. Create a Firestore Database:
    - Go to Firestore Database
    - Create database in test mode (or production with proper rules)
@@ -81,16 +84,16 @@ service cloud.firestore {
     // Users can only read/write their own data
     match /users/{userId} {
       allow read, write: if request.auth.uid == userId;
-      
+
+      match /profile/{profileDoc} {
+        allow read, write: if request.auth.uid == userId;
+      }
+
       match /progressedPosts/{postId} {
         allow read, write: if request.auth.uid == userId;
       }
-      
+
       match /seriesProgress/{seriesId} {
-        allow read, write: if request.auth.uid == userId;
-      }
-      
-      match /profile {
         allow read, write: if request.auth.uid == userId;
       }
     }
@@ -102,8 +105,8 @@ service cloud.firestore {
 
 ### For Users
 
-1. **Sign Up**: Click the "Login" button in the header
-2. **Create Account**: Switch to sign-up mode and fill in email/password
+1. **Sign In**: Click the "Sign in" button in the header
+2. **Create Account**: Continue with Google, GitHub, or Facebook
 3. **Track Progress**: After logging in, click "Mark Complete" on any post
 4. **View Progress**: Click your profile icon (top-right) → "Progress Tracker"
 
@@ -174,7 +177,7 @@ lib/
 components/
 ├── contexts/
 │   └── authContext.tsx           # Auth context and provider
-├── auth-modal.tsx                # Login/signup modal
+├── auth-modal.tsx                # Social sign-in modal
 ├── user-profile.tsx              # User profile menu
 └── progress-badge.tsx            # Mark complete badge
 
@@ -195,10 +198,11 @@ pages/
 users/
 ├── {userId}/
 │   ├── profile
-│   │   ├── displayName: string
-│   │   ├── email: string
-│   │   ├── avatar: string
-│   │   └── createdAt: timestamp
+│   │   └── metadata
+│   │       ├── displayName: string
+│   │       ├── email: string
+│   │       ├── avatar: string
+│   │       └── createdAt: timestamp
 │   ├── progressedPosts/
 │   │   └── {postId}
 │   │       ├── postId: string
@@ -221,12 +225,13 @@ users/
 ### useAuth Hook
 
 ```typescript
-const { user, loading, signUp, login, logout } = useAuth();
+const { user, loading, loginWithGoogle, loginWithGitHub, loginWithFacebook, logout } = useAuth();
 
 // user: User | null - Firebase user object
 // loading: boolean - Auth state loading
-// signUp(email: string, password: string): Promise<void>
-// login(email: string, password: string): Promise<void>
+// loginWithGoogle(): Promise<void>
+// loginWithGitHub(): Promise<void>
+// loginWithFacebook(): Promise<void>
 // logout(): Promise<void>
 ```
 
@@ -284,6 +289,12 @@ const { startTracking, endTracking } = usePostTimeTracking();
 - Verify Firebase config variables in .env.local
 - Check browser console for errors
 
+### "Missing or insufficient permissions" after social sign-in
+- Confirm the Firestore rules include `match /users/{userId}/profile/{profileDoc}`. The app stores profile metadata at `users/{uid}/profile/metadata`.
+- Confirm the same rules include `progressedPosts/{postId}` and `seriesProgress/{seriesId}` under `users/{userId}`.
+- Publish the rules in Firebase Console; local code changes do not update deployed Firestore rules.
+- Make sure the signed-in user's UID matches the `{userId}` being read or written.
+
 ### Progress not saving
 - Verify Firestore database is created and enabled
 - Check Firebase security rules
@@ -301,7 +312,7 @@ const { startTracking, endTracking } = usePostTimeTracking();
 - [ ] Achievements and badges
 - [ ] Leaderboard
 - [ ] Social sharing of progress
-- [ ] Google/GitHub sign-in
+- [x] Google/GitHub/Facebook sign-in
 - [ ] Email notifications for series completion
 - [ ] Progress reminders
 - [ ] Mobile app support
@@ -310,7 +321,7 @@ const { startTracking, endTracking } = usePostTimeTracking();
 ## Security Notes
 
 - All user data is private (Firestore rules enforce this)
-- Passwords are handled by Firebase (encrypted)
+- Passwords are not collected by this app; authentication is handled by social providers through Firebase
 - API keys are public (that's normal for web apps)
 - Never expose your project ID in git
 - Use environment variables for all sensitive data

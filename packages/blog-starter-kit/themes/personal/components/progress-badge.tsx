@@ -30,14 +30,14 @@ export const ProgressBadge = ({ postId, postTitle = '', size = 'md' }: ProgressB
 					? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
 					: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
 			} disabled:opacity-60`}
-			title={!user ? 'Login to track progress and mark this post complete' : undefined}
+			title={!user ? 'Sign in to track progress and mark this post complete' : undefined}
 		>
 			{!user ? (
 				<>
 					<svg className={`${iconSize} flex-shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11V7a3 3 0 10-6 0v4m-2 0h10a2 2 0 012 2v5a2 2 0 01-2 2H7a2 2 0 01-2-2v-5a2 2 0 012-2z" />
 					</svg>
-					Login to Mark Complete
+					Sign in to Mark Complete
 				</>
 			) : isCompleted ? (
 				<>

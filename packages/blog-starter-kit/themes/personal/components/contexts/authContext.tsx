@@ -7,20 +7,18 @@ import {
 	signOut,
 	setPersistence,
 	browserLocalPersistence,
-	signInWithEmailAndPassword,
-	createUserWithEmailAndPassword,
+	getAdditionalUserInfo,
 	signInWithPopup,
 	GoogleAuthProvider,
 	GithubAuthProvider,
 	FacebookAuthProvider,
 } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
+import { initializeUserCollections } from '../../lib/initializeFirestore';
 
 type AuthContextType = {
 	user: User | null;
 	loading: boolean;
-	signUp: (email: string, password: string) => Promise<void>;
-	login: (email: string, password: string) => Promise<void>;
 	loginWithGoogle: () => Promise<void>;
 	loginWithGitHub: () => Promise<void>;
 	loginWithFacebook: () => Promise<void>;
@@ -46,42 +44,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 		return () => unsubscribe();
 	}, []);
 
-	const signUp = async (email: string, password: string) => {
-		setLoading(true);
-		try {
-			// Use Firebase client SDK directly for signup
-			const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-			// Initialize Firestore collections for new user
-			const response = await fetch('/api/auth/signup', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ email, uid: userCredential.user.uid }),
-			});
-
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || 'Signup failed');
-			}
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const login = async (email: string, password: string) => {
-		setLoading(true);
-		try {
-			// Use Firebase client SDK directly for login
-			await signInWithEmailAndPassword(auth, email, password);
-		} finally {
-			setLoading(false);
-		}
-	};
-
 	const loginWithGoogle = async () => {
 		setLoading(true);
 		try {
 			const provider = new GoogleAuthProvider();
-			await signInWithPopup(auth, provider);
+			provider.setCustomParameters({ prompt: 'select_account' });
+			const userCredential = await signInWithPopup(auth, provider);
+			const isNewUser = getAdditionalUserInfo(userCredential)?.isNewUser;
+			if (isNewUser) {
+				void initializeUserCollections(
+					userCredential.user.uid,
+					userCredential.user.email ?? '',
+					userCredential.user.displayName ?? undefined,
+				).catch((error) => console.warn('Unable to initialize social user profile:', error));
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -91,7 +67,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 		setLoading(true);
 		try {
 			const provider = new GithubAuthProvider();
-			await signInWithPopup(auth, provider);
+			const userCredential = await signInWithPopup(auth, provider);
+			const isNewUser = getAdditionalUserInfo(userCredential)?.isNewUser;
+			if (isNewUser) {
+				void initializeUserCollections(
+					userCredential.user.uid,
+					userCredential.user.email ?? '',
+					userCredential.user.displayName ?? undefined,
+				).catch((error) => console.warn('Unable to initialize social user profile:', error));
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -101,7 +85,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 		setLoading(true);
 		try {
 			const provider = new FacebookAuthProvider();
-			await signInWithPopup(auth, provider);
+			const userCredential = await signInWithPopup(auth, provider);
+			const isNewUser = getAdditionalUserInfo(userCredential)?.isNewUser;
+			if (isNewUser) {
+				void initializeUserCollections(
+					userCredential.user.uid,
+					userCredential.user.email ?? '',
+					userCredential.user.displayName ?? undefined,
+				).catch((error) => console.warn('Unable to initialize social user profile:', error));
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -122,7 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 	};
 
 	return (
-		<AuthContext.Provider value={{ user, loading, signUp, login, loginWithGoogle, loginWithGitHub, loginWithFacebook, logout }}>
+		<AuthContext.Provider value={{ user, loading, loginWithGoogle, loginWithGitHub, loginWithFacebook, logout }}>
 			{children}
 		</AuthContext.Provider>
 	);

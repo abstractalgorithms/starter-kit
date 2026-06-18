@@ -5,10 +5,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		return res.status(405).json({ error: 'Method not allowed' });
 	}
 
-	// This endpoint is deprecated. Authentication is now handled directly by the Firebase client SDK.
-	// The login function in authContext.tsx uses signInWithEmailAndPassword() directly.
-	return res.status(200).json({ 
-		message: 'Login is now handled by Firebase client SDK. This endpoint is deprecated.',
-		deprecated: true 
+	return res.status(410).json({
+		error: 'Manual login has been removed. Please use social sign-in.',
+		deprecated: true,
 	});
 }
