@@ -25,6 +25,7 @@ import {
 import { useLearningContext } from '../components/learning-context-provider';
 import { buildTopicCollectionSummaries, type TopicCollectionSummary } from '../lib/topic-learning';
 import { CONTENT_REVALIDATE_SECONDS } from '../lib/cache-constants';
+import { LearnToday, LearnPost } from '../components/learn-today';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const FALLBACK_POST_IMAGE = '/assets/blog/post-fallback.svg';
@@ -121,6 +122,18 @@ export default function LearnPage({ publication, posts, topicCollections }: Prop
 	const seriesRoadmaps = useMemo(() => buildSeriesRoadmaps(posts), [posts]);
 	const recentPosts = posts.slice(0, 3);
 	const sidebarTopics = topicCollections.slice(0, 8);
+	const curatorPosts = useMemo<LearnPost[]>(() => posts.map((post) => ({
+		id: post.id,
+		title: post.title,
+		slug: post.slug,
+		brief: post.brief ?? '',
+		readTimeInMinutes: post.readTimeInMinutes ?? 0,
+		views: post.views ?? 0,
+		coverImage: post.coverImage?.url ? { url: post.coverImage.url } : null,
+		tags: (post.tags ?? []).map((tag) => ({ id: tag.id, name: tag.name, slug: tag.slug })),
+		series: post.series ? { name: post.series.name, slug: post.series.slug } : null,
+		publishedAt: post.publishedAt,
+	})), [posts]);
 
 	useEffect(() => {
 		setContext({
@@ -211,12 +224,12 @@ export default function LearnPage({ publication, posts, topicCollections }: Prop
 										Structured learning paths, in-depth articles, visual explanations and practice to help you build real-world skills.
 									</p>
 									<div className="mt-7 flex flex-wrap gap-3">
-										<Link href="#learning-paths" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20">
-											Find My Learning Path <Icon name="arrow" className="h-4 w-4" />
-										</Link>
-										<Link href="/posts" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-950 hover:border-blue-300 hover:text-blue-700">
-											Browse All Topics
-										</Link>
+									<Link href="#learning-paths" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20">
+										Find My Learning Path <Icon name="arrow" className="h-4 w-4" />
+									</Link>
+									<Link href="#curate-learning-path" className="inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-5 py-3 text-sm font-black text-blue-700 hover:bg-blue-50">
+										Curate a Learning Path <Icon name="arrow" className="h-4 w-4" />
+									</Link>
 									</div>
 								</div>
 								<div className="relative hidden min-h-[260px] md:block">
@@ -250,6 +263,10 @@ export default function LearnPage({ publication, posts, topicCollections }: Prop
 										</Link>
 									))}
 								</div>
+							</section>
+
+							<section id="curate-learning-path" className="border-b border-slate-200 bg-slate-50/60 px-5 md:px-8">
+								<LearnToday allPosts={curatorPosts} curateOnly />
 							</section>
 
 							<section id="learning-paths" className="border-b border-slate-200 px-5 py-7 md:px-8">

@@ -28,6 +28,7 @@ import {
 import { CONTENT_REVALIDATE_SECONDS } from '../lib/cache-constants';
 import { formatTagName } from '../utils/format';
 import { useUserProgress } from '../hooks/useProgress';
+import { orderSeriesPosts } from '../lib/series-order';
 
 const GQL_ENDPOINT = process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT;
 const RECENTLY_VIEWED_KEY = 'aa:recently-viewed-posts';
@@ -575,7 +576,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 
 		const series = [...rawSeriesMap.values()]
 			.map((s) => {
-				const seriesPosts = allPosts.filter((post) => post.series?.id === s.id);
+				const seriesPosts = orderSeriesPosts(allPosts.filter((post) => post.series?.id === s.id));
 				const totalReadTime = seriesPosts.reduce((sum, post) => sum + (post.readTimeInMinutes ?? 0), 0);
 				const totalViews = seriesPosts.reduce((sum, post) => sum + (post.views ?? 0), 0);
 				return {

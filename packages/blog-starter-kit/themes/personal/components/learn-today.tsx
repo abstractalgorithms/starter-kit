@@ -472,9 +472,10 @@ const SearchResultsPanel = ({
 
 type Props = {
 	allPosts: LearnPost[];
+	curateOnly?: boolean;
 };
 
-export const LearnToday = ({ allPosts }: Props) => {
+export const LearnToday = ({ allPosts, curateOnly = false }: Props) => {
 	const router = useRouter();
 	const [query, setQuery] = useState('');
 	const [loading, setLoading] = useState(false);
@@ -511,16 +512,17 @@ export const LearnToday = ({ allPosts }: Props) => {
 		const trimmed = q.trim();
 		if (!trimmed || loading) return;
 
-		// ── Intent detection (instant, no network call) ──────────────────────────
+		// Curator mode always builds a structured path. The default mode retains
+		// the lightweight search/generation routing used by other surfaces.
 		const { mode: detectedMode, matches } = detectIntent(trimmed, allPosts);
 
-		if (detectedMode === 'generate') {
+		if (!curateOnly && detectedMode === 'generate') {
 			// No matching content → navigate to on-the-fly AI post
 			router.push(`/generated?topic=${encodeURIComponent(trimmed)}`);
 			return;
 		}
 
-		if (detectedMode === 'search') {
+		if (!curateOnly && detectedMode === 'search') {
 			// A few matches → show them inline immediately
 			setMode('search');
 			setSearchResults(matches);
@@ -553,7 +555,7 @@ export const LearnToday = ({ allPosts }: Props) => {
 		} finally {
 			setLoading(false);
 		}
-	}, [allPosts, loading, router]);
+	}, [allPosts, curateOnly, loading, router]);
 
 	const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === 'Enter') handleSubmit(query);
@@ -568,17 +570,19 @@ export const LearnToday = ({ allPosts }: Props) => {
 	const hrs = result ? Math.round(result.totalMinutes / 60 * 10) / 10 : 0;
 
 	return (
-		<section className="w-full py-12 border-t border-neutral-200 dark:border-neutral-800">
+		<section className="w-full py-10">
 			{/* Header */}
 			<div className="mb-8">
 				<p className="text-[10px] font-mono uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-2">
-					Find a thread
+					{curateOnly ? 'Personalized curriculum' : 'Find a thread'}
 				</p>
 				<h2 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-neutral-50 mb-2">
-					What do you want to learn today?
+					{curateOnly ? 'Curate a learning path' : 'What do you want to learn today?'}
 				</h2>
 				<p className="text-neutral-500 dark:text-neutral-400 text-sm">
-					Type any topic and we&apos;ll surface the most useful articles and related concepts.
+					{curateOnly
+						? 'Tell us what you want to master. We’ll organize relevant blog articles into a logical, complexity-ranked sequence.'
+						: 'Type any topic and we’ll surface the most useful articles and related concepts.'}
 				</p>
 			</div>
 
@@ -622,7 +626,7 @@ export const LearnToday = ({ allPosts }: Props) => {
 						</>
 					) : (
 						<>
-							Explore
+							{curateOnly ? 'Curate Path' : 'Explore'}
 							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
 							</svg>

@@ -34,6 +34,9 @@ import {
 	PostFragment,
 	PostFullFragment,
 	PublicationFragment,
+	SeriesPostsByPublicationDocument,
+	SeriesPostsByPublicationQuery,
+	SeriesPostsByPublicationQueryVariables,
 	SinglePostByPublicationDocument,
 	SlugPostsByPublicationDocument,
 	StaticPageFragment,
@@ -53,6 +56,7 @@ import { inferTopicSlugForPost } from '../lib/topic-learning';
 import { ARTICLE_REVALIDATE_SECONDS } from '../lib/cache-constants';
 import { usePostTimeTracking, useUserProgress } from '../hooks/useProgress';
 import { useAuth } from '../components/contexts/authContext';
+import { getSeriesDifficulty, orderSeriesPosts, SeriesDifficulty } from '../lib/series-order';
 
 // ─── Reading Progress Bar ─────────────────────────────────────────────────────
 const ReadingProgressBar = () => {
@@ -1469,12 +1473,29 @@ const InterviewArticleOverlay = ({
 	</section>
 );
 
+type SeriesNavigationPost = {
+	id: string;
+	title: string;
+	slug: string;
+	brief: string;
+	readTimeInMinutes: number;
+	difficulty: SeriesDifficulty;
+};
+
+type SeriesNavigation = {
+	id: string;
+	name: string;
+	slug: string;
+	posts: SeriesNavigationPost[];
+};
+
 type PostProps = {
 	type: 'post';
 	post: PostFullFragment;
 	publication: PublicationFragment;
 	footerPosts: PostFragment[];
 	morePosts: PostFragment[];
+	seriesNavigation?: SeriesNavigation | null;
 	backmatter?: ArticleBackmatter | null;
 };
 
@@ -1487,7 +1508,7 @@ type PageProps = {
 
 type Props = PostProps | PageProps;
 
-const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
+const Post = ({ publication, post, morePosts, backmatter, seriesNavigation }: PostProps) => {
 	const highlightJsMonokaiTheme =
 		'.hljs{display:block;overflow-x:auto;padding:.5em;background:#23241f}.hljs,.hljs-subst,.hljs-tag{color:#f8f8f2}.hljs-emphasis,.hljs-strong{color:#a8a8a2}.hljs-bullet,.hljs-link,.hljs-literal,.hljs-number,.hljs-quote,.hljs-regexp{color:#ae81ff}.hljs-code,.hljs-section,.hljs-selector-class,.hljs-title{color:#a6e22e}.hljs-strong{font-weight:700}.hljs-emphasis{font-style:italic}.hljs-attr,.hljs-keyword,.hljs-name,.hljs-selector-tag{color:#f92672}.hljs-attribute,.hljs-symbol{color:#66d9ef}.hljs-class .hljs-title,.hljs-params{color:#f8f8f2}.hljs-addition,.hljs-built_in,.hljs-builtin-name,.hljs-selector-attr,.hljs-selector-id,.hljs-selector-pseudo,.hljs-string,.hljs-template-variable,.hljs-type,.hljs-variable{color:#e6db74}.hljs-comment,.hljs-deletion,.hljs-meta{color:#75715e}';
 	const [, setMobMount] = useState(false);
@@ -1781,6 +1802,9 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 		[conceptDependencies, post.readTimeInMinutes, tocItems.length],
 	);
 	const upNextPost = morePosts[0] ?? null;
+	const seriesLessonIndex = seriesNavigation?.posts.findIndex((item) => item.id === post.id) ?? -1;
+	const previousSeriesPost = seriesLessonIndex > 0 ? seriesNavigation?.posts[seriesLessonIndex - 1] : null;
+	const nextSeriesPost = seriesLessonIndex >= 0 ? seriesNavigation?.posts[seriesLessonIndex + 1] : null;
 
 	const getSimulationHrefForSection = (sectionTitle: string, sectionId?: string) => {
 		const params = new URLSearchParams({
@@ -2004,6 +2028,19 @@ const Post = ({ publication, post, morePosts, backmatter }: PostProps) => {
 
 					<PostQuiz postTitle={post.title} postContent={post.content.markdown} />
 
+					{seriesNavigation && seriesLessonIndex >= 0 ? (
+						<section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+							<div className="border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900">
+								<div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600">Guided series path</p><h2 className="mt-1 font-black text-slate-950 dark:text-white">{seriesNavigation.name}</h2></div><Link href={`/series/${seriesNavigation.slug}`} className="text-xs font-bold text-blue-600 hover:text-blue-700">View all lessons →</Link></div>
+								<div className="mt-4 flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"><div className="h-full rounded-full bg-blue-600" style={{ width: `${((seriesLessonIndex + 1) / seriesNavigation.posts.length) * 100}%` }} /></div><span className="shrink-0 text-xs font-bold text-slate-500">Lesson {seriesLessonIndex + 1} of {seriesNavigation.posts.length}</span></div>
+							</div>
+							<div className="grid gap-3 p-5 sm:grid-cols-2">
+								{previousSeriesPost ? <Link href={`/${previousSeriesPost.slug}`} className="rounded-xl border border-slate-200 p-4 transition hover:border-blue-300 dark:border-slate-700"><span className="text-[10px] font-black uppercase tracking-wide text-slate-400">← Previous lesson</span><span className="mt-2 block line-clamp-2 text-sm font-black text-slate-800 dark:text-slate-100">{previousSeriesPost.title}</span><span className="mt-2 block text-xs text-slate-500">{previousSeriesPost.difficulty} · {previousSeriesPost.readTimeInMinutes} min</span></Link> : <div className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-400 dark:border-slate-800">You are at the beginning of this series.</div>}
+								{nextSeriesPost ? <Link href={`/${nextSeriesPost.slug}`} className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 text-right transition hover:border-blue-400 dark:border-blue-900 dark:bg-blue-950/30"><span className="text-[10px] font-black uppercase tracking-wide text-blue-600">Next lesson →</span><span className="mt-2 block line-clamp-2 text-sm font-black text-slate-900 dark:text-white">{nextSeriesPost.title}</span><span className="mt-2 block text-xs text-slate-500">{nextSeriesPost.difficulty} · {nextSeriesPost.readTimeInMinutes} min</span></Link> : <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-right text-sm font-bold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">Series complete 🎉</div>}
+							</div>
+						</section>
+					) : null}
+
 					<ArticleEngagement post={post} publication={publication} />
 
 					{tags.length > 0 ? (
@@ -2205,6 +2242,49 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 			.slice(0, 4)
 			.map(({ post }) => post);
 
+		let seriesNavigation: SeriesNavigation | null = null;
+		if (currentPost.series?.slug) {
+			try {
+				const seriesData = await request<SeriesPostsByPublicationQuery, SeriesPostsByPublicationQueryVariables>(
+					endpoint,
+					SeriesPostsByPublicationDocument,
+					{ host, seriesSlug: currentPost.series.slug, first: 20 },
+				);
+				const series = seriesData.publication?.series;
+				if (series) {
+					const seriesPosts = series.posts.edges.map((edge) => edge.node);
+					let cursor = series.posts.pageInfo.endCursor;
+					let hasNextPage = series.posts.pageInfo.hasNextPage;
+					while (hasNextPage && cursor) {
+						const next = await request<SeriesPostsByPublicationQuery, SeriesPostsByPublicationQueryVariables>(
+							endpoint,
+							SeriesPostsByPublicationDocument,
+							{ host, seriesSlug: currentPost.series.slug, first: 20, after: cursor },
+						);
+						if (!next.publication?.series) break;
+						seriesPosts.push(...next.publication.series.posts.edges.map((edge) => edge.node));
+						cursor = next.publication.series.posts.pageInfo.endCursor;
+						hasNextPage = next.publication.series.posts.pageInfo.hasNextPage;
+					}
+					seriesNavigation = {
+						id: series.id,
+						name: series.name,
+						slug: series.slug,
+						posts: orderSeriesPosts(seriesPosts).map((seriesPost) => ({
+							id: seriesPost.id,
+							title: seriesPost.title,
+							slug: seriesPost.slug,
+							brief: seriesPost.brief,
+							readTimeInMinutes: seriesPost.readTimeInMinutes,
+							difficulty: getSeriesDifficulty(seriesPost),
+						})),
+					};
+				}
+			} catch (seriesError) {
+				console.error('[article-series-navigation] unable to load ordered series', seriesError);
+			}
+		}
+
 		const { cleanMarkdown, backmatter } = parseArticleBackmatter(currentPost.content.markdown);
 		const postWithBackmatter: PostFullFragment = {
 			...currentPost,
@@ -2222,6 +2302,7 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 				publication: postData.publication,
 				footerPosts,
 				morePosts,
+				seriesNavigation,
 			},
 			revalidate: ARTICLE_REVALIDATE_SECONDS,
 		};

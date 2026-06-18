@@ -26,6 +26,7 @@ import {
 	SeriesPostsByPublicationQuery,
 	SeriesPostsByPublicationQueryVariables,
 } from '../../generated/graphql';
+import { getSeriesDifficulty, orderSeriesPosts } from '../../lib/series-order';
 import { useUserProgress } from '../../hooks/useProgress';
 
 const RECENTLY_VIEWED_KEY = 'aa:recently-viewed-posts';
@@ -454,7 +455,7 @@ export default function SeriesDetailPage({ publication, posts, series, roadmap, 
 									{posts.map((post, index) => (
 										<Link key={post.id} href={`/${post.slug}`} onClick={() => rememberPostView(post)} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:border-blue-300">
 											<Image src={getPostImage(post)} alt="" width={520} height={300} className="aspect-[16/9] w-full rounded-lg object-cover" />
-											<p className="mt-4 text-xs font-black uppercase text-blue-600">Article {index + 1}</p>
+											<div className="mt-4 flex items-center justify-between gap-3"><p className="text-xs font-black uppercase text-blue-600">Lesson {index + 1}</p><span className={`rounded-full px-2 py-1 text-[10px] font-black ${getSeriesDifficulty(post) === 'Foundation' ? 'bg-emerald-50 text-emerald-700' : getSeriesDifficulty(post) === 'Advanced' ? 'bg-violet-50 text-violet-700' : 'bg-blue-50 text-blue-700'}`}>{getSeriesDifficulty(post)}</span></div>
 											<h3 className="mt-2 line-clamp-2 text-lg font-black text-slate-950">{post.title}</h3>
 											<p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{post.brief}</p>
 											<p className="mt-3 text-xs font-semibold text-slate-500">{post.readTimeInMinutes} min read</p>
@@ -578,10 +579,12 @@ export const getStaticProps: GetStaticProps<Props, Params> = async ({ params }) 
 		}
 	} catch {}
 
+	const orderedPosts = orderSeriesPosts(posts);
+
 	return {
 		props: {
 			publication,
-			posts,
+			posts: orderedPosts,
 			series: {
 				id: series.id,
 				name: series.name,
