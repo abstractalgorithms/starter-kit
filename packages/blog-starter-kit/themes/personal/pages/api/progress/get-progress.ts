@@ -34,6 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 				postTitle: fields.postTitle?.stringValue || '',
 				completedAt: parseInt(fields.completedAt?.integerValue || '0'),
 				timeSpent: parseInt(fields.timeSpent?.integerValue || '0'),
+				lastReadAt: parseInt(fields.lastReadAt?.integerValue || '0'),
 				status: fields.status?.stringValue || 'in-progress',
 			};
 		}) || [];

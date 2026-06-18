@@ -81,6 +81,7 @@ export async function initializeUserCollections(
  * │   │       ├── postTitle: string
  * │   │       ├── completedAt: number (timestamp in ms)
  * │   │       ├── timeSpent: number (milliseconds)
+ * │   │       ├── lastReadAt: number (timestamp in ms)
  * │   │       └── status: 'completed' | 'in-progress'
  * │   └── seriesProgress/
  * │       └── {seriesId}

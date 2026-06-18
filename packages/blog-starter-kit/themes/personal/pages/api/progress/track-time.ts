@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		}
 
 		// Update with new time spent value
-		const updateResponse = await fetch(`${url}?updateMask.fieldPaths=timeSpent`, {
+		const updateResponse = await fetch(`${url}?updateMask.fieldPaths=timeSpent&updateMask.fieldPaths=lastReadAt`, {
 			method: 'PATCH',
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -38,6 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			body: JSON.stringify({
 				fields: {
 					timeSpent: { integerValue: (currentTimeSpent + timeSpent).toString() },
+					lastReadAt: { integerValue: Date.now().toString() },
 				},
 			}),
 		});

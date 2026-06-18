@@ -17,6 +17,7 @@ export type PostProgress = {
 	postTitle?: string;
 	completedAt: number;
 	timeSpent: number;
+	lastReadAt: number;
 	status: 'completed' | 'in-progress';
 };
 
@@ -94,6 +95,7 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 							postTitle: typeof data.postTitle === 'string' ? data.postTitle : '',
 							completedAt: asNumber(data.completedAt),
 							timeSpent: asNumber(data.timeSpent),
+							lastReadAt: asNumber(data.lastReadAt),
 							status: data.status === 'completed' ? 'completed' : 'in-progress',
 						};
 					}),
@@ -144,6 +146,7 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 						postTitle: postTitle || data?.postTitle || '',
 						completedAt: data?.status === 'completed' ? asNumber(data.completedAt) : Date.now(),
 						timeSpent: asNumber(data?.timeSpent),
+						lastReadAt: Date.now(),
 						status: 'completed',
 					},
 					{ merge: true },
@@ -172,6 +175,7 @@ export const ProgressProvider = ({ children }: { children: React.ReactNode }) =>
 						postId,
 						postTitle: postTitle || data?.postTitle || '',
 						timeSpent: asNumber(data?.timeSpent) + boundedTime,
+						lastReadAt: Date.now(),
 						status: data?.status === 'completed' ? 'completed' : 'in-progress',
 						...(data?.status === 'completed' ? { completedAt: asNumber(data.completedAt) } : {}),
 					},

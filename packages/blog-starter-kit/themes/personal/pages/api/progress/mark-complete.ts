@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	}
 
 	try {
-		const fieldMask = ['postId', 'postTitle', 'completedAt', 'status']
+		const fieldMask = ['postId', 'postTitle', 'completedAt', 'lastReadAt', 'status']
 			.map((field) => `updateMask.fieldPaths=${field}`)
 			.join('&');
 		const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${userId}/progressedPosts/${postId}?${fieldMask}`;
@@ -29,6 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 					postId: { stringValue: postId },
 					postTitle: { stringValue: postTitle || '' },
 					completedAt: { integerValue: Date.now().toString() },
+					lastReadAt: { integerValue: Date.now().toString() },
 					status: { stringValue: 'completed' },
 				},
 			}),
