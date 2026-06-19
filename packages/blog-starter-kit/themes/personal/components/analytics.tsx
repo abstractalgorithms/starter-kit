@@ -10,8 +10,10 @@ const enableHashnodeInternalAnalytics =
 	process.env.NEXT_PUBLIC_ENABLE_HASHNODE_INTERNAL_ANALYTICS === 'true';
 
 const _sendPageViewsToHashnodeGoogleAnalytics = () => {
-	// @ts-ignore
-	window.gtag('config', GA_TRACKING_ID, {
+	const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
+	if (typeof gtag !== 'function') return;
+
+	gtag('config', GA_TRACKING_ID, {
 		transport_url: 'https://ping.hashnode.com',
 		first_party_collection: true,
 	});

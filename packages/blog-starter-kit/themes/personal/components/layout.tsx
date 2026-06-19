@@ -10,6 +10,9 @@ type Props = {
 };
 
 export const Layout = ({ children }: Props) => {
+	const speedInsightsEnabled =
+		process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true';
+
 	return (
 		<>
 			<Meta />
@@ -20,7 +23,7 @@ export const Layout = ({ children }: Props) => {
 			<PostChatbot />
 			<Analytics />
 			<Integrations />
-			<SpeedInsights />
+			{speedInsightsEnabled ? <SpeedInsights /> : null}
 		</>
 	);
 };

@@ -88,9 +88,12 @@ export function Integrations() {
     })(window, document, "clarity", "script", '${msClarityID}');`;
 
 	useEffect(() => {
-		if (!appContext) return;
-		// @ts-ignore
-		window.gtag('config', gaTrackingID, {
+		if (!appContext || !gaTrackingID) return;
+
+		const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
+		if (typeof gtag !== 'function') return;
+
+		gtag('config', gaTrackingID, {
 			transport_url: 'https://ping.hashnode.com',
 			first_party_collection: true,
 		});
