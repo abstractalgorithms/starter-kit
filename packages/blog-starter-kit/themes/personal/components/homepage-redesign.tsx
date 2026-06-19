@@ -217,40 +217,27 @@ const AALogo = () => (
 );
 
 const HeroVisual = () => (
-	<div className="relative mx-auto h-[360px] max-w-[620px] md:h-[430px]">
+	<div className="relative mx-auto flex h-[390px] max-w-[620px] items-center justify-center md:h-[460px]">
 		<div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(37,99,235,0.10)_1px,transparent_1px),linear-gradient(rgba(37,99,235,0.08)_1px,transparent_1px)] bg-[size:42px_42px] [mask-image:radial-gradient(circle_at_center,black,transparent_82%)]" />
-		<div className="absolute left-1/2 top-1/2 h-48 w-64 -translate-x-1/2 -translate-y-1/2">
-			{[2, 1, 0].map((layer) => (
-				<div
-					key={layer}
-					className="absolute left-1/2 h-24 w-64 -translate-x-1/2 rounded-[28px] border border-blue-200 bg-gradient-to-br from-white to-blue-50 shadow-[0_24px_70px_rgba(37,99,235,0.16)]"
-					style={{ top: `${layer * 42}px`, transform: 'translateX(-50%) skewY(-10deg)' }}
-				/>
-			))}
-			<div className="absolute left-1/2 top-2 flex h-32 w-32 -translate-x-1/2 -translate-y-16 items-center justify-center rounded-[34px] border border-cyan-300/45 bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 text-7xl font-black text-white shadow-[0_0_70px_rgba(56,189,248,0.55)]">
-				A
-			</div>
+		<div className="absolute left-[12%] top-[16%] h-28 w-28 rounded-full bg-cyan-300/25 blur-2xl" />
+		<div className="absolute bottom-[12%] right-[10%] h-36 w-36 rounded-full bg-indigo-400/25 blur-3xl" />
+		<div className="absolute left-5 top-16 hidden rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 shadow-xl shadow-blue-200/40 backdrop-blur md:block">
+			<p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600">Meet the platform</p>
+			<p className="mt-1 text-xs font-bold text-slate-700">Learn. Build. Grow.</p>
 		</div>
-		{[
-			{ title: 'Learn', subtitle: 'Deep articles and visual explanations', icon: 'book' as IconName, cls: 'left-0 top-8 md:left-8 md:top-10' },
-			{ title: 'Series', subtitle: 'Structured paths through complex topics', icon: 'diagram' as IconName, cls: 'right-0 top-10 md:right-8 md:top-12' },
-			{ title: 'Blog', subtitle: 'Engineering articles and deep dives', icon: 'code' as IconName, cls: 'bottom-5 left-1/2 -translate-x-1/2' },
-		].map((node) => (
-			<Link
-				key={node.title}
-				href={node.title === 'Series' ? '/series' : node.title === 'Blog' ? '/posts' : '/learn'}
-				className={`absolute ${node.cls} w-[155px] rounded-3xl border border-blue-100 bg-white/92 p-4 text-center text-slate-950 shadow-xl shadow-blue-200/50 backdrop-blur transition hover:-translate-y-1 hover:border-blue-300`}
-			>
-				<span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-					<Icon name={node.icon} />
-				</span>
-				<p className="mt-2 text-sm font-black uppercase">{node.title}</p>
-				<p className="mt-1 text-[11px] leading-4 text-slate-600">{node.subtitle}</p>
-			</Link>
-		))}
-		<svg className="absolute inset-0 h-full w-full text-blue-500/45" fill="none" viewBox="0 0 620 430" aria-hidden="true">
-			<path d="M165 120 C230 125 245 190 305 190 M455 122 C390 130 374 190 315 190 M310 270 C310 305 310 315 310 350" stroke="currentColor" strokeWidth="2" strokeDasharray="8 10" />
-		</svg>
+		<div className="absolute bottom-16 right-3 hidden rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 shadow-xl shadow-blue-200/40 backdrop-blur md:block">
+			<p className="flex items-center gap-2 text-xs font-black text-slate-950"><span className="h-2 w-2 rounded-full bg-red-500" /> Website intro</p>
+			<p className="mt-1 text-[11px] text-slate-600">60 seconds to get started</p>
+		</div>
+		<div className="relative z-10 overflow-hidden rounded-[28px] border-[6px] border-slate-950 bg-black shadow-[0_30px_80px_rgba(15,23,42,0.28)]">
+			<iframe
+				className="aspect-[9/16] h-[360px] w-[203px] md:h-[430px] md:w-[242px]"
+				src="https://www.youtube-nocookie.com/embed/F66IxcNEsU4?rel=0&modestbranding=1"
+				title="Master Abstract Algorithms Intro!"
+				allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+				allowFullScreen
+			/>
+		</div>
 	</div>
 );
 
