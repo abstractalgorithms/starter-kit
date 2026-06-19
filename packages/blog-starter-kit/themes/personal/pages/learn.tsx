@@ -176,6 +176,10 @@ export default function LearnPage({ publication, posts, topicCollections }: Prop
 								<div>
 									<p className="px-3 text-xs font-black uppercase tracking-wide text-slate-500">Browse</p>
 									<div className="mt-3 grid gap-1">
+										<Link href="/videos" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-blue-700">
+											<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" strokeWidth="2" /><path d="m10 9 5 3-5 3V9Z" strokeWidth="2" /></svg>
+											Videos
+										</Link>
 										<Link href="/posts" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-blue-700">
 											<Icon name="layers" className="h-4 w-4" />
 											All Topics

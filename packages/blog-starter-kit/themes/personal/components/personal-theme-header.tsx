@@ -205,6 +205,7 @@ export const PersonalHeader = () => {
 	const newsletterUrl = publication.url ? `${publication.url.replace(/\/$/, '')}/newsletter` : null;
 	const navItems = [
 		{ label: 'Learn', href: '/learn' },
+		{ label: 'Videos', href: '/videos' },
 		{ label: 'Series', href: '/series' },
 		{ label: 'Blog', href: '/posts' },
 	] as const;
