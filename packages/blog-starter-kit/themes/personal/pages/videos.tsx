@@ -5,7 +5,7 @@ import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Container } from '../components/container';
 import { AppProvider } from '../components/contexts/appContext';
 import { Footer } from '../components/footer';
@@ -110,14 +110,47 @@ const VideoRow = ({ video, onPlay }: { video: YouTubeVideo; onPlay: (video: YouT
 export default function VideosPage({ publication, posts, feed }: Props) {
 	const [filter, setFilter] = useState<'all' | 'videos' | 'shorts'>('all');
 	const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null);
+	const touchStartY = useRef<number | null>(null);
+	const wheelLocked = useRef(false);
 	const shownVideos = useMemo(() => feed.videos.filter((video) => filter === 'all' || (filter === 'shorts' ? video.isShort : !video.isShort)), [feed.videos, filter]);
 	const latest = feed.videos[0];
+	const selectedIndex = selectedVideo ? shownVideos.findIndex((video) => video.id === selectedVideo.id) : -1;
+
+	const navigateVideo = useCallback((direction: 1 | -1) => {
+		setSelectedVideo((current) => {
+			if (!current || shownVideos.length < 2) return current;
+			const currentIndex = shownVideos.findIndex((video) => video.id === current.id);
+			const nextIndex = (Math.max(0, currentIndex) + direction + shownVideos.length) % shownVideos.length;
+			return shownVideos[nextIndex];
+		});
+	}, [shownVideos]);
+
+	const handlePlayerWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+		if (Math.abs(event.deltaY) < 24 || wheelLocked.current) return;
+		wheelLocked.current = true;
+		navigateVideo(event.deltaY > 0 ? 1 : -1);
+		window.setTimeout(() => { wheelLocked.current = false; }, 500);
+	};
+
+	const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+		touchStartY.current = event.touches[0]?.clientY ?? null;
+	};
+
+	const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+		if (touchStartY.current === null) return;
+		const endY = event.changedTouches[0]?.clientY ?? touchStartY.current;
+		const distance = touchStartY.current - endY;
+		touchStartY.current = null;
+		if (Math.abs(distance) >= 48) navigateVideo(distance > 0 ? 1 : -1);
+	};
 
 	useEffect(() => {
 		if (!selectedVideo) return;
 		const previousOverflow = document.body.style.overflow;
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Escape') setSelectedVideo(null);
+			if (event.key === 'ArrowDown' || event.key === 'PageDown') navigateVideo(1);
+			if (event.key === 'ArrowUp' || event.key === 'PageUp') navigateVideo(-1);
 		};
 		document.body.style.overflow = 'hidden';
 		window.addEventListener('keydown', onKeyDown);
@@ -125,7 +158,7 @@ export default function VideosPage({ publication, posts, feed }: Props) {
 			document.body.style.overflow = previousOverflow;
 			window.removeEventListener('keydown', onKeyDown);
 		};
-	}, [selectedVideo]);
+	}, [navigateVideo, selectedVideo]);
 
 	return (
 		<AppProvider publication={publication} footerPosts={posts}>
@@ -211,13 +244,25 @@ export default function VideosPage({ publication, posts, feed }: Props) {
 					<Footer />
 				</Container>
 				{selectedVideo ? (
-					<div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={`Playing ${selectedVideo.title}`} onMouseDown={(event) => { if (event.currentTarget === event.target) setSelectedVideo(null); }}>
-						<div className="w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl">
+					<div
+						className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-3 backdrop-blur-sm sm:p-4"
+						role="dialog"
+						aria-modal="true"
+						aria-label={`Playing ${selectedVideo.title}`}
+						onMouseDown={(event) => { if (event.currentTarget === event.target) setSelectedVideo(null); }}
+						onWheel={handlePlayerWheel}
+						onTouchStart={handleTouchStart}
+						onTouchEnd={handleTouchEnd}
+					>
+						<div className={`relative w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl ${selectedVideo.isShort ? 'max-w-sm' : 'max-w-5xl'}`}>
 							<div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 sm:px-5">
-								<div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-wider text-red-400">Now playing</p><h2 className="mt-1 truncate text-sm font-bold text-white sm:text-base">{selectedVideo.title}</h2></div>
+								<div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-wider text-red-400">Now playing · {selectedIndex + 1} of {shownVideos.length}</p><h2 className="mt-1 truncate text-sm font-bold text-white sm:text-base">{selectedVideo.title}</h2></div>
 								<button type="button" onClick={() => setSelectedVideo(null)} aria-label="Close video player" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20">×</button>
 							</div>
-							<div className="aspect-video w-full bg-black">
+							<div
+								className={`bg-black ${selectedVideo.isShort ? 'mx-auto aspect-[9/16]' : 'aspect-video w-full'}`}
+								style={selectedVideo.isShort ? { width: 'min(100%, calc(72vh * 9 / 16))' } : undefined}
+							>
 								<iframe
 									key={selectedVideo.id}
 									className="h-full w-full"
@@ -227,6 +272,18 @@ export default function VideosPage({ publication, posts, feed }: Props) {
 									allowFullScreen
 								/>
 							</div>
+							{shownVideos.length > 1 ? (
+								<div className="absolute bottom-[61px] left-0 top-[65px] z-10 flex w-11 touch-none items-center justify-center bg-gradient-to-r from-black/35 to-transparent sm:hidden" aria-hidden="true">
+									<span className="rounded-full bg-black/45 px-2 py-3 text-xs font-black text-white/80">↕</span>
+								</div>
+							) : null}
+							{shownVideos.length > 1 ? (
+								<div className="flex items-center justify-between gap-3 border-t border-white/10 bg-slate-950 px-3 py-2">
+									<button type="button" onClick={() => navigateVideo(-1)} aria-label="Previous video" className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20">↑ <span>Previous</span></button>
+									<p className="text-center text-[9px] font-bold uppercase tracking-wider text-slate-400">Scroll<br />or swipe</p>
+									<button type="button" onClick={() => navigateVideo(1)} aria-label="Next video" className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20"><span>Next</span> ↓</button>
+								</div>
+							) : null}
 						</div>
 					</div>
 				) : null}
