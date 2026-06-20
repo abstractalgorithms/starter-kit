@@ -110,8 +110,11 @@ const VideoRow = ({ video, onPlay }: { video: YouTubeVideo; onPlay: (video: YouT
 export default function VideosPage({ publication, posts, feed }: Props) {
 	const [filter, setFilter] = useState<'all' | 'videos' | 'shorts'>('all');
 	const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null);
+	const [isPlaying, setIsPlaying] = useState(true);
 	const touchStartY = useRef<number | null>(null);
+	const didSwipe = useRef(false);
 	const wheelLocked = useRef(false);
+	const playerRef = useRef<HTMLIFrameElement>(null);
 	const shownVideos = useMemo(() => feed.videos.filter((video) => filter === 'all' || (filter === 'shorts' ? video.isShort : !video.isShort)), [feed.videos, filter]);
 	const latest = feed.videos[0];
 	const selectedIndex = selectedVideo ? shownVideos.findIndex((video) => video.id === selectedVideo.id) : -1;
@@ -133,6 +136,7 @@ export default function VideosPage({ publication, posts, feed }: Props) {
 	};
 
 	const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+		didSwipe.current = false;
 		touchStartY.current = event.touches[0]?.clientY ?? null;
 	};
 
@@ -141,11 +145,30 @@ export default function VideosPage({ publication, posts, feed }: Props) {
 		const endY = event.changedTouches[0]?.clientY ?? touchStartY.current;
 		const distance = touchStartY.current - endY;
 		touchStartY.current = null;
-		if (Math.abs(distance) >= 48) navigateVideo(distance > 0 ? 1 : -1);
+		if (Math.abs(distance) >= 48) {
+			didSwipe.current = true;
+			event.preventDefault();
+			navigateVideo(distance > 0 ? 1 : -1);
+		}
+	};
+
+	const sendPlayerCommand = (command: 'playVideo' | 'pauseVideo') => {
+		playerRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: command, args: [] }), '*');
+	};
+
+	const togglePlayback = () => {
+		if (didSwipe.current) {
+			didSwipe.current = false;
+			return;
+		}
+		const nextPlaying = !isPlaying;
+		setIsPlaying(nextPlaying);
+		sendPlayerCommand(nextPlaying ? 'playVideo' : 'pauseVideo');
 	};
 
 	useEffect(() => {
 		if (!selectedVideo) return;
+		setIsPlaying(true);
 		const previousOverflow = document.body.style.overflow;
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Escape') setSelectedVideo(null);
@@ -251,8 +274,6 @@ export default function VideosPage({ publication, posts, feed }: Props) {
 						aria-label={`Playing ${selectedVideo.title}`}
 						onMouseDown={(event) => { if (event.currentTarget === event.target) setSelectedVideo(null); }}
 						onWheel={handlePlayerWheel}
-						onTouchStart={handleTouchStart}
-						onTouchEnd={handleTouchEnd}
 					>
 						<div className={`relative w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl ${selectedVideo.isShort ? 'max-w-sm' : 'max-w-5xl'}`}>
 							<div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 sm:px-5">
@@ -264,23 +285,32 @@ export default function VideosPage({ publication, posts, feed }: Props) {
 								style={selectedVideo.isShort ? { width: 'min(100%, calc(72vh * 9 / 16))' } : undefined}
 							>
 								<iframe
+									ref={playerRef}
 									key={selectedVideo.id}
 									className="h-full w-full"
-									src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}?autoplay=1&rel=0&modestbranding=1`}
+									src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&playsinline=1`}
 									title={selectedVideo.title}
 									allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 									allowFullScreen
 								/>
 							</div>
 							{shownVideos.length > 1 ? (
-								<div className="absolute bottom-[61px] left-0 top-[65px] z-10 flex w-11 touch-none items-center justify-center bg-gradient-to-r from-black/35 to-transparent sm:hidden" aria-hidden="true">
-									<span className="rounded-full bg-black/45 px-2 py-3 text-xs font-black text-white/80">↕</span>
+								<div
+									className="absolute bottom-[61px] left-0 right-0 top-[65px] z-10 flex touch-none items-center justify-center sm:hidden"
+									onTouchStart={handleTouchStart}
+									onTouchEnd={handleTouchEnd}
+									onClick={togglePlayback}
+									aria-label="Swipe up or down to change video; tap to play or pause"
+									role="button"
+									tabIndex={0}
+								>
+									<span className="pointer-events-none rounded-full bg-black/55 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white/85 opacity-70">Swipe ↑↓</span>
 								</div>
 							) : null}
 							{shownVideos.length > 1 ? (
 								<div className="flex items-center justify-between gap-3 border-t border-white/10 bg-slate-950 px-3 py-2">
 									<button type="button" onClick={() => navigateVideo(-1)} aria-label="Previous video" className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20">↑ <span>Previous</span></button>
-									<p className="text-center text-[9px] font-bold uppercase tracking-wider text-slate-400">Scroll<br />or swipe</p>
+									<button type="button" onClick={togglePlayback} aria-label={isPlaying ? 'Pause video' : 'Play video'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-base text-slate-950">{isPlaying ? 'Ⅱ' : '▶'}</button>
 									<button type="button" onClick={() => navigateVideo(1)} aria-label="Next video" className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20"><span>Next</span> ↓</button>
 								</div>
 							) : null}
