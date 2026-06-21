@@ -194,7 +194,7 @@ export default function VideosPage({ publication, posts, feed }: Props) {
 				</Head>
 				<Container className="mx-auto w-full bg-white">
 					<PersonalHeader />
-					<main className="mx-auto grid w-full max-w-[1440px] grid-cols-1 border-x border-slate-200 px-4 md:px-7 lg:grid-cols-[220px_minmax(0,1fr)]">
+					<main className="mx-auto grid w-full max-w-[1440px] grid-cols-1 border-x border-slate-200 px-4 md:px-7 overflow-x-hidden lg:grid-cols-[220px_minmax(0,1fr)]">
 						<aside className="hidden min-h-screen border-r border-slate-200 bg-white p-5 lg:block">
 							<p className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Learn</p>
 							<nav className="mt-3 grid gap-1">

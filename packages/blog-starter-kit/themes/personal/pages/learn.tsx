@@ -161,7 +161,7 @@ export default function LearnPage({ publication, posts, topicCollections }: Prop
 
 				<Container className="mx-auto w-full bg-white">
 					<PersonalHeader />
-					<main className="mx-auto grid w-full max-w-[1440px] grid-cols-1 border-x border-slate-200 px-4 md:px-7 lg:grid-cols-[220px_minmax(0,1fr)]">
+					<main className="mx-auto grid w-full max-w-[1440px] grid-cols-1 border-x border-slate-200 px-4 md:px-7 overflow-x-hidden lg:grid-cols-[220px_minmax(0,1fr)]">
 						<aside className="hidden border-r border-slate-200 bg-white p-5 lg:block">
 							<Link href="/" className="mb-5 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:border-blue-300 hover:text-blue-700">
 								<Icon name="arrow" className="h-4 w-4 rotate-180" />
@@ -236,7 +236,7 @@ export default function LearnPage({ publication, posts, topicCollections }: Prop
 									</Link>
 									</div>
 								</div>
-								<div className="relative hidden min-h-[260px] md:block">
+								<div className="relative hidden min-h-[260px] md:block overflow-hidden">
 									<div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(37,99,235,0.10)_1px,transparent_1px),linear-gradient(rgba(37,99,235,0.08)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:radial-gradient(circle_at_center,black,transparent_78%)]" />
 									<div className="absolute left-1/2 top-1/2 h-28 w-40 -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-blue-200 bg-white shadow-2xl shadow-blue-200/70" />
 									<div className="absolute left-1/2 top-[38%] flex h-20 w-28 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl">
