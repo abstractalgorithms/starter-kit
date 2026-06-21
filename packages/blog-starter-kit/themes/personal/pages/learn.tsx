@@ -161,7 +161,7 @@ export default function LearnPage({ publication, posts, topicCollections }: Prop
 
 				<Container className="mx-auto w-full bg-white">
 					<PersonalHeader />
-					<main className="mx-auto grid w-full max-w-[1440px] grid-cols-1 border-x border-slate-200 lg:grid-cols-[220px_minmax(0,1fr)]">
+					<main className="mx-auto grid w-full max-w-[1440px] grid-cols-1 border-x border-slate-200 px-4 md:px-7 lg:grid-cols-[220px_minmax(0,1fr)]">
 						<aside className="hidden border-r border-slate-200 bg-white p-5 lg:block">
 							<Link href="/" className="mb-5 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:border-blue-300 hover:text-blue-700">
 								<Icon name="arrow" className="h-4 w-4 rotate-180" />

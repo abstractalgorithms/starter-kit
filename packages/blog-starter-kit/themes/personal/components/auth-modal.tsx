@@ -15,11 +15,12 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 	if (!isOpen) return null;
 
 	const getFriendlyAuthError = (err: unknown) => {
-		const message = err instanceof Error ? err.message : 'Authentication failed';
+		let message = err instanceof Error ? err.message : 'Authentication failed';
+		message = message.replace(/^Firebase:\s*/i, '').replace(/Firebase Authentication/i, 'Authentication');
 		if (/auth\/popup-closed-by-user/i.test(message)) return 'Sign-in was cancelled before it completed.';
 		if (/auth\/popup-blocked/i.test(message)) return 'Your browser blocked the sign-in popup. Allow popups and try again.';
-		if (/auth\/operation-not-allowed/i.test(message)) return 'This social provider is not enabled in Firebase Authentication.';
-		if (/auth\/unauthorized-domain/i.test(message)) return 'This domain is not authorized in Firebase Authentication settings.';
+		if (/auth\/operation-not-allowed/i.test(message)) return 'This social provider is not enabled for this site.';
+		if (/auth\/unauthorized-domain/i.test(message)) return 'This domain is not authorized for login.';
 		if (/auth\/account-exists-with-different-credential/i.test(message)) return 'An account already exists with the same email using a different sign-in method.';
 		return message;
 	};
